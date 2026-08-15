@@ -453,7 +453,7 @@
 
 /* ---------- storage: 구글 시트 연동 + 로컬 캐시 ---------- */
 /*  ▼▼▼  설치 후 여기에 Apps Script 웹앱 URL을 붙여넣으세요  ▼▼▼  */
-const CLOUD_URL = "https://script.google.com/macros/s/AKfycbwgXAbXPXC8LD7JhTnWFhBWsF4cJISfWw2P2ds1m9qqjjoUhdB33U6YkLNHUGNHnfNw/exec";
+const CLOUD_URL = "https://script.google.com/macros/s/AKfycbwgXAbXPXC8LD7JhTnWFhBWsF4cJISfWw2P2ds1m9qqjjoUhdB33U6YkLNHUGNHnfNw/exec";   // 예: "https://script.google.com/macros/s/AKfy...../exec"
 /*  ▲▲▲  비워두면 예전처럼 이 브라우저에만 저장(오프라인)됩니다  ▲▲▲  */
 
 const KEY='everyup_consult_v1';
@@ -490,30 +490,39 @@ function saveAll(){
 function pushCloud(){
   if(!cloudOn) return;
   chipSyncing();
+  // no-cors + text/plain = 프리플라이트 없이 전송(응답은 불투명하지만 서버 저장은 실행됨)
   fetch(CLOUD_URL, {
     method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},  // 프리플라이트 회피
+    mode:'no-cors',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify({action:'saveAll', records, notes:loadNotes()})
-  }).then(r=>r.json()).then(res=>{
-    if(res && res.ok){ chipSaved(); } else { chipError(); }
-  }).catch(()=>chipError());
+  }).then(()=>{ chipSaved(); })
+    .catch(()=>chipError());
 }
-/* 클라우드에서 최신 데이터 받아오기 */
+/* 클라우드에서 최신 데이터 받아오기 — JSONP(스크립트 태그)로 CORS 우회 */
 function pullCloud(silent){
   if(!cloudOn) return Promise.resolve(false);
   if(!silent) chipSyncing();
-  return fetch(CLOUD_URL, {method:'GET'})
-    .then(r=>r.json())
-    .then(res=>{
-      if(res && res.ok && Array.isArray(res.records)){
-        records = res.records;
-        localSave();
-        if(res.notes) saveNotesObj(res.notes);
-        chipSaved();
-        return true;
-      }
-      chipError(); return false;
-    }).catch(()=>{ chipError(); return false; });
+  return new Promise(function(resolve){
+    var cb='__eu_cb_'+Date.now()+'_'+Math.floor(Math.random()*1e4);
+    var s=document.createElement('script');
+    var done=false;
+    function cleanup(){ try{ delete window[cb]; }catch(e){ window[cb]=undefined; } if(s.parentNode) s.parentNode.removeChild(s); }
+    window[cb]=function(res){
+      done=true;
+      try{
+        if(res && res.ok && Array.isArray(res.records)){
+          records=res.records; localSave();
+          if(res.notes) saveNotesObj(res.notes);
+          chipSaved(); resolve(true);
+        } else { chipError(); resolve(false); }
+      } finally { cleanup(); }
+    };
+    s.onerror=function(){ if(!done){ chipError(); resolve(false); cleanup(); } };
+    s.src=CLOUD_URL+(CLOUD_URL.indexOf('?')>=0?'&':'?')+'callback='+cb+'&t='+Date.now();
+    document.head.appendChild(s);
+    setTimeout(function(){ if(!done){ chipError(); resolve(false); cleanup(); } }, 15000);
+  });
 }
 function refreshCloud(){
   if(!cloudOn){ toast('구글 시트 연동이 설정되지 않았습니다.',true); return; }
