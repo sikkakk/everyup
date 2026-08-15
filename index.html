@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>에브리업의원 · 상담 결제 전환 관리</title>
+<style>
+  :root{
+    --navy:#1C2B4A; --navy2:#2C3E50;
+    --teal:#0EA5A0; --teal-lt:#E6F7F6;
+    --blue:#2E86C1; --blue-lt:#EAF2FB;
+    --purple:#7D3C98; --purple-lt:#F4ECF7;
+    --green:#1E8E54; --green-lt:#EAFAF1;
+    --red:#D64541; --red-lt:#FDECEA;
+    --ink:#1C2B4A; --muted:#7C8A99; --line:#E4E9EE; --bg:#F1F4F8; --card:#FFFFFF;
+    --r:14px; --shadow:0 1px 3px rgba(28,43,74,.06),0 8px 24px rgba(28,43,74,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif;
+    background:var(--bg); color:var(--ink);
+    -webkit-font-smoothing:antialiased; line-height:1.5;
+  }
+  .num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
+  button{font-family:inherit; cursor:pointer}
+  button:focus-visible, select:focus-visible, input:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
+
+  /* ---- top bar ---- */
+  header{
+    background:var(--navy); color:#fff; padding:14px 20px;
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    position:sticky; top:0; z-index:30;
+  }
+  .brand{font-weight:800; font-size:17px; letter-spacing:-.2px; display:flex; align-items:center; gap:9px}
+  .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 4px rgba(14,165,160,.25)}
+  .tabs{display:flex; gap:4px; background:rgba(255,255,255,.08); padding:4px; border-radius:11px}
+  .tabs button{
+    border:0; background:transparent; color:#cdd6e4; font-weight:700; font-size:14px;
+    padding:8px 18px; border-radius:8px; transition:.15s;
+  }
+  .tabs button.on{background:#fff; color:var(--navy)}
+  .spacer{flex:1}
+  .topbtn{
+    border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.06); color:#e7ecf3;
+    font-weight:600; font-size:12.5px; padding:8px 13px; border-radius:9px; transition:.15s;
+  }
+  .topbtn:hover{background:rgba(255,255,255,.16)}
+  .save-chip{font-size:12px; color:#9fb0c4; display:flex; align-items:center; gap:6px}
+  .save-chip b{color:#7fe3dd; font-weight:700}
+
+  main{max-width:1180px; margin:0 auto; padding:22px 20px 60px}
+  .view{display:none}
+  .view.on{display:block}
+
+  /* ---- entry form ---- */
+  .panel{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow)}
+  .formwrap{padding:16px 16px 6px}
+  .formwrap h2{margin:2px 4px 12px; font-size:14px; color:var(--muted); font-weight:700; letter-spacing:.2px}
+  .grid{display:grid; grid-template-columns:118px 110px 90px 110px 1fr 120px 78px 120px 1fr; gap:10px}
+  .field{display:flex; flex-direction:column; gap:5px; min-width:0}
+  .field label{font-size:11px; color:var(--muted); font-weight:700; padding-left:2px}
+  .field input, .field select{
+    border:1px solid var(--line); border-radius:9px; padding:9px 10px; font-size:13.5px; background:#fff; color:var(--ink);
+    width:100%; min-width:0;
+  }
+  .field input::placeholder{color:#b9c3cd}
+  .formactions{display:flex; gap:10px; align-items:center; padding:12px 4px 14px}
+  .btn{border:0; border-radius:10px; padding:11px 22px; font-weight:800; font-size:14px; transition:.15s}
+  .btn-primary{background:var(--teal); color:#fff}
+  .btn-primary:hover{background:#0c918d}
+  .btn-ghost{background:#eef1f5; color:var(--navy2)}
+  .btn-ghost:hover{background:#e3e8ee}
+  .editing-flag{display:none; font-size:12.5px; font-weight:700; color:var(--purple); background:var(--purple-lt); padding:6px 12px; border-radius:8px}
+  .editing .editing-flag{display:inline-block}
+  .editing #addBtn{background:var(--purple)}
+  .editing #addBtn:hover{background:#6a3184}
+
+  /* ---- records table ---- */
+  .recwrap{margin-top:18px}
+  .recwrap .head{display:flex; justify-content:space-between; align-items:baseline; padding:2px 4px 10px}
+  .recwrap .head h2{margin:0; font-size:15px; font-weight:800}
+  .recwrap .head .cnt{font-size:13px; color:var(--muted)}
+  .tablescroll{overflow-x:auto; border-radius:var(--r); border:1px solid var(--line); background:#fff; box-shadow:var(--shadow)}
+  table{border-collapse:collapse; width:100%; font-size:13px; min-width:920px}
+  thead th{
+    background:var(--navy); color:#fff; font-weight:700; font-size:12px; padding:11px 10px; text-align:center;
+    position:sticky; top:0; white-space:nowrap;
+  }
+  tbody td{padding:9px 10px; text-align:center; border-bottom:1px solid #EEF1F5; white-space:nowrap}
+  tbody td.lft{text-align:left; white-space:normal; min-width:120px; color:#3a4a5e}
+  tbody tr:hover{background:#F7FAFC}
+  .pay{display:inline-flex; width:24px; height:24px; align-items:center; justify-content:center; border-radius:7px; font-weight:800}
+  .pay.O{background:var(--green-lt); color:var(--green)}
+  .pay.X{background:var(--red-lt); color:var(--red)}
+  .pay.none{background:#F0F3F6; color:#aab4bf; font-weight:700}
+  .tag{font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px; display:inline-block}
+  .tag.cho{background:#FFF4E0; color:#B9770E}
+  .tag.jae{background:#E8F1FB; color:#2E72B8}
+  .tag.none{color:#c2cad3}
+  .rowbtn{border:1px solid var(--line); background:#fff; border-radius:7px; padding:5px 9px; font-size:12px; font-weight:600; color:var(--navy2)}
+  .rowbtn:hover{background:#f1f4f7}
+  .rowbtn.del:hover{background:var(--red-lt); color:var(--red); border-color:#f3c9c5}
+  .empty{padding:40px; text-align:center; color:var(--muted); font-size:14px}
+
+  /* ---- dashboard ---- */
+  .periods{display:grid; grid-template-columns:1fr; gap:18px}
+  .pcard{border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow); border:1px solid var(--line); background:#fff}
+  .pcard .bar{display:flex; align-items:center; gap:12px; padding:12px 16px; color:#fff; flex-wrap:wrap}
+  .pcard.day .bar{background:var(--teal)}
+  .pcard.week .bar{background:var(--blue)}
+  .pcard.month .bar{background:var(--purple)}
+  .pcard .bar .ttl{font-weight:800; font-size:15px; display:flex; align-items:center; gap:8px}
+  .nav{display:flex; align-items:center; gap:8px; margin-left:auto}
+  .nav .lbl{min-width:184px; text-align:center; font-weight:800; font-size:14px; background:rgba(255,255,255,.16); padding:7px 14px; border-radius:9px; letter-spacing:-.2px}
+  .nav button{border:0; border-radius:9px; font-weight:800; font-size:13px; padding:8px 12px; color:#fff; background:rgba(255,255,255,.18); transition:.12s}
+  .nav button:hover{background:rgba(255,255,255,.32)}
+  .nav button:disabled{opacity:.32; cursor:not-allowed}
+  .nav .today{background:rgba(255,255,255,.9); color:var(--navy)}
+  .nav .today:hover{background:#fff}
+
+  .statgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line)}
+  .stat{background:#fff; padding:14px 16px; display:flex; flex-direction:column; gap:7px}
+  .stat .nm{font-size:12.5px; font-weight:800; display:flex; align-items:center; gap:6px}
+  .stat .rate{font-size:30px; font-weight:800; line-height:1; letter-spacing:-1px}
+  .stat .sub{font-size:12px; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  .stat .sub .ox{font-weight:700}
+  .stat .sub .o{color:var(--green)} .stat .sub .x{color:var(--red)}
+  .stat .bartrack{height:6px; background:#EEF2F6; border-radius:99px; overflow:hidden}
+  .stat .barfill{height:100%; border-radius:99px}
+  .stat.s-all .nm{color:var(--navy)} .stat.s-all .rate{color:var(--navy)} .stat.s-all .barfill{background:var(--navy)}
+  .stat.s-type .barfill{background:var(--teal)}
+  .stat.s-type.hl{background:linear-gradient(0deg,#fbfffe,#fff)}
+  .stat.s-type.hl .nm{color:var(--teal)} .stat.s-type.hl .rate{color:var(--teal)}
+  .stat.s-cho .nm{color:#B9770E} .stat.s-cho .rate{color:#B9770E} .stat.s-cho .barfill{background:#E0A93B}
+  .stat.s-jae .nm{color:#2E72B8} .stat.s-jae .rate{color:#2E72B8} .stat.s-jae .barfill{background:#2E72B8}
+  .stat .rate.zero{color:#c4ccd5 !important}
+
+  .lower{display:grid; grid-template-columns:0.9fr 1.1fr; gap:18px; margin-top:18px}
+  .block{border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow); border:1px solid var(--line); background:#fff}
+  .block .bhead{background:var(--navy2); color:#fff; font-weight:800; font-size:14px; padding:12px 16px; display:flex; align-items:center; gap:8px}
+  .block .bbody{padding:6px 16px 14px}
+  .reason{display:flex; align-items:center; gap:12px; padding:9px 2px; border-bottom:1px solid #F0F3F6}
+  .reason:last-child{border-bottom:0}
+  .reason .rn{width:74px; font-size:13px; font-weight:700; color:#46566a}
+  .reason .rtrack{flex:1; height:16px; background:#F4F6F8; border-radius:6px; overflow:hidden; display:block}
+  .reason .rfill{display:block; height:100%; background:linear-gradient(90deg,#f0a39d,#D64541); border-radius:6px; min-width:0}
+  .reason .rc{flex:0 0 auto; min-width:74px; text-align:right; font-size:12.5px; color:var(--muted); white-space:nowrap}
+  .reason .rc b{color:var(--ink); font-size:14px}
+  .reason-empty{padding:22px 4px; color:var(--muted); font-size:13px; text-align:center}
+
+  .trend{width:100%; border-collapse:collapse; font-size:13px; min-width:0}
+  .trend th{background:var(--navy); color:#fff; font-weight:700; font-size:11.5px; padding:9px 6px; text-align:center}
+  .trend td{padding:9px 6px; text-align:center; border-bottom:1px solid #EEF1F5; white-space:nowrap}
+  .trend td.mon{font-weight:700; color:#46566a}
+  .trend tr.cur td{background:var(--teal-lt)}
+  .trend tr.cur td.mon{color:var(--teal)}
+  .trend .dash{color:#c4ccd5}
+
+  .hint{font-size:12.5px; color:var(--muted); padding:14px 4px 0; line-height:1.7}
+  .hint b{color:var(--navy2)}
+
+  /* ---- charts ---- */
+  .chartbox{padding:14px 12px 4px}
+  .chartbox svg{width:100%; height:auto; display:block; overflow:visible}
+  .cx-grid{stroke:#EDF1F5; stroke-width:1}
+  .cx-axis{fill:#9AA6B2; font-size:11px; font-family:inherit}
+  .cx-line{fill:none; stroke-width:2.5; stroke-linejoin:round; stroke-linecap:round}
+  .cx-bar{rx:4}
+  .cx-val{font-size:11px; font-weight:800; font-family:inherit}
+  .cx-cnt{font-size:11px; font-weight:800; fill:#5B6B7C; font-family:inherit}
+  .clegend{display:flex; gap:16px; align-items:center; padding:0 16px 12px; font-size:12px; color:var(--muted); flex-wrap:wrap}
+  .clegend i{display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px}
+  .clegend .lo{background:#1E8E54; opacity:.45}
+  .clegend .lx{background:#D64541; opacity:.28}
+  .clegend .ll{width:16px; height:3px; border-radius:2px; background:currentColor}
+  .cx-none{fill:#C7CFD8; font-size:11px}
+
+  /* ---- report ---- */
+  .rephead{display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; padding:2px 4px 16px}
+  .reptitle h1{margin:0; font-size:22px; font-weight:800; letter-spacing:-.4px}
+  .reptitle p{margin:5px 0 0; font-size:13px; color:var(--muted)}
+  .repctrl{display:flex; align-items:center; gap:8px; margin-left:auto; flex-wrap:wrap}
+  .repctrl select{border:1px solid var(--line); background:#fff; border-radius:9px; padding:9px 12px; font-weight:700; font-size:13px; color:var(--navy)}
+  .repctrl button{border:1px solid var(--line); background:#fff; border-radius:9px; padding:9px 13px; font-weight:700; font-size:13px; color:var(--navy2)}
+  .repctrl button:hover{background:#f1f4f7}
+  .repctrl button:disabled{opacity:.35; cursor:not-allowed}
+  .repctrl .lbl{min-width:172px; text-align:center; font-weight:800; font-size:13.5px; background:var(--navy); color:#fff; padding:9px 14px; border-radius:9px}
+  .repctrl .btn-print{background:var(--teal); color:#fff; border-color:var(--teal)}
+  .repctrl .btn-print:hover{background:#0c918d; color:#fff}
+
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px}
+  .kpi{background:#fff; border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); padding:16px 18px}
+  .kpi .k{font-size:12px; font-weight:700; color:var(--muted)}
+  .kpi .v{font-size:29px; font-weight:800; letter-spacing:-1px; margin-top:6px; line-height:1.1}
+  .kpi .d{font-size:12px; font-weight:700; margin-top:6px; color:var(--muted)}
+  .kpi .d.up{color:var(--green)} .kpi .d.down{color:var(--red)}
+  .kpi.main .v{color:var(--teal)}
+
+  .repgrid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:18px}
+  .segrow{display:flex; align-items:center; gap:12px; padding:10px 2px; border-bottom:1px solid #F0F3F6}
+  .segrow:last-child{border-bottom:0}
+  .segrow .sn{width:76px; font-size:13px; font-weight:700; color:#46566a}
+  .segrow .strack{flex:1; height:16px; background:#F4F6F8; border-radius:6px; overflow:hidden; display:block}
+  .segrow .sfill{display:block; height:100%; border-radius:6px; background:linear-gradient(90deg,#5fc9c4,#0EA5A0)}
+  .segrow.cho .sfill{background:linear-gradient(90deg,#f0c579,#E0A93B)}
+  .segrow.jae .sfill{background:linear-gradient(90deg,#8ebbe6,#2E72B8)}
+  .segrow .sc{flex:0 0 auto; min-width:118px; text-align:right; font-size:12.5px; color:var(--muted); white-space:nowrap}
+  .segrow .sc b{color:var(--ink); font-size:14px}
+  .moneyrow{display:flex; justify-content:space-between; align-items:baseline; padding:11px 2px; border-bottom:1px solid #F0F3F6}
+  .moneyrow:last-child{border-bottom:0}
+  .moneyrow .ml{font-size:13px; font-weight:700; color:#46566a}
+  .moneyrow .mv{font-size:17px; font-weight:800}
+  .moneyrow .mv.o{color:var(--green)} .moneyrow .mv.x{color:var(--red)}
+  .trend .prog{display:inline-block; font-size:10.5px; font-weight:800; color:#0EA5A0;
+    background:#E6F7F6; padding:2px 7px; border-radius:99px; margin-left:5px; vertical-align:middle}
+  #rep-note textarea{width:100%; min-height:110px; border:1px solid var(--line); border-radius:10px; padding:12px;
+    font-family:inherit; font-size:13.5px; line-height:1.7; color:var(--ink); resize:vertical; background:#FCFDFE}
+  #rep-note .nhint{font-size:12px; color:var(--muted); padding-top:8px}
+
+  /* ---- print ---- */
+  @media print{
+    @page{size:A4; margin:12mm}
+    body{background:#fff}
+    header, .tabs, .repctrl, #toast, .hint{display:none !important}
+    main{max-width:none; padding:0}
+    .view{display:none !important}
+    .view#view-report{display:block !important}
+    .block, .kpi{box-shadow:none; border:1px solid #D8DEE5; break-inside:avoid}
+    .repgrid{break-inside:avoid}
+    #rep-note textarea{border:1px solid #D8DEE5; min-height:90px}
+  }
+
+  /* ---- toast ---- */
+  #toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px);
+    background:var(--navy); color:#fff; padding:12px 20px; border-radius:11px; font-weight:700; font-size:13.5px;
+    box-shadow:0 10px 30px rgba(28,43,74,.3); opacity:0; pointer-events:none; transition:.25s; z-index:60; max-width:90vw}
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  #toast.warn{background:#B9770E}
+
+  @media (max-width:1080px){
+    .grid{grid-template-columns:repeat(4,1fr)}
+    .lower{grid-template-columns:1fr}
+  }
+  @media (max-width:680px){
+    .grid{grid-template-columns:repeat(2,1fr)}
+    .statgrid{grid-template-columns:1fr}
+    .nav .lbl{min-width:120px; font-size:12.5px}
+    .brand{font-size:15px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span>에브리업의원 · 상담 결제 전환 관리</div>
+  <div class="tabs">
+    <button id="tabInput" class="on" onclick="switchView('input')">상담 입력</button>
+    <button id="tabDash" onclick="switchView('dash')">대시보드</button>
+    <button id="tabReport" onclick="switchView('report')">보고서</button>
+  </div>
+  <div class="spacer"></div>
+  <span class="save-chip" id="saveChip"><b>●</b> 자동 저장됨</span>
+  <button class="topbtn" id="refreshBtn" onclick="refreshCloud()" title="구글 시트에서 최신 데이터 불러오기">↻ 새로고침</button>
+  <button class="topbtn" onclick="exportJSON()">백업 내보내기</button>
+  <button class="topbtn" onclick="document.getElementById('importFile').click()">가져오기</button>
+  <button class="topbtn" onclick="exportCSV()">CSV (엑셀)</button>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+</header>
+
+<main>
+  <!-- ============ INPUT VIEW ============ -->
+  <section id="view-input" class="view on">
+    <div class="panel formwrap">
+      <h2>새 상담 기록 추가</h2>
+      <div class="grid">
+        <div class="field"><label>날짜</label><input type="date" id="f_date"></div>
+        <div class="field"><label>환자 이니셜</label><input type="text" id="f_name" placeholder="예) 홍길동" maxlength="20"></div>
+        <div class="field"><label>초/재진</label>
+          <select id="f_rj"><option value="">-</option><option>초진</option><option>재진</option></select></div>
+        <div class="field"><label>상담 종류</label>
+          <select id="f_type"><option>선상담</option><option selected>후상담</option><option>단독상담</option></select></div>
+        <div class="field"><label>시술 내용</label><input type="text" id="f_proc" placeholder="예) BBL, 토닝"></div>
+        <div class="field"><label>상담 금액</label><input type="text" id="f_amt" inputmode="numeric" placeholder="0"></div>
+        <div class="field"><label>결제</label>
+          <select id="f_pay"><option value="">미정</option><option>O</option><option>X</option></select></div>
+        <div class="field"><label>미결제 사유</label>
+          <select id="f_reason"><option value="">-</option><option>가격 부담</option><option>고민 중</option><option>타원 비교</option><option>시간 필요</option><option>기타</option></select></div>
+        <div class="field"><label>메모</label><input type="text" id="f_memo" placeholder="자유 입력"></div>
+      </div>
+      <div class="formactions">
+        <button class="btn btn-primary" id="addBtn" onclick="saveRecord()">기록 추가</button>
+        <button class="btn btn-ghost" id="cancelBtn" style="display:none" onclick="cancelEdit()">취소</button>
+        <span class="editing-flag" id="editFlag">수정 중</span>
+      </div>
+    </div>
+
+    <div class="recwrap">
+      <div class="head">
+        <h2>상담 기록</h2>
+        <span class="cnt" id="recCount"></span>
+      </div>
+      <div class="tablescroll">
+        <table>
+          <thead><tr>
+            <th>날짜</th><th>환자</th><th>초/재진</th><th>상담종류</th><th style="text-align:left">시술 내용</th>
+            <th>금액</th><th>결제</th><th>미결제 사유</th><th style="text-align:left">메모</th><th></th>
+          </tr></thead>
+          <tbody id="recBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DASHBOARD VIEW ============ -->
+  <section id="view-dash" class="view">
+    <div class="periods">
+      <div class="pcard day">
+        <div class="bar">
+          <span class="ttl">📅 일별 전환율</span>
+          <div class="nav">
+            <button onclick="nav('day',-1)">◀ 이전</button>
+            <span class="lbl" id="lbl-day"></span>
+            <button id="next-day" onclick="nav('day',1)">다음 ▶</button>
+            <button class="today" onclick="navToday('day')">오늘</button>
+          </div>
+        </div>
+        <div class="statgrid" id="grid-day"></div>
+      </div>
+
+      <div class="pcard week">
+        <div class="bar">
+          <span class="ttl">📆 주별 전환율</span>
+          <div class="nav">
+            <button onclick="nav('week',-1)">◀ 이전</button>
+            <span class="lbl" id="lbl-week"></span>
+            <button id="next-week" onclick="nav('week',1)">다음 ▶</button>
+            <button class="today" onclick="navToday('week')">이번 주</button>
+          </div>
+        </div>
+        <div class="statgrid" id="grid-week"></div>
+      </div>
+
+      <div class="pcard month">
+        <div class="bar">
+          <span class="ttl">🗓️ 월별 전환율</span>
+          <div class="nav">
+            <button onclick="nav('month',-1)">◀ 이전</button>
+            <span class="lbl" id="lbl-month"></span>
+            <button id="next-month" onclick="nav('month',1)">다음 ▶</button>
+            <button class="today" onclick="navToday('month')">이번 달</button>
+          </div>
+        </div>
+        <div class="statgrid" id="grid-month"></div>
+      </div>
+    </div>
+
+    <div class="block" style="margin-top:18px">
+      <div class="bhead">❌ 미결제 사유 <span style="font-weight:600;opacity:.8;font-size:12.5px" id="reason-period"></span><span id="reason-total" style="margin-left:auto;font-size:12.5px;font-weight:700;background:rgba(255,255,255,.16);padding:3px 10px;border-radius:99px"></span></div>
+      <div class="bbody" id="reasonBody"></div>
+    </div>
+
+    <p class="hint">
+      <b>전환율</b> = 결제 O / 해당 기간 전체 상담 수 (미정 포함). &nbsp;·&nbsp;
+      <b>주</b>는 월요일~일요일 기준이며, <b>진행 중인 기간은 오늘까지 입력된 내용으로 계산</b>됩니다. &nbsp;·&nbsp; ◀ 이전 / 다음 ▶ 버튼으로 과거를 넘겨 보세요.<br>
+      월별·주별 <b>추이 그래프는 보고서 탭</b>에 있습니다. &nbsp;·&nbsp;
+      데이터는 이 브라우저에 자동 저장됩니다. 가끔 <b>백업 내보내기</b>를 눌러 파일로 저장해 두세요.
+    </p>
+  </section>
+
+  <!-- ============ REPORT VIEW ============ -->
+  <section id="view-report" class="view">
+    <div class="rephead">
+      <div class="reptitle">
+        <h1 id="rep-title">월간 상담 결제 전환 보고서</h1>
+        <p id="rep-sub"></p>
+      </div>
+      <div class="repctrl">
+        <select id="rep-range" onchange="repOff=0; renderReport()">
+          <option value="month">월간</option>
+          <option value="week">주간</option>
+        </select>
+        <button onclick="repNav(-1)">◀ 이전</button>
+        <span class="lbl" id="rep-lbl"></span>
+        <button id="rep-next" onclick="repNav(1)">다음 ▶</button>
+        <button class="btn-print" onclick="window.print()">🖨️ 인쇄 / PDF</button>
+      </div>
+    </div>
+
+    <div class="kpis" id="rep-kpis"></div>
+
+    <div class="repgrid">
+      <div class="block">
+        <div class="bhead">📊 상담 종류별</div>
+        <div class="bbody" id="rep-bytype"></div>
+      </div>
+      <div class="block">
+        <div class="bhead">🆕🔁 초진 / 재진별</div>
+        <div class="bbody" id="rep-byrj"></div>
+      </div>
+    </div>
+
+    <div class="repgrid">
+      <div class="block">
+        <div class="bhead">❌ 미결제 사유</div>
+        <div class="bbody" id="rep-reasons"></div>
+      </div>
+      <div class="block">
+        <div class="bhead">💰 결제 금액</div>
+        <div class="bbody" id="rep-money"></div>
+      </div>
+    </div>
+
+    <div class="block" style="margin-top:18px">
+      <div class="bhead">🗓️ 월별 전환율 추이 <span style="font-weight:600;opacity:.8;font-size:12.5px">· 최근 6개월</span></div>
+      <div class="chartbox"><svg id="chart-month" viewBox="0 0 900 230" preserveAspectRatio="xMidYMid meet"></svg></div>
+      <div class="clegend"><span><i class="lo"></i>결제 O</span><span><i class="lx"></i>미결제·미정</span>
+        <span style="color:#7D3C98"><i class="ll"></i><span style="color:var(--muted)">전환율(%)</span></span>
+        <span style="margin-left:auto">막대 = 상담 건수 · 초록 비율이 곧 전환율</span></div>
+      <div style="overflow-x:auto">
+        <table class="trend">
+          <thead><tr><th>월</th><th>전체</th><th>후상담</th><th>🆕 초진</th><th>🔁 재진</th><th>결제 O</th><th>상담수</th></tr></thead>
+          <tbody id="trendBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="block" style="margin-top:18px">
+      <div class="bhead">📆 주별 전환율 추이 <span style="font-weight:600;opacity:.8;font-size:12.5px">· 최근 8주 (월~일)</span></div>
+      <div class="chartbox"><svg id="chart-week" viewBox="0 0 900 230" preserveAspectRatio="xMidYMid meet"></svg></div>
+      <div class="clegend"><span><i class="lo"></i>결제 O</span><span><i class="lx"></i>미결제·미정</span>
+        <span style="color:#2E86C1"><i class="ll"></i><span style="color:var(--muted)">전환율(%)</span></span>
+        <span style="margin-left:auto">막대 = 상담 건수 · 초록 비율이 곧 전환율</span></div>
+      <div style="overflow-x:auto">
+        <table class="trend">
+          <thead><tr><th>주 (월~일)</th><th>전체</th><th>후상담</th><th>🆕 초진</th><th>🔁 재진</th><th>결제 O</th><th>상담수</th></tr></thead>
+          <tbody id="trendWeekBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="block" style="margin-top:18px">
+      <div class="bhead">📝 총평 / 액션 플랜</div>
+      <div class="bbody" id="rep-note"></div>
+    </div>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* ---------- storage: 구글 시트 연동 + 로컬 캐시 ---------- */
+/*  ▼▼▼  설치 후 여기에 Apps Script 웹앱 URL을 붙여넣으세요  ▼▼▼  */
+const CLOUD_URL = "https://script.google.com/macros/s/AKfycbwgXAbXPXC8LD7JhTnWFhBWsF4cJISfWw2P2ds1m9qqjjoUhdB33U6YkLNHUGNHnfNw/exec";
+/*  ▲▲▲  비워두면 예전처럼 이 브라우저에만 저장(오프라인)됩니다  ▲▲▲  */
+
+const KEY='everyup_consult_v1';
+const NOTE_KEY='everyup_report_notes_v1';
+let memFallback=null, storageOK=true;
+let cloudOn = !!CLOUD_URL;
+let syncing=false;
+
+function localLoad(){
+  try{ const r=localStorage.getItem(KEY); return r?JSON.parse(r):null; }
+  catch(e){ storageOK=false; return memFallback; }
+}
+function localSave(){
+  try{ localStorage.setItem(KEY, JSON.stringify(records)); }
+  catch(e){ storageOK=false; memFallback=records; }
+}
+function loadNotes(){
+  try{ return JSON.parse(localStorage.getItem(NOTE_KEY)||'{}'); }catch(e){ return {}; }
+}
+function saveNotesObj(n){ try{ localStorage.setItem(NOTE_KEY, JSON.stringify(n)); }catch(e){} }
+
+/* 상태 표시 */
+function setChip(html){ const c=document.getElementById('saveChip'); if(c) c.innerHTML=html; }
+function chipSaved(){ setChip(cloudOn?'<b>●</b> 구글 시트에 저장됨':'<b>●</b> 자동 저장됨(이 PC)'); }
+function chipSyncing(){ setChip('<b style="color:#8fd3ff">↻</b> 동기화 중…'); }
+function chipError(){ setChip('<b style="color:#ffb84d">●</b> 동기화 실패 · 로컬 저장됨'); }
+
+/* saveAll(): 로컬에 먼저 저장 → 클라우드로 전송 */
+function saveAll(){
+  localSave();
+  if(!cloudOn){ chipSaved(); return; }
+  pushCloud();
+}
+function pushCloud(){
+  if(!cloudOn) return;
+  chipSyncing();
+  fetch(CLOUD_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},  // 프리플라이트 회피
+    body: JSON.stringify({action:'saveAll', records, notes:loadNotes()})
+  }).then(r=>r.json()).then(res=>{
+    if(res && res.ok){ chipSaved(); } else { chipError(); }
+  }).catch(()=>chipError());
+}
+/* 클라우드에서 최신 데이터 받아오기 */
+function pullCloud(silent){
+  if(!cloudOn) return Promise.resolve(false);
+  if(!silent) chipSyncing();
+  return fetch(CLOUD_URL, {method:'GET'})
+    .then(r=>r.json())
+    .then(res=>{
+      if(res && res.ok && Array.isArray(res.records)){
+        records = res.records;
+        localSave();
+        if(res.notes) saveNotesObj(res.notes);
+        chipSaved();
+        return true;
+      }
+      chipError(); return false;
+    }).catch(()=>{ chipError(); return false; });
+}
+function refreshCloud(){
+  if(!cloudOn){ toast('구글 시트 연동이 설정되지 않았습니다.',true); return; }
+  pullCloud().then(ok=>{
+    if(ok){ renderRecords(); if(document.getElementById('view-dash').classList.contains('on')) renderDash();
+      if(document.getElementById('view-report').classList.contains('on')) renderReport();
+      toast('최신 데이터를 불러왔습니다.'); }
+  });
+}
+
+/* ---------- seed data (기존 17건) ---------- */
+const SEED=[
+ ["2026-06-19","최여은","","후상담","토닝",1000000,"X","고민 중","복직"],
+ ["2026-06-19","강은형","","후상담","BBL, 토닝",1100000,"X","시간 필요","남편과 상의"],
+ ["2026-06-19","김지은","","후상담","BBL",1100000,"X","기타","시간부족 바로귀가"],
+ ["2026-06-19","박영희","","후상담","실리프팅, BBL",4200000,"X","기타","시술 거부감"],
+ ["2026-06-19","맹천영","","후상담","토닝, BBL, moxi",2100000,"X","기타","아내(박영희님) 상의 필요"],
+ ["2026-06-20","정은이","","후상담","실팅, moxi, 보톡스",2000000,"X","타원 비교","울산 거주"],
+ ["2026-06-22","고태훈","초진","후상담","지방파괴주사, 인모드",825000,"O","",""],
+ ["2026-06-22","이욱","","후상담","리투오",1500000,"X","시간 필요","추후 결정"],
+ ["2026-06-23","최민희","초진","후상담","BBL, moxi",2000000,"O","",""],
+ ["2026-06-25","홍다혜","초진","후상담","여드름/모공관리 5회(포텐자)",1375000,"O","",""],
+ ["2026-06-25","강나주","","후상담","기본토닝 10회",770000,"O","","추후관리"],
+ ["2026-06-25","조민주","","후상담","BBL 3회",121100,"X","기타","빨리 귀가 · BBL 2가지 모드(색소톤업만)"],
+ ["2026-06-26","도현지","","후상담","포텐자, 모노실, 웰스톡스",1390000,"O","","팔자·마리오넷"],
+ ["2026-06-26","최성희","","후상담","인모드",198000,"O","","양쪽 볼 부위"],
+ ["2026-06-26","장성유","","후상담","더블네오페이스",1012000,"O","","리프팅"],
+ ["2026-06-27","김은민","","후상담","moxi + 세렉소",1100000,"O","",""],
+ ["2026-06-29","노혜진","","후상담","",0,"","",""]
+];
+function seedRecords(){
+  return SEED.map((r,i)=>({
+    id:'seed'+i+'_'+Date.now(), date:r[0], name:r[1], rj:r[2], type:r[3],
+    proc:r[4], amt:r[5]||0, pay:r[6], reason:r[7], memo:r[8]
+  }));
+}
+
+/* 초기 로드: 로컬 캐시로 즉시 표시 → 클라우드 있으면 최신으로 갱신 */
+let records = localLoad();
+if(records===null){ records = cloudOn ? [] : seedRecords(); if(!cloudOn) localSave(); }
+
+/* ---------- date helpers ---------- */
+const WEEK_KO=['일','월','화','수','목','금','토'];
+function pd(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function fd(dt){ return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
+function todayD(){ const t=new Date(); return new Date(t.getFullYear(),t.getMonth(),t.getDate()); }
+function addDays(dt,n){ return new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()+n); }
+function monStart(dt){ const dow=(dt.getDay()+6)%7; return addDays(dt,-dow); } // Monday
+function inRange(s,a,b){ return s>=a && s<=b; }
+
+/* ---------- offsets ---------- */
+let off={day:0, week:0, month:0};
+
+function dayPeriod(){
+  const d=addDays(todayD(), off.day);
+  return {a:fd(d), b:fd(d), label:`${d.getMonth()+1}/${d.getDate()} (${WEEK_KO[d.getDay()]})`+(off.day===0?' · 오늘':'')};
+}
+function weekPeriod(){
+  const base=addDays(todayD(), off.week*7);
+  const ms=monStart(base), me=addDays(ms,6);
+  const lbl=`${ms.getMonth()+1}/${ms.getDate()} ~ ${me.getMonth()+1}/${me.getDate()}`+(off.week===0?' · 이번 주':'');
+  return {a:fd(ms), b:fd(me), label:lbl};
+}
+function monthPeriod(){
+  const t=todayD(); const d=new Date(t.getFullYear(), t.getMonth()+off.month, 1);
+  const ms=new Date(d.getFullYear(),d.getMonth(),1), me=new Date(d.getFullYear(),d.getMonth()+1,0);
+  const lbl=`${d.getFullYear()}년 ${d.getMonth()+1}월`+(off.month===0?' · 이번 달':'');
+  return {a:fd(ms), b:fd(me), label:lbl};
+}
+
+/* ---------- stats ---------- */
+function statFor(a,b, seg){
+  // seg: {field:'type'|'rj', val:'후상담'} or null for 전체
+  let tot=0,o=0,x=0;
+  for(const r of records){
+    if(!r.date || !inRange(r.date,a,b)) continue;
+    if(seg){ if((r[seg.field]||'')!==seg.val) continue; }
+    tot++;
+    if(r.pay==='O') o++; else if(r.pay==='X') x++;
+  }
+  return {tot,o,x, rate: tot? o/tot : 0};
+}
+const REASONS=['가격 부담','고민 중','타원 비교','시간 필요','기타'];
+function reasonBreakdown(a,b){
+  const m={}; REASONS.forEach(r=>m[r]=0); let total=0;
+  for(const r of records){
+    if(!r.date||!inRange(r.date,a,b)) continue;
+    if(r.pay!=='X') continue;
+    let rs=r.reason||''; if(!REASONS.includes(rs)) rs='기타';
+    m[rs]++; total++;
+  }
+  return {m,total};
+}
+
+/* ---------- render: input ---------- */
+let editingId=null;
+function fmtNum(n){ return (n||0).toLocaleString('ko-KR'); }
+function renderRecords(){
+  const body=document.getElementById('recBody');
+  const sorted=[...records].sort((p,q)=> (q.date||'').localeCompare(p.date||'') || (q.id>p.id?1:-1));
+  document.getElementById('recCount').textContent='총 '+records.length+'건';
+  if(records.length===0){ body.innerHTML='<tr><td colspan="10" class="empty">아직 기록이 없습니다. 위에서 첫 상담을 추가해 보세요.</td></tr>'; return; }
+  body.innerHTML=sorted.map(r=>{
+    const rj = r.rj==='초진'?'<span class="tag cho">초진</span>':r.rj==='재진'?'<span class="tag jae">재진</span>':'<span class="tag none">-</span>';
+    const pay = r.pay==='O'?'<span class="pay O">O</span>':r.pay==='X'?'<span class="pay X">X</span>':'<span class="pay none">·</span>';
+    const dd = r.date? r.date.slice(5).replace('-','/')+` (${WEEK_KO[pd(r.date).getDay()]})` : '-';
+    return `<tr>
+      <td class="num">${dd}</td>
+      <td><b>${esc(r.name)}</b></td>
+      <td>${rj}</td>
+      <td>${esc(r.type||'')}</td>
+      <td class="lft">${esc(r.proc||'')}</td>
+      <td class="num">${r.amt?fmtNum(r.amt):'-'}</td>
+      <td>${pay}</td>
+      <td>${esc(r.reason||'')}</td>
+      <td class="lft" style="color:#8190a0">${esc(r.memo||'')}</td>
+      <td style="white-space:nowrap">
+        <button class="rowbtn" onclick="editRecord('${r.id}')">수정</button>
+        <button class="rowbtn del" onclick="delRecord('${r.id}')">삭제</button>
+      </td></tr>`;
+  }).join('');
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- form actions ---------- */
+function resetForm(){
+  document.getElementById('f_date').value=fd(todayD());
+  document.getElementById('f_name').value='';
+  document.getElementById('f_rj').value='';
+  document.getElementById('f_type').value='후상담';
+  document.getElementById('f_proc').value='';
+  document.getElementById('f_amt').value='';
+  document.getElementById('f_pay').value='';
+  document.getElementById('f_reason').value='';
+  document.getElementById('f_memo').value='';
+}
+function saveRecord(){
+  const name=document.getElementById('f_name').value.trim();
+  const date=document.getElementById('f_date').value;
+  if(!date){ toast('날짜를 입력하세요.',true); return; }
+  if(!name){ toast('환자 이니셜을 입력하세요.',true); document.getElementById('f_name').focus(); return; }
+  const rec={
+    date, name,
+    rj:document.getElementById('f_rj').value,
+    type:document.getElementById('f_type').value,
+    proc:document.getElementById('f_proc').value.trim(),
+    amt:parseInt((document.getElementById('f_amt').value||'').replace(/[^0-9]/g,''))||0,
+    pay:document.getElementById('f_pay').value,
+    reason:document.getElementById('f_reason').value,
+    memo:document.getElementById('f_memo').value.trim()
+  };
+  if(editingId){
+    const i=records.findIndex(r=>r.id===editingId);
+    if(i>=0) records[i]={...records[i],...rec};
+    cancelEdit(); toast('수정되었습니다.');
+  }else{
+    rec.id='r'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    records.push(rec); toast('기록이 추가되었습니다.');
+  }
+  saveAll(); renderRecords(); resetForm();
+  document.getElementById('f_name').focus();
+}
+function editRecord(id){
+  const r=records.find(x=>x.id===id); if(!r) return;
+  editingId=id;
+  document.getElementById('f_date').value=r.date;
+  document.getElementById('f_name').value=r.name;
+  document.getElementById('f_rj').value=r.rj||'';
+  document.getElementById('f_type').value=r.type||'후상담';
+  document.getElementById('f_proc').value=r.proc||'';
+  document.getElementById('f_amt').value=r.amt||'';
+  document.getElementById('f_pay').value=r.pay||'';
+  document.getElementById('f_reason').value=r.reason||'';
+  document.getElementById('f_memo').value=r.memo||'';
+  document.body.classList.add('editing');
+  document.getElementById('addBtn').textContent='수정 저장';
+  document.getElementById('cancelBtn').style.display='inline-block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function cancelEdit(){
+  editingId=null;
+  document.body.classList.remove('editing');
+  document.getElementById('addBtn').textContent='기록 추가';
+  document.getElementById('cancelBtn').style.display='none';
+  resetForm();
+}
+function delRecord(id){
+  const r=records.find(x=>x.id===id);
+  if(!confirm(`'${r?r.name:''}' 기록을 삭제할까요?`)) return;
+  records=records.filter(x=>x.id!==id);
+  if(editingId===id) cancelEdit();
+  saveAll(); renderRecords(); renderDash(); toast('삭제되었습니다.');
+}
+
+/* ---------- render: dashboard ---------- */
+const ROWS=[
+  {key:'all', nm:'전체', cls:'s-all', seg:null},
+  {key:'선상담', nm:'선상담', cls:'s-type', seg:{field:'type',val:'선상담'}},
+  {key:'후상담', nm:'후상담', cls:'s-type hl', seg:{field:'type',val:'후상담'}},
+  {key:'단독상담', nm:'단독상담', cls:'s-type', seg:{field:'type',val:'단독상담'}},
+  {key:'초진', nm:'🆕 초진', cls:'s-cho', seg:{field:'rj',val:'초진'}},
+  {key:'재진', nm:'🔁 재진', cls:'s-jae', seg:{field:'rj',val:'재진'}},
+];
+function renderGrid(elId, a, b){
+  const el=document.getElementById(elId);
+  el.innerHTML=ROWS.map(row=>{
+    const s=statFor(a,b,row.seg);
+    const pct=(s.rate*100).toFixed(s.rate>0&&s.rate<0.1?0:1);
+    const zero = s.tot===0;
+    return `<div class="stat ${row.cls}">
+      <div class="nm">${row.nm}</div>
+      <div class="rate num ${zero?'zero':''}">${zero?'–':pct+'%'}</div>
+      <div class="bartrack"><div class="barfill" style="width:${Math.round(s.rate*100)}%"></div></div>
+      <div class="sub num"><span>상담 <b>${s.tot}</b></span><span class="ox o">O ${s.o}</span><span class="ox x">X ${s.x}</span></div>
+    </div>`;
+  }).join('');
+}
+function renderReasons(a,b,label){
+  document.getElementById('reason-period').textContent='· '+label.replace(/ · .*/,'');
+  const {m,total}=reasonBreakdown(a,b);
+  document.getElementById('reason-total').textContent='미결제 '+total+'건';
+  const body=document.getElementById('reasonBody');
+  if(total===0){ body.innerHTML='<div class="reason-empty">이 기간에는 미결제(X) 기록이 없습니다.</div>'; return; }
+  body.innerHTML=REASONS.map(r=>{
+    const c=m[r], p=total?Math.round(c/total*100):0;
+    return `<div class="reason">
+      <span class="rn">${r}</span>
+      <span class="rtrack"><span class="rfill" style="width:${p}%"></span></span>
+      <span class="rc"><b>${c}</b>건 · ${p}%</span></div>`;
+  }).join('');
+}
+/* ---------- charts (SVG) ---------- */
+function drawChart(svgId, pts, opt){
+  // pts: [{label, rate, tot, o, x}] ; opt:{w,h,color}
+  const svg=document.getElementById(svgId); if(!svg) return;
+  const W=opt.w, H=opt.h, L=38, R=14, T=40, B=30;   // T 넉넉히: 건수 라벨 자리
+  const iw=W-L-R, ih=H-T-B;
+  const n=pts.length, step= n>1 ? iw/(n-1) : 0;
+  const bw=Math.min(34, (iw/Math.max(n,1))*0.46);
+  const y=v=>T+ih-(v*ih);                            // v: 0..1 (전환율 축)
+  const x=i=> n>1 ? L+i*step : L+iw/2;
+  const maxTot=Math.max(1,...pts.map(p=>p.tot));
+  const barTop=p=> T+ih-((p.tot/maxTot)*ih*0.86);    // 막대 윗변 y좌표
+  let s='';
+
+  // grid + y labels
+  [0,0.5,1].forEach(v=>{
+    s+=`<line class="cx-grid" x1="${L}" y1="${y(v)}" x2="${W-R}" y2="${y(v)}"/>`;
+    s+=`<text class="cx-axis" x="${L-8}" y="${y(v)+4}" text-anchor="end">${v*100}%</text>`;
+  });
+
+  // stacked bars: 결제 O(초록) + 미결제·미정(연회색)
+  pts.forEach((p,i)=>{
+    if(!p.tot) return;
+    const bt=barTop(p), bh=T+ih-bt;
+    const oh=bh*(p.o/p.tot);                          // O 비율만큼 초록
+    const bx=x(i)-bw/2;
+    // 나머지(미결제+미정) 먼저: 막대 전체 배경
+    s+=`<rect class="cx-bar" x="${bx}" y="${bt}" width="${bw}" height="${bh}" fill="#D64541" opacity="0.16"/>`;
+    // 결제 O: 아래에서부터 초록
+    if(oh>0) s+=`<rect class="cx-bar" x="${bx}" y="${T+ih-oh}" width="${bw}" height="${oh}" fill="#1E8E54" opacity="0.30"/>`;
+    // 건수 라벨: 막대 바로 위
+    s+=`<text class="cx-cnt" x="${x(i)}" y="${bt-7}" text-anchor="middle">${p.tot}건</text>`;
+  });
+
+  // 전환율 꺾은선
+  const has=pts.map((p,i)=>({...p,i})).filter(p=>p.tot>0);
+  if(has.length>1){
+    s+=`<path class="cx-line" stroke="${opt.color}" d="${has.map((p,k)=>(k?'L':'M')+x(p.i)+' '+y(p.rate)).join(' ')}"/>`;
+  }
+
+  // 점 + % 라벨 (건수 라벨과 겹치면 아래로 피함)
+  pts.forEach((p,i)=>{
+    if(!p.tot){
+      s+=`<text class="cx-none" x="${x(i)}" y="${y(0)-8}" text-anchor="middle">–</text>`;
+    }else{
+      const py=y(p.rate), cntY=barTop(p)-7;
+      // % 라벨: 점 위/아래 후보 중 건수 라벨에서 더 멀리 떨어지는 쪽 선택
+      const cand=[py-11, py+17];
+      let ly=cand[0], best=-1;
+      cand.forEach(c=>{ const d=Math.abs(c-cntY); if(d>best){best=d; ly=c;} });
+      if(best<14) ly=cntY+20;   // 둘 다 붙으면 건수 라벨 아래로 확실히 내림
+      s+=`<circle cx="${x(i)}" cy="${py}" r="4.5" fill="#fff" stroke="${opt.color}" stroke-width="2.5"/>`;
+      s+=`<text class="cx-val" x="${x(i)}" y="${ly}" text-anchor="middle" fill="${opt.color}">${Math.round(p.rate*100)}%</text>`;
+    }
+    s+=`<text class="cx-axis" x="${x(i)}" y="${H-10}" text-anchor="middle">${p.label}</text>`;
+  });
+  svg.innerHTML=s;
+}
+
+/* ---------- trends ---------- */
+function monthBuckets(count){
+  const t=todayD(), tf=fd(t), out=[];
+  for(let k=-(count-1);k<=0;k++){
+    const d=new Date(t.getFullYear(), t.getMonth()+k, 1);
+    const endFull=fd(new Date(d.getFullYear(),d.getMonth()+1,0));
+    const cur=(k===0);
+    out.push({
+      a:fd(new Date(d.getFullYear(),d.getMonth(),1)),
+      b: cur && tf<endFull ? tf : endFull,   // 진행 중이면 오늘까지만 집계
+      partial: cur && tf<endFull,
+      full:`${d.getFullYear()}년 ${d.getMonth()+1}월`,
+      short:`${d.getMonth()+1}월`, cur
+    });
+  }
+  return out;
+}
+function weekBuckets(count){
+  const t=todayD(), tf=fd(t), base=monStart(t), out=[];
+  for(let k=-(count-1);k<=0;k++){
+    const ms=addDays(base,k*7), me=addDays(ms,6);
+    const endFull=fd(me), cur=(k===0);
+    out.push({
+      a:fd(ms),
+      b: cur && tf<endFull ? tf : endFull,   // 진행 중이면 오늘까지만 집계
+      partial: cur && tf<endFull,
+      full:`${ms.getMonth()+1}/${ms.getDate()} ~ ${me.getMonth()+1}/${me.getDate()}`,
+      short:`${ms.getMonth()+1}/${ms.getDate()}`, cur
+    });
+  }
+  return out;
+}
+function trendRow(bk){
+  const all=statFor(bk.a,bk.b,null);
+  const hu=statFor(bk.a,bk.b,{field:'type',val:'후상담'});
+  const cho=statFor(bk.a,bk.b,{field:'rj',val:'초진'});
+  const jae=statFor(bk.a,bk.b,{field:'rj',val:'재진'});
+  return {all,hu,cho,jae};
+}
+const cellPct = s => s.tot? `<b class="num">${(s.rate*100).toFixed(1)}%</b>` : '<span class="dash">–</span>';
+
+function renderTrend(){
+  const mb=monthBuckets(6);
+  document.getElementById('trendBody').innerHTML = mb.map(bk=>{
+    const r=trendRow(bk);
+    return `<tr class="${bk.cur?'cur':''}">
+      <td class="mon">${bk.full}${bk.partial?' <span class="prog">진행 중</span>':''}</td>
+      <td>${cellPct(r.all)}</td><td>${cellPct(r.hu)}</td><td>${cellPct(r.cho)}</td><td>${cellPct(r.jae)}</td>
+      <td class="num" style="color:#1E8E54;font-weight:700">${r.all.o}</td>
+      <td class="num">${r.all.tot}</td></tr>`;
+  }).join('');
+  drawChart('chart-month', mb.map(bk=>{
+    const s=statFor(bk.a,bk.b,null);
+    return {label:bk.short, rate:s.rate, tot:s.tot, o:s.o, x:s.x};
+  }), {w:900,h:230,color:'#7D3C98'});
+
+  const wb=weekBuckets(8);
+  document.getElementById('trendWeekBody').innerHTML = wb.map(bk=>{
+    const r=trendRow(bk);
+    return `<tr class="${bk.cur?'cur':''}">
+      <td class="mon">${bk.full}${bk.partial?' <span class="prog">진행 중</span>':''}</td>
+      <td>${cellPct(r.all)}</td><td>${cellPct(r.hu)}</td><td>${cellPct(r.cho)}</td><td>${cellPct(r.jae)}</td>
+      <td class="num" style="color:#1E8E54;font-weight:700">${r.all.o}</td>
+      <td class="num">${r.all.tot}</td></tr>`;
+  }).join('');
+  drawChart('chart-week', wb.map(bk=>{
+    const s=statFor(bk.a,bk.b,null);
+    return {label:bk.short, rate:s.rate, tot:s.tot, o:s.o, x:s.x};
+  }), {w:900,h:230,color:'#2E86C1'});
+}
+function renderDash(){
+  const dp=dayPeriod(), wp=weekPeriod(), mp=monthPeriod();
+  document.getElementById('lbl-day').textContent=dp.label;
+  document.getElementById('lbl-week').textContent=wp.label;
+  document.getElementById('lbl-month').textContent=mp.label;
+  renderGrid('grid-day', dp.a, dp.b);
+  renderGrid('grid-week', wp.a, wp.b);
+  renderGrid('grid-month', mp.a, mp.b);
+  renderReasons(mp.a, mp.b, mp.label);
+  document.getElementById('next-day').disabled = off.day>=0;
+  document.getElementById('next-week').disabled = off.week>=0;
+  document.getElementById('next-month').disabled = off.month>=0;
+}
+function nav(kind,dir){
+  off[kind]=Math.min(0, off[kind]+dir);
+  renderDash();
+}
+function navToday(kind){ off[kind]=0; renderDash(); }
+
+/* ---------- report ---------- */
+let repOff=0;
+function repPeriod(){
+  const kind=document.getElementById('rep-range').value;
+  const t=todayD();
+  if(kind==='week'){
+    const ms=addDays(monStart(t), repOff*7), me=addDays(ms,6);
+    const endFull=fd(me), partial = fd(t)<endFull && repOff===0;
+    return {kind, a:fd(ms), b: partial? fd(t) : endFull, partial,
+      lbl:`${ms.getMonth()+1}/${ms.getDate()} ~ ${me.getMonth()+1}/${me.getDate()}`+(repOff===0?' · 이번 주':''),
+      title:'주간 상담 결제 전환 보고서',
+      sub:`${ms.getFullYear()}년 ${ms.getMonth()+1}월 ${ms.getDate()}일 ~ ${me.getMonth()+1}월 ${me.getDate()}일 (월~일)  ·  에브리업의원`,
+      key:'W'+fd(ms),
+      prev:(()=>{const p=addDays(ms,-7);return {a:fd(p),b:fd(addDays(p,6))};})()};
+  }
+  const d=new Date(t.getFullYear(), t.getMonth()+repOff, 1);
+  const ms=new Date(d.getFullYear(),d.getMonth(),1), me=new Date(d.getFullYear(),d.getMonth()+1,0);
+  const p=new Date(d.getFullYear(),d.getMonth()-1,1);
+  const endFull=fd(me), partial = fd(t)<endFull && repOff===0;
+  return {kind:'month', a:fd(ms), b: partial? fd(t) : endFull, partial,
+    lbl:`${d.getFullYear()}년 ${d.getMonth()+1}월`+(repOff===0?' · 이번 달':''),
+    title:'월간 상담 결제 전환 보고서',
+    sub:`${d.getFullYear()}년 ${d.getMonth()+1}월 1일 ~ ${me.getMonth()+1}월 ${me.getDate()}일  ·  에브리업의원`,
+    key:'M'+fd(ms),
+    prev:{a:fd(new Date(p.getFullYear(),p.getMonth(),1)), b:fd(new Date(p.getFullYear(),p.getMonth()+1,0))}};
+}
+function repNav(dir){ repOff=Math.min(0, repOff+dir); renderReport(); }
+
+function renderReport(){
+  const P=repPeriod();
+  document.getElementById('rep-title').textContent=P.title;
+  document.getElementById('rep-sub').textContent=P.sub + (P.partial? '  ·  진행 중 (오늘까지 입력분 기준)' : '');
+  document.getElementById('rep-lbl').textContent=P.lbl;
+  document.getElementById('rep-next').disabled = repOff>=0;
+
+  const cur=statFor(P.a,P.b,null), prev=statFor(P.prev.a,P.prev.b,null);
+  const rows=records.filter(r=>r.date && inRange(r.date,P.a,P.b));
+  const paidAmt=rows.filter(r=>r.pay==='O').reduce((s,r)=>s+(r.amt||0),0);
+  const lostAmt=rows.filter(r=>r.pay==='X').reduce((s,r)=>s+(r.amt||0),0);
+  const avg = cur.o? Math.round(paidAmt/cur.o) : 0;
+
+  // KPI
+  let delta='';
+  if(prev.tot>0 && cur.tot>0){
+    const dp=(cur.rate-prev.rate)*100;
+    const cls= dp>0?'up': dp<0?'down':'';
+    const sign= dp>0?'▲':dp<0?'▼':'–';
+    delta=`<div class="d ${cls}">${sign} 지난 ${P.kind==='week'?'주':'달'} 대비 ${Math.abs(dp).toFixed(1)}%p</div>`;
+  }else{
+    delta=`<div class="d">비교 기간 데이터 없음</div>`;
+  }
+  document.getElementById('rep-kpis').innerHTML=`
+    <div class="kpi main"><div class="k">결제 전환율</div>
+      <div class="v num">${cur.tot? (cur.rate*100).toFixed(1)+'%':'–'}</div>${delta}</div>
+    <div class="kpi"><div class="k">총 상담</div><div class="v num">${cur.tot}<span style="font-size:15px;color:#9AA6B2">건</span></div>
+      <div class="d">결제 ${cur.o} · 미결제 ${cur.x}</div></div>
+    <div class="kpi"><div class="k">결제 매출</div><div class="v num" style="color:#1E8E54;font-size:24px">${fmtNum(paidAmt)}</div>
+      <div class="d">건당 평균 ${fmtNum(avg)}원</div></div>
+    <div class="kpi"><div class="k">미결제 상담가</div><div class="v num" style="color:#D64541;font-size:24px">${fmtNum(lostAmt)}</div>
+      <div class="d">리콜 대상 ${cur.x}건</div></div>`;
+
+  // by type
+  const types=['선상담','후상담','단독상담'];
+  document.getElementById('rep-bytype').innerHTML = types.map(t=>{
+    const s=statFor(P.a,P.b,{field:'type',val:t});
+    const p=Math.round(s.rate*100);
+    return `<div class="segrow"><span class="sn">${t}</span>
+      <span class="strack"><span class="sfill" style="width:${s.tot?p:0}%"></span></span>
+      <span class="sc">${s.tot? `<b>${p}%</b> · ${s.o}/${s.tot}건` : '<span style="color:#C7CFD8">기록 없음</span>'}</span></div>`;
+  }).join('');
+
+  // by 초/재진
+  document.getElementById('rep-byrj').innerHTML = [['초진','cho'],['재진','jae']].map(([t,c])=>{
+    const s=statFor(P.a,P.b,{field:'rj',val:t});
+    const p=Math.round(s.rate*100);
+    return `<div class="segrow ${c}"><span class="sn">${t==='초진'?'🆕 초진':'🔁 재진'}</span>
+      <span class="strack"><span class="sfill" style="width:${s.tot?p:0}%"></span></span>
+      <span class="sc">${s.tot? `<b>${p}%</b> · ${s.o}/${s.tot}건` : '<span style="color:#C7CFD8">기록 없음</span>'}</span></div>`;
+  }).join('');
+
+  // reasons
+  const {m,total}=reasonBreakdown(P.a,P.b);
+  document.getElementById('rep-reasons').innerHTML = total===0
+    ? '<div class="reason-empty">이 기간에는 미결제(X) 기록이 없습니다.</div>'
+    : REASONS.map(r=>{
+        const c=m[r], p=total?Math.round(c/total*100):0;
+        return `<div class="reason"><span class="rn">${r}</span>
+          <span class="rtrack"><span class="rfill" style="width:${p}%"></span></span>
+          <span class="rc"><b>${c}</b>건 · ${p}%</span></div>`;
+      }).join('');
+
+  // money
+  document.getElementById('rep-money').innerHTML=`
+    <div class="moneyrow"><span class="ml">결제 완료 매출</span><span class="mv o num">${fmtNum(paidAmt)}원</span></div>
+    <div class="moneyrow"><span class="ml">미결제 상담 금액</span><span class="mv x num">${fmtNum(lostAmt)}원</span></div>
+    <div class="moneyrow"><span class="ml">건당 평균 결제액</span><span class="mv num">${fmtNum(avg)}원</span></div>
+    <div class="moneyrow"><span class="ml">상담 금액 합계</span><span class="mv num" style="color:#7C8A99">${fmtNum(paidAmt+lostAmt)}원</span></div>`;
+
+  // trends (always latest 6 months / 8 weeks)
+  renderTrend();
+
+  // note (saved per period)
+  const notes=loadNotes();
+  document.getElementById('rep-note').innerHTML=
+    `<textarea id="noteArea" placeholder="이번 기간 총평, 잘된 점, 개선할 점, 다음 액션을 적어두세요. 자동 저장됩니다."></textarea>
+     <div class="nhint">이 기간(${P.lbl.replace(/ · .*/,'')})에만 저장되는 메모입니다. 인쇄 시 함께 출력됩니다.</div>`;
+  const ta=document.getElementById('noteArea');
+  ta.value=notes[P.key]||'';
+  let noteT=null;
+  ta.addEventListener('input',()=>{
+    const n=loadNotes(); n[P.key]=ta.value; saveNotesObj(n);
+    clearTimeout(noteT); noteT=setTimeout(()=>{ if(cloudOn) pushCloud(); }, 800);
+  });
+}
+
+/* ---------- view switch ---------- */
+function switchView(v){
+  ['input','dash','report'].forEach(k=>{
+    document.getElementById('view-'+k).classList.toggle('on', v===k);
+  });
+  document.getElementById('tabInput').classList.toggle('on', v==='input');
+  document.getElementById('tabDash').classList.toggle('on', v==='dash');
+  document.getElementById('tabReport').classList.toggle('on', v==='report');
+  if(v==='dash') renderDash();
+  if(v==='report') renderReport();
+}
+
+/* ---------- backup ---------- */
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(records,null,2)],{type:'application/json'});
+  download(blob, '상담결제전환_백업_'+fd(todayD())+'.json');
+  toast('백업 파일을 내려받았습니다.');
+}
+function exportCSV(){
+  const head=['날짜','환자이니셜','초재진','상담종류','시술내용','상담금액','결제','미결제사유','메모'];
+  const rows=[...records].sort((p,q)=>(p.date||'').localeCompare(q.date||''))
+    .map(r=>[r.date,r.name,r.rj,r.type,r.proc,r.amt,r.pay,r.reason,r.memo]
+      .map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(','));
+  const csv='\uFEFF'+[head.join(','),...rows].join('\r\n');
+  download(new Blob([csv],{type:'text/csv'}), '상담결제전환_'+fd(todayD())+'.csv');
+  toast('CSV 파일을 내려받았습니다.');
+}
+function download(blob,name){
+  const u=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),500);
+}
+function importJSON(e){
+  const file=e.target.files[0]; if(!file) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const data=JSON.parse(rd.result);
+      if(!Array.isArray(data)) throw 0;
+      if(!confirm(`가져온 ${data.length}건으로 현재 데이터를 모두 교체합니다. 계속할까요?\n(현재 데이터는 먼저 '백업 내보내기'로 보관하세요.)`)) return;
+      records=data.map((r,i)=>({id:r.id||'imp'+i+'_'+Date.now(), date:r.date||'', name:r.name||'', rj:r.rj||'',
+        type:r.type||'', proc:r.proc||'', amt:r.amt||0, pay:r.pay||'', reason:r.reason||'', memo:r.memo||''}));
+      saveAll(); renderRecords(); renderDash(); toast('가져오기 완료: '+records.length+'건'+(cloudOn?' · 구글 시트에 반영됨':''));
+    }catch(err){ toast('파일을 읽을 수 없습니다. 올바른 백업(.json)인지 확인하세요.',true); }
+    e.target.value='';
+  };
+  rd.readAsText(file);
+}
+
+/* ---------- toast ---------- */
+let toastT=null;
+function toast(msg,warn){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='show'+(warn?' warn':'');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.className=t.className.replace('show','').trim(),2200);
+}
+
+/* ---------- init ---------- */
+document.getElementById('f_amt').addEventListener('input',e=>{
+  const v=e.target.value.replace(/[^0-9]/g,'');
+  e.target.value=v?parseInt(v).toLocaleString('ko-KR'):'';
+});
+document.getElementById('f_memo').addEventListener('keydown',e=>{ if(e.key==='Enter') saveRecord(); });
+document.getElementById('f_name').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('f_proc').focus(); });
+resetForm();
+renderRecords();
+
+/* 클라우드 연동 시 최신 데이터 받아오고, 아니면 오프라인 안내 */
+if(cloudOn){
+  chipSyncing();
+  pullCloud(true).then(ok=>{
+    renderRecords();
+    if(document.getElementById('view-dash').classList.contains('on')) renderDash();
+    if(!ok) toast('구글 시트에서 데이터를 불러오지 못했습니다. 새로고침(↻)을 눌러 다시 시도하세요.', true);
+  });
+}else if(!storageOK){
+  setChip('<b style="color:#ffb84d">●</b> 미리보기(저장 안 됨)');
+}else{
+  chipSaved();
+}
+</script>
+</body>
+</html>
