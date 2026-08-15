@@ -1,0 +1,502 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',sans-serif;}
+.app{padding:16px;max-width:960px;margin:0 auto;background:#f5f6f8;min-height:100vh;}
+.tab-bar{display:flex;gap:4px;margin-bottom:16px;background:#fff;border:1px solid #ddd;border-radius:10px;padding:5px;}
+.tab{flex:1;padding:8px 0;font-size:13px;font-weight:500;border:none;border-radius:7px;cursor:pointer;background:transparent;color:#666;}
+.tab.active{background:#2563eb;color:#fff;}
+.panel{display:none;}
+.panel.active{display:block;}
+.card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:16px;margin-bottom:14px;}
+.card-title{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;}
+.week-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.week-row input[type=date]{padding:7px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;color:#333;}
+.week-lbl{font-size:13px;font-weight:700;color:#2563eb;}
+.save-indicator{font-size:12px;color:#059669;font-weight:500;margin-left:auto;opacity:0;transition:opacity 0.3s;}
+.save-indicator.show{opacity:1;}
+.day-tabs{display:flex;gap:4px;margin-bottom:14px;overflow-x:auto;}
+.dtab{padding:7px 14px;font-size:13px;font-weight:500;border:1px solid #ddd;border-radius:7px;background:#fff;color:#555;cursor:pointer;white-space:nowrap;}
+.dtab.active{background:#2563eb;color:#fff;border-color:#2563eb;}
+.dtab.has-data{border-color:#059669;color:#059669;}
+.dtab.has-data.active{background:#059669;color:#fff;border-color:#059669;}
+table.dt{width:100%;border-collapse:collapse;}
+table.dt th{background:#f0f4ff;color:#444;font-size:12px;font-weight:600;padding:9px 10px;text-align:center;border:1px solid #ddd;}
+table.dt th:first-child{text-align:left;min-width:80px;}
+table.dt td{padding:7px 8px;border:1px solid #e5e7eb;text-align:center;font-size:13px;color:#333;}
+table.dt td:first-child{text-align:left;font-weight:600;color:#222;background:#fafafa;}
+table.dt tr:nth-child(even) td{background:#f9f9f9;}
+table.dt tr:nth-child(even) td:first-child{background:#f3f4f6;}
+table.dt tfoot td{background:#e8f0fe;font-weight:700;color:#1d4ed8;border:1px solid #c7d2fe;}
+table.dt tfoot td:first-child{color:#1d4ed8;}
+table.dt input[type=number]{width:58px;padding:5px 4px;border:1px solid #bbb;border-radius:5px;font-size:13px;text-align:center;background:#fff;color:#222;}
+table.dt input[type=number]:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,0.15);}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.mc{background:#fff;border:1px solid #ddd;border-radius:10px;padding:14px;}
+.mc-label{font-size:11px;color:#888;margin-bottom:4px;}
+.mc-val{font-size:22px;font-weight:700;color:#1d4ed8;}
+.mc-sub{font-size:10px;color:#aaa;margin-top:3px;}
+.week-sum-btn{width:100%;padding:11px;font-size:13px;font-weight:600;background:#fff;color:#2563eb;border:1px solid #2563eb;border-radius:8px;cursor:pointer;}
+.week-sum-btn:hover{background:#eff6ff;}
+table.ht{width:100%;border-collapse:collapse;}
+table.ht th{background:#f0f4ff;color:#555;font-size:12px;font-weight:600;padding:8px 10px;border:1px solid #ddd;text-align:center;}
+table.ht th:first-child{text-align:left;}
+table.ht td{padding:7px 10px;border:1px solid #e5e7eb;text-align:center;font-size:12px;color:#333;}
+table.ht td:first-child{text-align:left;font-size:12px;color:#555;}
+table.ht tr:nth-child(even) td{background:#f9f9f9;}
+table.ht tr.week-total td{background:#e8f0fe;font-weight:700;color:#1d4ed8;font-size:12px;}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;background:#d1fae5;color:#065f46;}
+.del-btn{padding:2px 8px;font-size:11px;border:1px solid #fca5a5;border-radius:5px;background:#fff;color:#dc2626;cursor:pointer;}
+.empty{text-align:center;color:#aaa;padding:30px;font-size:13px;}
+.ctoggle{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.ctab{padding:6px 14px;font-size:12px;font-weight:500;border:1px solid #ddd;border-radius:999px;background:#fff;color:#666;cursor:pointer;}
+.ctab.active{background:#2563eb;color:#fff;border-color:#2563eb;}
+.chart-wrap{position:relative;width:100%;height:270px;}
+.chart-wrap2{position:relative;width:100%;height:240px;}
+.view-toggle{display:flex;gap:4px;margin-bottom:10px;}
+.vt{padding:5px 12px;font-size:12px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#666;cursor:pointer;}
+.vt.active{background:#f0f4ff;color:#2563eb;border-color:#93c5fd;font-weight:600;}
+</style>
+
+<div class="app">
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('input')">데이터 입력</button>
+    <button class="tab" onclick="showTab('history')">기록 조회</button>
+    <button class="tab" onclick="showTab('chart')">추세 그래프</button>
+  </div>
+
+  <div id="tab-input" class="panel active">
+    <div class="card">
+      <div class="card-title">주차 선택</div>
+      <div class="week-row">
+        <input type="date" id="weekStart">
+        <span class="week-lbl" id="weekLbl">—</span>
+        <span class="save-indicator" id="saveIndicator">✓ 저장됨</span>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <button onclick="exportData()" style="flex:1;padding:8px;font-size:12px;font-weight:600;background:#fff;color:#2563eb;border:1px solid #2563eb;border-radius:7px;cursor:pointer;">📥 백업 내보내기</button>
+        <button onclick="document.getElementById('importFile').click()" style="flex:1;padding:8px;font-size:12px;font-weight:600;background:#fff;color:#059669;border:1px solid #059669;border-radius:7px;cursor:pointer;">📤 백업 가져오기</button>
+        <button onclick="refreshCloud()" style="flex:1;padding:8px;font-size:12px;font-weight:600;background:#fff;color:#7c3aed;border:1px solid #7c3aed;border-radius:7px;cursor:pointer;">🔄 새로고침</button>
+        <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(this.files[0])">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">요일 선택</div>
+      <div class="day-tabs" id="dayTabs"></div>
+      <table class="dt">
+        <thead><tr><th>채널</th><th>예약문의</th><th>예약성공</th><th>보류</th><th>무응답</th></tr></thead>
+        <tbody id="inputBody"></tbody>
+        <tfoot><tr><td>합계</td><td id="t-inq">0</td><td id="t-bk">0</td><td id="t-hold">0</td><td id="t-nr">0</td></tr></tfoot>
+      </table>
+    </div>
+    <div class="metrics">
+      <div class="mc"><div class="mc-label">전환율 (문의→예약)</div><div class="mc-val" id="m-conv">—</div><div class="mc-sub">예약성공 ÷ 예약문의</div></div>
+      <div class="mc"><div class="mc-label">보류율</div><div class="mc-val" id="m-hold">—</div><div class="mc-sub">보류 ÷ 예약문의</div></div>
+      <div class="mc"><div class="mc-label">무응답율</div><div class="mc-val" id="m-nr">—</div><div class="mc-sub">무응답 ÷ 예약문의</div></div>
+    </div>
+    <button class="week-sum-btn" onclick="showWeekSummary()">📊 주간 합계 보기</button>
+    <div id="weekSummaryWrap"></div>
+  </div>
+
+  <div id="tab-history" class="panel">
+    <div class="card">
+      <div class="card-title">조회 단위</div>
+      <div class="view-toggle">
+        <button class="vt active" onclick="setView('day')">일별</button>
+        <button class="vt" onclick="setView('week')">주별</button>
+      </div>
+      <div id="historyWrap"></div>
+    </div>
+  </div>
+
+  <div id="tab-chart" class="panel">
+    <div class="card">
+      <div class="card-title">지표 선택</div>
+      <div class="ctoggle" id="ctoggle">
+        <button class="ctab active" onclick="switchChart('overview')">전체 추세</button>
+        <button class="ctab" onclick="switchChart('channel')">채널별 비교</button>
+        <button class="ctab" onclick="switchChart('rate')">전환·보류율</button>
+      </div>
+      <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">채널별 누적 예약문의</div>
+      <div class="chart-wrap2"><canvas id="chChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const CH = ['전화','네이버','카카오','여신티켓','강남언니','AI'];
+const COLORS = ['#2563eb','#059669','#d97706','#db2777','#7c3aed','#0891b2'];
+const MK = ['inq','bk','hold','nr'];
+const DAY_NAMES = ['월','화','수','목','금','토','일'];
+
+let store = {};
+let chartM = null, chartC = null, curMode = 'overview';
+let curWeek = '', curDayIdx = 0;
+let histView = 'day';
+let saveTimer = null;
+
+/* ===== 구글 시트 연동 (상담결제전환관리와 같은 URL 사용) ===== */
+/*  ▼▼▼ 상담결제전환관리에서 쓰던 그 Apps Script /exec URL을 그대로 붙여넣으세요 ▼▼▼ */
+const CLOUD_URL = "https://script.google.com/macros/s/AKfycbwgXAbXPXC8LD7JhTnWFhBWsF4cJISfWw2P2ds1m9qqjjoUhdB33U6YkLNHUGNHnfNw/exec";
+/*  ▲▲▲ 비워두면 예전처럼 이 브라우저에만 저장됩니다 ▲▲▲ */
+const cloudOn = !!CLOUD_URL;
+
+function cloudPush(){
+  if(!cloudOn) return;
+  fetch(CLOUD_URL, {method:'POST', mode:'no-cors',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({action:'saveResv', store:store})
+  }).catch(function(){});
+}
+function cloudPull(){
+  return new Promise(function(resolve){
+    if(!cloudOn){ resolve(false); return; }
+    var cb='__rv_cb_'+Date.now()+'_'+Math.floor(Math.random()*1e4);
+    var s=document.createElement('script'); var done=false;
+    function cleanup(){ try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode) s.parentNode.removeChild(s); }
+    window[cb]=function(res){ done=true; try{
+      if(res && res.ok && res.resv && typeof res.resv==='object'){
+        store=res.resv;
+        try{ localStorage.setItem('ct_daily_v1', JSON.stringify(store)); }catch(e){}
+        resolve(true);
+      } else resolve(false);
+    } finally { cleanup(); } };
+    s.onerror=function(){ if(!done){ resolve(false); cleanup(); } };
+    s.src=CLOUD_URL+(CLOUD_URL.indexOf('?')>=0?'&':'?')+'callback='+cb+'&t='+Date.now();
+    document.head.appendChild(s);
+    setTimeout(function(){ if(!done){ resolve(false); cleanup(); } }, 15000);
+  });
+}
+function refreshCloud(){
+  if(!cloudOn){ alert('구글 시트 연동이 설정되지 않았습니다. (CLOUD_URL 비어 있음)'); return; }
+  const ind=document.getElementById('saveIndicator');
+  ind.textContent='↻ 동기화 중…'; ind.style.color='#2563eb'; ind.classList.add('show');
+  cloudPull().then(function(ok){
+    if(ok){
+      buildDayTabs(); loadDay();
+      if(document.getElementById('tab-history').classList.contains('active')) renderHistory();
+      ind.textContent='✓ 최신 데이터 불러옴'; ind.style.color='#059669';
+      setTimeout(()=>ind.classList.remove('show'),1800);
+    } else { ind.textContent='⚠ 동기화 실패'; ind.style.color='#dc2626'; }
+  });
+}
+
+try { const s = localStorage.getItem('ct_daily_v1'); if(s) store = JSON.parse(s); } catch(e){}
+
+function persist(){
+  const ind = document.getElementById('saveIndicator');
+  clearTimeout(saveTimer);
+  try {
+    localStorage.setItem('ct_daily_v1', JSON.stringify(store));
+    ind.textContent = cloudOn ? '✓ 구글 시트에 저장됨' : '✓ 저장됨';
+    ind.style.color = '#059669';
+    ind.classList.add('show');
+    saveTimer = setTimeout(() => ind.classList.remove('show'), 1500);
+    if(cloudOn) cloudPush();
+  } catch(e) {
+    ind.textContent = '⚠ 저장 실패! 화면을 새로고침하지 마세요';
+    ind.style.color = '#dc2626';
+    ind.classList.add('show');
+    console.error('localStorage 저장 실패:', e);
+  }
+}
+
+// 날짜 문자열(YYYY-MM-DD)을 로컬 Date로 변환
+function parseLocal(str){
+  const [y,m,d] = str.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+
+// 해당 날짜가 속한 주의 월요일 반환 (YYYY-MM-DD)
+function getMonday(str){
+  const d = parseLocal(str);
+  const dow = d.getDay(); // 0=일, 1=월 ... 6=토
+  // 월요일로 맞추기: 일요일(0)이면 -6, 월요일(1)이면 0, ..., 토요일(6)이면 -5
+  const offset = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate() + offset);
+  return toYMD(d);
+}
+
+function toYMD(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+// 주의 월요일(str)에서 i일 후 날짜 반환
+function weekDay(monStr, i){
+  const d = parseLocal(monStr);
+  d.setDate(d.getDate() + i);
+  return toYMD(d);
+}
+
+// 날짜 문자열 → 요일 인덱스 (월=0, 화=1 ... 일=6)
+function dayIndex(str){
+  const dow = parseLocal(str).getDay(); // 0=일
+  return dow === 0 ? 6 : dow - 1;
+}
+
+function fmtShort(str){
+  const d = parseLocal(str);
+  return `${d.getMonth()+1}/${d.getDate()}`;
+}
+
+function fmtWeek(monStr){
+  const d = parseLocal(monStr);
+  const e = parseLocal(monStr); e.setDate(e.getDate()+6);
+  return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 주`;
+}
+
+function buildTable(){
+  const tb = document.getElementById('inputBody');
+  tb.innerHTML = '';
+  CH.forEach(ch => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${ch}</td>` + MK.map(m =>
+      `<td><input type="number" min="0" value="0" id="i_${ch}_${m}" oninput="onInput()"></td>`
+    ).join('');
+    tb.appendChild(tr);
+  });
+}
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(store, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const today = toYMD(new Date());
+  a.href = url;
+  a.download = `에브리업_예약통계_백업_${today}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importData(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const imported = JSON.parse(e.target.result);
+      if(typeof imported !== 'object' || imported === null) throw new Error('invalid');
+      const existingCount = Object.keys(store).length;
+      const importCount = Object.keys(imported).length;
+      if(existingCount > 0){
+        if(!confirm(`현재 앱에 ${existingCount}일치 데이터가 있습니다.\n백업 파일에는 ${importCount}일치 데이터가 있습니다.\n\n가져오면 겹치는 날짜는 백업 파일 내용으로 덮어씌워집니다. 계속할까요?`)) return;
+      }
+      store = Object.assign({}, store, imported);
+      persist();
+      buildDayTabs();
+      loadDay();
+      if(document.getElementById('tab-history').classList.contains('active')) renderHistory();
+      alert(`가져오기 완료: ${importCount}일치 데이터를 불러왔습니다.`);
+    } catch(err){
+      alert('파일을 읽는 데 실패했습니다. 올바른 백업 JSON 파일인지 확인해주세요.');
+      console.error(err);
+    }
+    document.getElementById('importFile').value = '';
+  };
+  reader.readAsText(file);
+}
+
+function onInput(){ calcTotals(); autoSave(); }
+
+function autoSave(){
+  if(!curWeek) return;
+  const dateStr = weekDay(curWeek, curDayIdx);
+  const wd = {};
+  CH.forEach(ch => { wd[ch] = {}; MK.forEach(m => { wd[ch][m] = +document.getElementById(`i_${ch}_${m}`).value || 0; }); });
+  store[dateStr] = wd;
+  persist();
+  buildDayTabs();
+}
+
+function buildDayTabs(){
+  const wrap = document.getElementById('dayTabs');
+  wrap.innerHTML = '';
+  // i=0 → 월요일, i=1 → 화요일 ... i=6 → 일요일
+  for(let i = 0; i < 7; i++){
+    const dateStr = weekDay(curWeek, i);  // curWeek은 항상 월요일
+    const hasData = store[dateStr] && CH.some(ch => MK.some(m => (store[dateStr][ch]?.[m] || 0) > 0));
+    const btn = document.createElement('button');
+    btn.className = 'dtab' + (i === curDayIdx ? ' active' : '') + (hasData ? ' has-data' : '');
+    // DAY_NAMES[i]: i=0→월, i=4→금, i=6→일
+    btn.textContent = `${DAY_NAMES[i]} (${fmtShort(dateStr)})`;
+    btn.onclick = (()=>{ const idx=i; return ()=>{ curDayIdx=idx; loadDay(); buildDayTabs(); }; })();
+    wrap.appendChild(btn);
+  }
+}
+
+function loadDay(){
+  const dateStr = weekDay(curWeek, curDayIdx);
+  const wd = store[dateStr];
+  CH.forEach(ch => MK.forEach(m => {
+    const el = document.getElementById(`i_${ch}_${m}`);
+    if(el) el.value = wd ? (wd[ch]?.[m] || 0) : 0;
+  }));
+  calcTotals();
+  document.getElementById('weekSummaryWrap').innerHTML = '';
+}
+
+function calcTotals(){
+  let inq=0,bk=0,hold=0,nr=0;
+  CH.forEach(ch => {
+    inq  += +document.getElementById(`i_${ch}_inq`).value  || 0;
+    bk   += +document.getElementById(`i_${ch}_bk`).value   || 0;
+    hold += +document.getElementById(`i_${ch}_hold`).value  || 0;
+    nr   += +document.getElementById(`i_${ch}_nr`).value    || 0;
+  });
+  document.getElementById('t-inq').textContent  = inq;
+  document.getElementById('t-bk').textContent   = bk;
+  document.getElementById('t-hold').textContent = hold;
+  document.getElementById('t-nr').textContent   = nr;
+  document.getElementById('m-conv').textContent = inq>0 ? Math.round(bk/inq*100)+'%' : '—';
+  document.getElementById('m-hold').textContent = inq>0 ? Math.round(hold/inq*100)+'%' : '—';
+  document.getElementById('m-nr').textContent   = inq>0 ? Math.round(nr/inq*100)+'%' : '—';
+}
+
+function showWeekSummary(){
+  const wrap = document.getElementById('weekSummaryWrap');
+  let html = `<div style="margin-top:14px;"><table class="dt"><thead><tr><th>채널</th><th>예약문의</th><th>예약성공</th><th>보류</th><th>무응답</th></tr></thead><tbody>`;
+  let tI=0,tB=0,tH=0,tN=0;
+  CH.forEach(ch => {
+    let inq=0,bk=0,hold=0,nr=0;
+    for(let i=0;i<7;i++){ const ds=weekDay(curWeek,i); inq+=store[ds]?.[ch]?.inq||0; bk+=store[ds]?.[ch]?.bk||0; hold+=store[ds]?.[ch]?.hold||0; nr+=store[ds]?.[ch]?.nr||0; }
+    tI+=inq; tB+=bk; tH+=hold; tN+=nr;
+    html += `<tr><td>${ch}</td><td>${inq}</td><td>${bk}</td><td>${hold}</td><td>${nr}</td></tr>`;
+  });
+  html += `</tbody><tfoot><tr><td>합계</td><td>${tI}</td><td>${tB}</td><td>${tH}</td><td>${tN}</td></tr></tfoot></table></div>`;
+  wrap.innerHTML = html;
+}
+
+function setView(v){
+  histView = v;
+  document.querySelectorAll('.view-toggle .vt').forEach((b,i) => b.classList.toggle('active', ['day','week'][i] === v));
+  renderHistory();
+}
+
+function renderHistory(){
+  const el = document.getElementById('historyWrap');
+  const allDates = Object.keys(store).sort().reverse();
+  if(!allDates.length){ el.innerHTML='<div class="empty">저장된 데이터가 없습니다.</div>'; return; }
+  if(histView === 'day'){
+    let h = `<table class="ht"><thead><tr><th>날짜</th><th>요일</th><th>예약문의</th><th>예약성공</th><th>전환율</th><th>보류</th><th>무응답</th><th></th></tr></thead><tbody>`;
+    allDates.forEach(ds => {
+      let inq=0,bk=0,hold=0,nr=0;
+      CH.forEach(ch => { inq+=store[ds][ch]?.inq||0; bk+=store[ds][ch]?.bk||0; hold+=store[ds][ch]?.hold||0; nr+=store[ds][ch]?.nr||0; });
+      const d = parseLocal(ds);
+      const conv = inq>0 ? Math.round(bk/inq*100)+'%' : '—';
+      h += `<tr><td>${d.getMonth()+1}/${d.getDate()}</td><td>${DAY_NAMES[dayIndex(ds)]}</td><td>${inq}</td><td>${bk}</td><td><span class="badge">${conv}</span></td><td>${hold}</td><td>${nr}</td><td><button class="del-btn" onclick="delDay('${ds}')">삭제</button></td></tr>`;
+    });
+    h += '</tbody></table>';
+    el.innerHTML = h;
+  } else {
+    const weeks = [...new Set(allDates.map(ds => getMonday(ds)))].sort().reverse();
+    let h = `<table class="ht"><thead><tr><th>주차</th><th>예약문의</th><th>예약성공</th><th>전환율</th><th>보류</th><th>무응답</th></tr></thead><tbody>`;
+    weeks.forEach(wk => {
+      let inq=0,bk=0,hold=0,nr=0;
+      for(let i=0;i<7;i++){ const ds=weekDay(wk,i); CH.forEach(ch => { inq+=store[ds]?.[ch]?.inq||0; bk+=store[ds]?.[ch]?.bk||0; hold+=store[ds]?.[ch]?.hold||0; nr+=store[ds]?.[ch]?.nr||0; }); }
+      const conv = inq>0 ? Math.round(bk/inq*100)+'%' : '—';
+      h += `<tr class="week-total"><td>${fmtWeek(wk)}</td><td>${inq}</td><td>${bk}</td><td><span class="badge">${conv}</span></td><td>${hold}</td><td>${nr}</td></tr>`;
+    });
+    h += '</tbody></table>';
+    el.innerHTML = h;
+  }
+}
+
+function delDay(ds){
+  const d = parseLocal(ds);
+  if(!confirm(`${d.getMonth()+1}/${d.getDate()} 데이터를 삭제할까요?`)) return;
+  delete store[ds]; persist(); renderHistory();
+}
+
+function renderCharts(){
+  const dates = Object.keys(store).sort();
+  if(!dates.length) return;
+  if(chartM){ chartM.destroy(); chartM=null; }
+  if(chartC){ chartC.destroy(); chartC=null; }
+  const lbs = dates.map(ds => fmtShort(ds));
+  const T = dates.map(ds => {
+    let inq=0,bk=0,hold=0,nr=0;
+    CH.forEach(ch => { inq+=store[ds][ch]?.inq||0; bk+=store[ds][ch]?.bk||0; hold+=store[ds][ch]?.hold||0; nr+=store[ds][ch]?.nr||0; });
+    return {inq,bk,hold,nr};
+  });
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  if(curMode==='overview'){
+    chartM = new Chart(ctx,{type:'line',data:{labels:lbs,datasets:[
+      {label:'예약문의',data:T.map(t=>t.inq),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.07)',tension:0.3,pointRadius:3,fill:true},
+      {label:'예약성공',data:T.map(t=>t.bk),borderColor:'#059669',backgroundColor:'rgba(5,150,105,0.07)',tension:0.3,pointRadius:3,fill:true,borderDash:[5,3]},
+      {label:'보류',data:T.map(t=>t.hold),borderColor:'#d97706',backgroundColor:'rgba(217,119,6,0.05)',tension:0.3,pointRadius:3,fill:true,borderDash:[3,4]},
+      {label:'무응답',data:T.map(t=>t.nr),borderColor:'#9ca3af',backgroundColor:'rgba(156,163,175,0.05)',tension:0.3,pointRadius:3,fill:true,borderDash:[2,5]},
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:12},usePointStyle:true}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}},x:{ticks:{autoSkip:true,maxTicksLimit:14,maxRotation:45}}}}});
+  } else if(curMode==='channel'){
+    chartM = new Chart(ctx,{type:'bar',data:{labels:lbs,datasets:CH.map((ch,i)=>({label:ch,data:dates.map(ds=>store[ds][ch]?.bk||0),backgroundColor:COLORS[i]+'99',borderColor:COLORS[i],borderWidth:1.5}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:12}}}},scales:{x:{stacked:true,ticks:{autoSkip:true,maxTicksLimit:14,maxRotation:45}},y:{stacked:true,beginAtZero:true}}}});
+  } else {
+    chartM = new Chart(ctx,{type:'line',data:{labels:lbs,datasets:[
+      {label:'전환율(%)',data:T.map(t=>t.inq>0?Math.round(t.bk/t.inq*100):0),borderColor:'#059669',tension:0.3,pointRadius:3,borderDash:[5,3]},
+      {label:'보류율(%)',data:T.map(t=>t.inq>0?Math.round(t.hold/t.inq*100):0),borderColor:'#d97706',tension:0.3,pointRadius:3,borderDash:[3,4]},
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:12},usePointStyle:true}}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}},x:{ticks:{autoSkip:true,maxTicksLimit:14,maxRotation:45}}}}});
+  }
+  const ctx2 = document.getElementById('chChart').getContext('2d');
+  chartC = new Chart(ctx2,{type:'bar',data:{labels:CH,datasets:[{label:'누적 예약문의',data:CH.map(ch=>dates.reduce((s,ds)=>s+(store[ds][ch]?.inq||0),0)),backgroundColor:COLORS.map(c=>c+'BB'),borderColor:COLORS,borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}});
+}
+
+function switchChart(mode){
+  curMode = mode;
+  document.querySelectorAll('#ctoggle .ctab').forEach((b,i) => b.classList.toggle('active', ['overview','channel','rate'][i]===mode));
+  renderCharts();
+}
+
+function showTab(name){
+  ['input','history','chart'].forEach(t => { document.getElementById('tab-'+t).classList.toggle('active', t===name); });
+  document.querySelectorAll('.tab-bar .tab').forEach((b,i) => b.classList.toggle('active', ['input','history','chart'][i]===name));
+  if(name==='history') renderHistory();
+  if(name==='chart') renderCharts();
+}
+
+function initWeek(todayStr){
+  curWeek = getMonday(todayStr);         // 항상 월요일
+  curDayIdx = dayIndex(todayStr);        // 오늘 요일 (월=0 ... 일=6)
+  document.getElementById('weekStart').value = curWeek;
+  document.getElementById('weekLbl').textContent = fmtWeek(curWeek);
+  buildDayTabs();
+  loadDay();
+}
+
+document.getElementById('weekStart').addEventListener('change', function(){
+  if(!this.value) return;
+  curWeek = getMonday(this.value);
+  this.value = curWeek;
+  document.getElementById('weekLbl').textContent = fmtWeek(curWeek);
+  curDayIdx = 0;
+  buildDayTabs();
+  loadDay();
+});
+
+buildTable();
+
+// 오늘 날짜 로컬 기준으로 정확히 구하기
+const _n = new Date();
+const todayStr = toYMD(_n);
+initWeek(todayStr);
+
+// 구글 시트 연동 시: 최신 데이터 받아와서 화면 갱신
+if(cloudOn){
+  const ind = document.getElementById('saveIndicator');
+  ind.textContent = '↻ 동기화 중…'; ind.style.color = '#2563eb'; ind.classList.add('show');
+  cloudPull().then(function(ok){
+    if(ok){
+      buildDayTabs(); loadDay();
+      if(document.getElementById('tab-history').classList.contains('active')) renderHistory();
+    }
+    ind.textContent = ok ? '✓ 구글 시트 연결됨' : '⚠ 동기화 실패 · 로컬 사용';
+    ind.style.color = ok ? '#059669' : '#d97706';
+    ind.classList.add('show');
+    if(ok) setTimeout(()=>ind.classList.remove('show'), 2000);
+  });
+}
+</script>
