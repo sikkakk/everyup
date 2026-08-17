@@ -175,6 +175,10 @@
   <div id="tab-chart" class="panel">
     <div class="card">
       <div class="card-title">지표 선택</div>
+      <div class="view-toggle" style="margin-bottom:12px">
+        <button class="vt" id="granDay" onclick="setChartGran('day')">일별</button>
+        <button class="vt active" id="granWeek" onclick="setChartGran('week')">주별</button>
+      </div>
       <div class="ctoggle" id="ctoggle">
         <button class="ctab active" onclick="switchChart('overview')">전체 추세</button>
         <button class="ctab" onclick="switchChart('channel')">채널별 비교</button>
@@ -199,6 +203,7 @@ const DAY_NAMES = ['월','화','수','목','금','토','일'];
 
 let store = {};
 let chartM = null, chartC = null, curMode = 'overview';
+let chartGran = 'week';   // 추세 그래프 집계 단위: 기본 주별
 let showTrend = true;
 let curWeek = '', curDayIdx = 0;
 let histView = 'day';
@@ -504,16 +509,33 @@ function linreg(ys){
 }
 
 function renderCharts(){
-  const dates = Object.keys(store).sort();
-  if(!dates.length) return;
+  const allDates = Object.keys(store).sort();
+  if(!allDates.length) return;
   if(chartM){ chartM.destroy(); chartM=null; }
   if(chartC){ chartC.destroy(); chartC=null; }
-  const lbs = dates.map(ds => fmtShort(ds));
-  const T = dates.map(ds => {
+
+  // 집계 단위별 구간(periods) 구성: 일별=날짜 하나씩, 주별=월요일 기준 묶음
+  let periods;
+  if(chartGran==='week'){
+    const map={};
+    allDates.forEach(ds=>{ const wk=getMonday(ds); (map[wk]=map[wk]||[]).push(ds); });
+    periods = Object.keys(map).sort().map(wk=>{
+      const p=wk.split('-'); return {label:(+p[1])+'/'+(+p[2])+'주', dates:map[wk]};
+    });
+  } else {
+    periods = allDates.map(ds=>({label:fmtShort(ds), dates:[ds]}));
+  }
+
+  const lbs = periods.map(p=>p.label);
+  const T = periods.map(p=>{
     let inq=0,bk=0,hold=0,nr=0;
-    CH.forEach(ch => { inq+=store[ds][ch]?.inq||0; bk+=store[ds][ch]?.bk||0; hold+=store[ds][ch]?.hold||0; nr+=store[ds][ch]?.nr||0; });
+    p.dates.forEach(ds=>CH.forEach(ch=>{ inq+=store[ds][ch]?.inq||0; bk+=store[ds][ch]?.bk||0; hold+=store[ds][ch]?.hold||0; nr+=store[ds][ch]?.nr||0; }));
     return {inq,bk,hold,nr};
   });
+  // 채널별 예약성공(구간 합계)
+  const chData = {};
+  CH.forEach(ch => chData[ch] = periods.map(p => p.dates.reduce((s,ds)=> s + (store[ds][ch]?.bk||0), 0)));
+
   const ctx = document.getElementById('mainChart').getContext('2d');
   if(curMode==='overview'){
     chartM = new Chart(ctx,{type:'line',data:{labels:lbs,datasets:[
@@ -523,13 +545,13 @@ function renderCharts(){
       {label:'무응답',data:T.map(t=>t.nr),borderColor:'#9AA6B2',backgroundColor:'rgba(156,163,175,0.05)',tension:0.3,pointRadius:3,fill:true,borderDash:[2,5]},
     ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:12},usePointStyle:true}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}},x:{ticks:{autoSkip:true,maxTicksLimit:14,maxRotation:45}}}}});
   } else if(curMode==='channel'){
-    const maxTotal = Math.max(1, ...dates.map(ds => CH.reduce((s,ch)=> s + (store[ds][ch]?.bk||0), 0)));
+    const maxTotal = Math.max(1, ...periods.map((p,i)=> CH.reduce((s,ch)=> s + chData[ch][i], 0)));
     const barSets = CH.map((ch,i)=>({
-      type:'bar', label:ch, data:dates.map(ds=>store[ds][ch]?.bk||0),
+      type:'bar', label:ch, data:chData[ch],
       backgroundColor:COLORS[i]+'99', borderColor:COLORS[i], borderWidth:1.5, yAxisID:'y', order:2, stack:'ch'
     }));
     const trendSets = (showTrend ? CH.map((ch,i)=>{
-      const ys = dates.map(ds=>store[ds][ch]?.bk||0);
+      const ys = chData[ch];
       if(!ys.some(v=>v>0)) return null;   // 값이 있는 채널만 추세선
       return {
         type:'line', label:ch+' 추세', data:linreg(ys),
@@ -540,7 +562,7 @@ function renderCharts(){
     chartM = new Chart(ctx,{type:'bar',data:{labels:lbs,datasets:[...barSets,...trendSets]},options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:'top',labels:{font:{size:12},usePointStyle:true,
-        filter:(item)=> !/ 추세$/.test(item.text)}}},   // 범례엔 채널만, 추세선은 숨김
+        filter:(item)=> !/ 추세$/.test(item.text)}}},
       scales:{
         x:{stacked:true,ticks:{autoSkip:true,maxTicksLimit:14,maxRotation:45}},
         y:{stacked:true,beginAtZero:true,min:0,max:maxTotal+1},
@@ -563,7 +585,14 @@ function renderCharts(){
       scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}},x:{ticks:{autoSkip:true,maxTicksLimit:14,maxRotation:45}}}}});
   }
   const ctx2 = document.getElementById('chChart').getContext('2d');
-  chartC = new Chart(ctx2,{type:'bar',data:{labels:CH,datasets:[{label:'누적 예약문의',data:CH.map(ch=>dates.reduce((s,ds)=>s+(store[ds][ch]?.inq||0),0)),backgroundColor:COLORS.map(c=>c+'BB'),borderColor:COLORS,borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}});
+  chartC = new Chart(ctx2,{type:'bar',data:{labels:CH,datasets:[{label:'누적 예약문의',data:CH.map(ch=>allDates.reduce((s,ds)=>s+(store[ds][ch]?.inq||0),0)),backgroundColor:COLORS.map(c=>c+'BB'),borderColor:COLORS,borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}});
+}
+
+function setChartGran(g){
+  chartGran = g;
+  document.getElementById('granDay').classList.toggle('active', g==='day');
+  document.getElementById('granWeek').classList.toggle('active', g==='week');
+  renderCharts();
 }
 
 function switchChart(mode){
