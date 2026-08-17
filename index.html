@@ -461,6 +461,7 @@ const NOTE_KEY='everyup_report_notes_v1';
 let memFallback=null, storageOK=true;
 let cloudOn = !!CLOUD_URL;
 let syncing=false;
+let syncedOK=false;   // 시트에서 정상 로드(또는 명시적 가져오기) 되었는가
 
 function localLoad(){
   try{ const r=localStorage.getItem(KEY); return r?JSON.parse(r):null; }
@@ -489,6 +490,16 @@ function saveAll(){
 }
 function pushCloud(){
   if(!cloudOn) return;
+  if(!syncedOK){
+    setChip('<b style="color:#ffb84d">●</b> 시트 미동기화 · 로컬만 저장');
+    toast('아직 구글 시트를 불러오지 못해 시트 저장을 보류했습니다. 새로고침(↻)으로 시트를 먼저 불러오세요.', true);
+    return;
+  }
+  if(!Array.isArray(records) || records.length===0){
+    setChip('<b style="color:#ffb84d">●</b> 빈 데이터 · 시트 저장 안 함');
+    toast('빈 데이터는 구글 시트에 저장하지 않습니다(시트 데이터 보호).', true);
+    return;
+  }
   chipSyncing();
   // no-cors + text/plain = 프리플라이트 없이 전송(응답은 불투명하지만 서버 저장은 실행됨)
   fetch(CLOUD_URL, {
@@ -514,7 +525,7 @@ function pullCloud(silent){
         if(res && res.ok && Array.isArray(res.records)){
           records=res.records; localSave();
           if(res.notes) saveNotesObj(res.notes);
-          chipSaved(); resolve(true);
+          syncedOK=true; chipSaved(); resolve(true);
         } else { chipError(); resolve(false); }
       } finally { cleanup(); }
     };
@@ -1056,6 +1067,7 @@ function importJSON(e){
       const data=JSON.parse(rd.result);
       if(!Array.isArray(data)) throw 0;
       if(!confirm(`가져온 ${data.length}건으로 현재 데이터를 모두 교체합니다. 계속할까요?\n(현재 데이터는 먼저 '백업 내보내기'로 보관하세요.)`)) return;
+      syncedOK=true;   // 사용자가 명시적으로 가져온 데이터 → 시트 저장 허용
       records=data.map((r,i)=>({id:r.id||'imp'+i+'_'+Date.now(), date:r.date||'', name:r.name||'', rj:r.rj||'',
         type:r.type||'', proc:r.proc||'', amt:r.amt||0, pay:r.pay||'', reason:r.reason||'', memo:r.memo||''}));
       saveAll(); renderRecords(); renderDash(); toast('가져오기 완료: '+records.length+'건'+(cloudOn?' · 구글 시트에 반영됨':''));
