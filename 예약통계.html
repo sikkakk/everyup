@@ -175,9 +175,13 @@
   <div id="tab-chart" class="panel">
     <div class="card">
       <div class="card-title">지표 선택</div>
-      <div class="view-toggle" style="margin-bottom:12px">
+      <div class="view-toggle" style="margin-bottom:12px; align-items:center;">
         <button class="vt" id="granDay" onclick="setChartGran('day')">일별</button>
         <button class="vt active" id="granWeek" onclick="setChartGran('week')">주별</button>
+        <button class="vt" id="granMonth" onclick="setChartGran('month')">월별</button>
+        <span style="margin-left:10px; font-size:12.5px; color:var(--muted); font-weight:600;">기간</span>
+        <select id="chartRange" onchange="setChartRange(this.value)"
+          style="border:1px solid var(--line); background:#fff; border-radius:8px; padding:7px 10px; font-size:12.5px; font-weight:700; color:var(--navy2); font-family:inherit;"></select>
       </div>
       <div class="ctoggle" id="ctoggle">
         <button class="ctab active" onclick="switchChart('overview')">전체 추세</button>
@@ -204,6 +208,13 @@ const DAY_NAMES = ['월','화','수','목','금','토','일'];
 let store = {};
 let chartM = null, chartC = null, curMode = 'overview';
 let chartGran = 'week';   // 추세 그래프 집계 단위: 기본 주별
+// 집계 단위별 기간(현재 기준 과거 N구간). 기본: 일별 30일, 주별 8주, 월별 6개월
+let rangeByGran = { day:'30', week:'8', month:'6' };
+const RANGE_OPTS = {
+  day:   [['14','최근 14일'],['30','최근 30일'],['60','최근 60일'],['90','최근 90일'],['all','전체']],
+  week:  [['4','최근 4주'],['8','최근 8주'],['12','최근 12주'],['26','최근 26주'],['all','전체']],
+  month: [['3','최근 3개월'],['6','최근 6개월'],['12','최근 12개월'],['all','전체']]
+};
 let showTrend = true;
 let curWeek = '', curDayIdx = 0;
 let histView = 'day';
@@ -509,18 +520,31 @@ function linreg(ys){
 }
 
 function renderCharts(){
-  const allDates = Object.keys(store).sort();
+  let allDates = Object.keys(store).sort();
   if(!allDates.length) return;
   if(chartM){ chartM.destroy(); chartM=null; }
   if(chartC){ chartC.destroy(); chartC=null; }
 
-  // 집계 단위별 구간(periods) 구성: 일별=날짜 하나씩, 주별=월요일 기준 묶음
+  // 선택한 기간(현재 기준 과거 N구간)으로 날짜 자르기
+  allDates = trimDatesByRange(allDates);
+  if(!allDates.length){
+    // 해당 기간에 데이터가 없으면 빈 차트 방지: 전체로 대체
+    allDates = Object.keys(store).sort();
+  }
+
+  // 집계 단위별 구간(periods) 구성: 일별=날짜 하나씩, 주별=월요일 묶음, 월별=YYYY-MM 묶음
   let periods;
   if(chartGran==='week'){
     const map={};
     allDates.forEach(ds=>{ const wk=getMonday(ds); (map[wk]=map[wk]||[]).push(ds); });
     periods = Object.keys(map).sort().map(wk=>{
       const p=wk.split('-'); return {label:(+p[1])+'/'+(+p[2])+'주', dates:map[wk]};
+    });
+  } else if(chartGran==='month'){
+    const map={};
+    allDates.forEach(ds=>{ const mk=ds.slice(0,7); (map[mk]=map[mk]||[]).push(ds); });
+    periods = Object.keys(map).sort().map(mk=>{
+      const p=mk.split('-'); return {label:(+p[1])+'월', dates:map[mk]};
     });
   } else {
     periods = allDates.map(ds=>({label:fmtShort(ds), dates:[ds]}));
@@ -562,7 +586,7 @@ function renderCharts(){
     chartM = new Chart(ctx,{type:'bar',data:{labels:lbs,datasets:[...barSets,...trendSets]},options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:'top',labels:{font:{size:12},usePointStyle:true,
-        filter:(item)=> !/ 추세$/.test(item.text)}}},
+        filter:(item)=> !/ 추세$/.test(item.text)}, onClick: pairTrendLegendClick}},
       scales:{
         x:{stacked:true,ticks:{autoSkip:true,maxTicksLimit:14,maxRotation:45}},
         y:{stacked:true,beginAtZero:true,min:0,max:maxTotal+1},
@@ -576,22 +600,63 @@ function renderCharts(){
       {label:'보류율(%)', data:holdArr, borderColor:'#D97706', backgroundColor:'rgba(217,119,6,0.05)', tension:0.3, pointRadius:3, fill:false},
     ];
     const trends = showTrend ? [
-      {label:'전환율 추세', data:linreg(convArr), borderColor:'#1E8E54', borderWidth:2.5, borderDash:[7,4], pointRadius:0, fill:false, tension:0},
-      {label:'보류율 추세', data:linreg(holdArr), borderColor:'#D97706', borderWidth:2.5, borderDash:[7,4], pointRadius:0, fill:false, tension:0},
+      {label:'전환율(%) 추세', data:linreg(convArr), borderColor:'#1E8E54', borderWidth:2.5, borderDash:[7,4], pointRadius:0, fill:false, tension:0},
+      {label:'보류율(%) 추세', data:linreg(holdArr), borderColor:'#D97706', borderWidth:2.5, borderDash:[7,4], pointRadius:0, fill:false, tension:0},
     ] : [];
     chartM = new Chart(ctx,{type:'line',data:{labels:lbs,datasets:[...base,...trends]},options:{
       responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'top',labels:{font:{size:12},usePointStyle:true,filter:(item)=> !/ 추세$/.test(item.text)}}},
+      plugins:{legend:{position:'top',labels:{font:{size:12},usePointStyle:true,filter:(item)=> !/ 추세$/.test(item.text)}, onClick: pairTrendLegendClick}},
       scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}},x:{ticks:{autoSkip:true,maxTicksLimit:14,maxRotation:45}}}}});
   }
   const ctx2 = document.getElementById('chChart').getContext('2d');
   chartC = new Chart(ctx2,{type:'bar',data:{labels:CH,datasets:[{label:'누적 예약문의',data:CH.map(ch=>allDates.reduce((s,ds)=>s+(store[ds][ch]?.inq||0),0)),backgroundColor:COLORS.map(c=>c+'BB'),borderColor:COLORS,borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}});
 }
 
+function pairTrendLegendClick(e, legendItem, legend){
+  const ci = legend.chart;
+  const idx = legendItem.datasetIndex;
+  const willShow = !ci.isDatasetVisible(idx);
+  ci.setDatasetVisibility(idx, willShow);
+  // 같은 항목의 추세선(라벨 + ' 추세')도 함께 표시/숨김
+  const trendLabel = ci.data.datasets[idx].label + ' 추세';
+  ci.data.datasets.forEach((d, i) => {
+    if(d.label === trendLabel) ci.setDatasetVisibility(i, willShow);
+  });
+  ci.update();
+}
+
+function trimDatesByRange(dates){
+  const val = rangeByGran[chartGran];
+  if(val==='all') return dates;
+  const n = +val;
+  const today = new Date();
+  let cutoff;
+  if(chartGran==='day'){
+    const d=new Date(today); d.setDate(d.getDate()-(n-1)); cutoff=toYMD(d);
+  } else if(chartGran==='week'){
+    const mon=parseLocal(getMonday(toYMD(today))); mon.setDate(mon.getDate()-(n-1)*7); cutoff=toYMD(mon);
+  } else {
+    const m=new Date(today.getFullYear(), today.getMonth()-(n-1), 1); cutoff=toYMD(m);
+  }
+  return dates.filter(ds => ds >= cutoff);
+}
+function updateRangeOptions(){
+  const sel=document.getElementById('chartRange');
+  const cur=rangeByGran[chartGran];
+  sel.innerHTML = RANGE_OPTS[chartGran].map(([v,t])=>
+    `<option value="${v}"${v===cur?' selected':''}>${t}</option>`).join('');
+}
+function setChartRange(v){
+  rangeByGran[chartGran] = v;
+  renderCharts();
+}
+
 function setChartGran(g){
   chartGran = g;
   document.getElementById('granDay').classList.toggle('active', g==='day');
   document.getElementById('granWeek').classList.toggle('active', g==='week');
+  document.getElementById('granMonth').classList.toggle('active', g==='month');
+  updateRangeOptions();
   renderCharts();
 }
 
@@ -652,6 +717,7 @@ document.getElementById('weekStart').addEventListener('change', function(){
 });
 
 buildTable();
+updateRangeOptions();   // 기간 드롭다운 초기화(기본 주별·8주)
 
 // 오늘 날짜 로컬 기준으로 정확히 구하기
 const _n = new Date();
