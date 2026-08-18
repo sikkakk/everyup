@@ -157,6 +157,7 @@
   .trend tr.cur td.mon{color:var(--teal)}
   .trend .dash{color:#c4ccd5}
 
+  .happy-chk{width:18px; height:18px; accent-color:var(--teal); cursor:pointer;}
   .hint{font-size:12.5px; color:var(--muted); padding:14px 4px 0; line-height:1.7}
   .hint b{color:var(--navy2)}
 
@@ -304,7 +305,7 @@
         <table>
           <thead><tr>
             <th>날짜</th><th>환자</th><th>초/재진</th><th>상담종류</th><th style="text-align:left">시술 내용</th>
-            <th>금액</th><th>결제</th><th>미결제 사유</th><th style="text-align:left">메모</th><th></th>
+            <th>금액</th><th>결제</th><th>미결제 사유</th><th style="text-align:left">메모</th><th>해피콜</th><th></th>
           </tr></thead>
           <tbody id="recBody"></tbody>
         </table>
@@ -567,7 +568,7 @@ const SEED=[
 function seedRecords(){
   return SEED.map((r,i)=>({
     id:'seed'+i+'_'+Date.now(), date:r[0], name:r[1], rj:r[2], type:r[3],
-    proc:r[4], amt:r[5]||0, pay:r[6], reason:r[7], memo:r[8]
+    proc:r[4], amt:r[5]||0, pay:r[6], reason:r[7], memo:r[8], happy:''
   }));
 }
 
@@ -635,7 +636,7 @@ function renderRecords(){
   const body=document.getElementById('recBody');
   const sorted=[...records].sort((p,q)=> (q.date||'').localeCompare(p.date||'') || (q.id>p.id?1:-1));
   document.getElementById('recCount').textContent='총 '+records.length+'건';
-  if(records.length===0){ body.innerHTML='<tr><td colspan="10" class="empty">아직 기록이 없습니다. 위에서 첫 상담을 추가해 보세요.</td></tr>'; return; }
+  if(records.length===0){ body.innerHTML='<tr><td colspan="11" class="empty">아직 기록이 없습니다. 위에서 첫 상담을 추가해 보세요.</td></tr>'; return; }
   body.innerHTML=sorted.map(r=>{
     const rj = r.rj==='초진'?'<span class="tag cho">초진</span>':r.rj==='재진'?'<span class="tag jae">재진</span>':'<span class="tag none">-</span>';
     const pay = r.pay==='O'?'<span class="pay O">O</span>':r.pay==='X'?'<span class="pay X">X</span>':'<span class="pay none">·</span>';
@@ -650,11 +651,18 @@ function renderRecords(){
       <td>${pay}</td>
       <td>${esc(r.reason||'')}</td>
       <td class="lft" style="color:#8190a0">${esc(r.memo||'')}</td>
+      <td style="text-align:center"><input type="checkbox" class="happy-chk" ${r.happy==='O'?'checked':''} onchange="toggleHappy('${r.id}', this.checked)" title="해피콜 완료"></td>
       <td style="white-space:nowrap">
         <button class="rowbtn" onclick="editRecord('${r.id}')">수정</button>
         <button class="rowbtn del" onclick="delRecord('${r.id}')">삭제</button>
       </td></tr>`;
   }).join('');
+}
+function toggleHappy(id, checked){
+  const i=records.findIndex(r=>r.id===id);
+  if(i<0) return;
+  records[i].happy = checked ? 'O' : '';
+  saveAll();
 }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -1047,9 +1055,9 @@ function exportJSON(){
   toast('백업 파일을 내려받았습니다.');
 }
 function exportCSV(){
-  const head=['날짜','환자이니셜','초재진','상담종류','시술내용','상담금액','결제','미결제사유','메모'];
+  const head=['날짜','환자이니셜','초재진','상담종류','시술내용','상담금액','결제','미결제사유','메모','해피콜'];
   const rows=[...records].sort((p,q)=>(p.date||'').localeCompare(q.date||''))
-    .map(r=>[r.date,r.name,r.rj,r.type,r.proc,r.amt,r.pay,r.reason,r.memo]
+    .map(r=>[r.date,r.name,r.rj,r.type,r.proc,r.amt,r.pay,r.reason,r.memo,(r.happy==='O'?'O':'')]
       .map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(','));
   const csv='\uFEFF'+[head.join(','),...rows].join('\r\n');
   download(new Blob([csv],{type:'text/csv'}), '상담결제전환_'+fd(todayD())+'.csv');
@@ -1069,7 +1077,7 @@ function importJSON(e){
       if(!confirm(`가져온 ${data.length}건으로 현재 데이터를 모두 교체합니다. 계속할까요?\n(현재 데이터는 먼저 '백업 내보내기'로 보관하세요.)`)) return;
       syncedOK=true;   // 사용자가 명시적으로 가져온 데이터 → 시트 저장 허용
       records=data.map((r,i)=>({id:r.id||'imp'+i+'_'+Date.now(), date:r.date||'', name:r.name||'', rj:r.rj||'',
-        type:r.type||'', proc:r.proc||'', amt:r.amt||0, pay:r.pay||'', reason:r.reason||'', memo:r.memo||''}));
+        type:r.type||'', proc:r.proc||'', amt:r.amt||0, pay:r.pay||'', reason:r.reason||'', memo:r.memo||'', happy:r.happy||''}));
       saveAll(); renderRecords(); renderDash(); toast('가져오기 완료: '+records.length+'건'+(cloudOn?' · 구글 시트에 반영됨':''));
     }catch(err){ toast('파일을 읽을 수 없습니다. 올바른 백업(.json)인지 확인하세요.',true); }
     e.target.value='';
