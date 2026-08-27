@@ -392,13 +392,13 @@ function renderStock(){
 function renderHistory(){
   document.getElementById("thead").innerHTML = `<tr>
     <th>입고일</th><th>부서</th><th>품목</th><th>규격</th>
-    <th class="num">입고수량</th><th>구매처</th><th>메모</th></tr>`;
+    <th class="num">입고수량</th><th>구매처</th><th>메모</th><th style="text-align:right">관리</th></tr>`;
   let recs=[];
   items.forEach(it=>{
     if(it.deleted) return;
     if(filterDept!=="전체" && it.dept!==filterDept) return;
     if(query && !(it.name+" "+(it.company||"")).toLowerCase().includes(query.toLowerCase())) return;
-    it.logs.forEach(g=>recs.push({date:g.date||"", ts:g.ts, dept:it.dept, name:it.name, company:it.company, spec:it.spec, unit:it.unit, amt:g.amt, src:g.src||"", memo:g.memo||""}));
+    (it.logs||[]).forEach(g=>recs.push({itemId:it.id, date:g.date||"", ts:g.ts, dept:it.dept, name:it.name, company:it.company, spec:it.spec, unit:it.unit, amt:g.amt, src:g.src||"", memo:g.memo||""}));
   });
   recs.sort((a,b)=> (b.date.localeCompare(a.date)) || (b.ts-a.ts));
   const tb=document.getElementById("rows"), emp=document.getElementById("empty");
@@ -411,8 +411,41 @@ function renderHistory(){
     <td class="spec">${esc(r.spec||"-")}</td>
     <td class="num"><span class="qty">+${r.amt}<span class="u">${esc(r.unit||"")}</span></span></td>
     <td class="spec">${esc(r.src||"-")}</td>
-    <td><div class="memo" title="${esc(r.memo)}">${esc(r.memo)||'<span class="muted">-</span>'}</div></td></tr>`).join("");
+    <td><div class="memo" title="${esc(r.memo)}">${esc(r.memo)||'<span class="muted">-</span>'}</div></td>
+    <td><div class="actions"><button class="mini edit" onclick="openLogEdit(${r.itemId},${r.ts})">수정</button></div></td></tr>`).join("");
 }
+/* ---- 입고 기록 수정/삭제 ---- */
+function openLogEdit(itemId, ts){
+  const it=find(itemId); if(!it) return;
+  const g=(it.logs||[]).find(x=>x.ts===ts); if(!g) return;
+  modal.innerHTML=`
+    <h3>입고 기록 수정</h3>
+    <div class="msub">${esc(it.name)} · ${esc(it.company||"")}</div>
+    <div class="body">
+      <div class="field"><label>입고일</label><input id="le_date" type="date" value="${toDateInput(g.date||"")}"></div>
+      <div class="field"><label>입고 수량 (${esc(it.unit||"개")})</label><input id="le_amt" type="number" min="1" value="${Number(g.amt)||1}" inputmode="numeric"></div>
+      <div class="field"><label>구매처</label><input id="le_src" list="dl-src" value="${esc(g.src||"")}"></div>
+      <div class="field"><label>메모</label><input id="le_memo" value="${esc(g.memo||"")}"></div>
+      <div class="preview">수량을 고치면 현재수량도 함께 조정됩니다.</div>
+    </div>
+    <div class="foot"><button class="btn del" onclick="deleteLog(${itemId},${ts})">삭제</button><button class="btn ghost" onclick="closeModal()">취소</button><button class="btn primary" onclick="saveLogEdit(${itemId},${ts})">저장</button></div>`;
+  overlay.classList.add("show");
+}
+function saveLogEdit(itemId, ts){
+  const it=find(itemId); const g=(it.logs||[]).find(x=>x.ts===ts); if(!g){ closeModal(); return; }
+  g.amt=Math.max(1,parseInt(document.getElementById("le_amt").value||"1"));
+  g.date=fromDateInput(document.getElementById("le_date").value)||g.date;
+  g.src=document.getElementById("le_src").value.trim();
+  g.memo=document.getElementById("le_memo").value.trim();
+  closeModal(); commit();
+}
+function deleteLog(itemId, ts){
+  const it=find(itemId); if(!it) return;
+  if(!confirm("이 입고 기록을 삭제할까요? 현재수량에서도 빠집니다.")) return;
+  it.logs=(it.logs||[]).filter(x=>x.ts!==ts);
+  closeModal(); commit();
+}
+
 
 function renderTrash(){
   document.getElementById("thead").innerHTML = `<tr>
