@@ -26,9 +26,12 @@
   }
   .wrap{max-width:1280px; margin:0 auto; padding:20px 18px 80px}
 
-  header.top{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin:6px 2px 14px}
-  header.top h1{font-size:20px; font-weight:800; letter-spacing:-.02em; margin:0}
-  header.top .sub{color:var(--ink-soft); font-size:13px; font-weight:500}
+  header.top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:6px 2px 14px}
+  header.top .logo{height:34px; width:auto; display:block}
+  header.top .divider{width:1px; height:26px; background:var(--line)}
+  header.top .titlebox{display:flex; flex-direction:column; gap:1px}
+  header.top h1{font-size:20px; font-weight:800; letter-spacing:-.02em; margin:0; line-height:1.15}
+  header.top .sub{color:var(--ink-soft); font-size:12.5px; font-weight:500}
   header.top .asof{margin-left:auto; color:var(--ink-soft); font-size:12.5px}
   .syncpill{font-size:11.5px; font-weight:800; padding:3px 10px; border-radius:999px}
   .syncpill.off{background:var(--line-soft); color:var(--ink-soft)}
@@ -176,8 +179,12 @@
 <body>
 <div class="wrap">
   <header class="top">
-    <h1 onclick="titleTap()">재고관리</h1>
-    <span class="sub">위례 에브리업의원 · 통합 재고</span>
+    <img class="logo" src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원">
+    <span class="divider"></span>
+    <div class="titlebox">
+      <h1 onclick="titleTap()">재고관리</h1>
+      <span class="sub">통합 재고</span>
+    </div>
     <span class="asof" id="asof"></span>
     <span class="syncpill off" id="syncpill">미리보기</span>
   </header>
