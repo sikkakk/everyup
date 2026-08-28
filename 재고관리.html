@@ -183,7 +183,6 @@
     <span class="divider"></span>
     <div class="titlebox">
       <h1 onclick="titleTap()">재고관리</h1>
-      <span class="sub">통합 재고</span>
     </div>
     <span class="asof" id="asof"></span>
     <span class="syncpill off" id="syncpill">미리보기</span>
@@ -719,12 +718,16 @@ function pullCloud(initial){
       if(arr.length>0){ items=arr; syncedOK=true; setStatus("ok","연결됨"); render(); }
       else if(initial){ items=seed(); syncedOK=true; setStatus("ok","연결됨"); render(); pushCloud(); } // 시트가 비어있으면 현재 215개로 초기화
       else { syncedOK=true; setStatus("ok","연결됨"); }
-    }catch(err){ setStatus("err","불러오기 오류"); }
+    }catch(err){ setStatus("err","불러오기 오류"); if(initial) showLoadError(); }
   };
   const s=document.createElement("script"); s.id=cb;
   s.src=CLOUD.EXEC_URL+(CLOUD.EXEC_URL.includes("?")?"&":"?")+"callback="+cb+"&t="+Date.now();
-  s.onerror=()=>{ setStatus("err","연결 실패"); const x=document.getElementById(cb); if(x) x.remove(); };
+  s.onerror=()=>{ setStatus("err","연결 실패"); if(initial) showLoadError(); const x=document.getElementById(cb); if(x) x.remove(); };
   document.body.appendChild(s);
+}
+function showLoadError(){
+  const emp=document.getElementById("empty");
+  if(emp){ emp.querySelector("b").textContent="재고를 불러오지 못했어요"; emp.style.display="block"; }
 }
 function pushCloud(){
   if(!cloudOn()||!syncedOK) return;        // 최초 불러오기 성공 전엔 저장 안 함
@@ -874,8 +877,9 @@ try{
   if(cloudOn()){
     document.getElementById("demoBanner").style.display="none";
     setStatus("saving","불러오는 중…");
-    render();
-    pullCloud(true);
+    const emp=document.getElementById("empty");
+    if(emp){ emp.querySelector("b").textContent="재고를 불러오는 중…"; emp.style.display="block"; }
+    pullCloud(true);   // 최신 데이터를 받아온 뒤에 한 번만 그림 (예전 215개가 잠깐 보이던 깜빡임 제거)
     scheduleRefresh();
   }else{
     setStatus("off","미리보기");
