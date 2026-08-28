@@ -70,6 +70,12 @@
   .btn.primary{background:var(--primary); color:#fff}
   .btn.ghost{background:var(--surface); color:var(--ink); border:1px solid var(--line)}
   .btn.del{background:var(--surface); color:var(--danger); border:1px solid #F5D2D2}
+  .btn.save{background:#1E8E5A; color:#fff}
+  .btn.save:disabled{opacity:.55; cursor:default}
+  #toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px);
+    background:#1E8E5A; color:#fff; padding:12px 20px; border-radius:12px; font-weight:800; font-size:14px;
+    box-shadow:0 8px 24px rgba(0,0,0,.18); opacity:0; pointer-events:none; transition:.25s; z-index:9999; white-space:nowrap}
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
   .btn:active{transform:translateY(1px)}
 
   .tablecard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden}
@@ -167,7 +173,7 @@
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>재고관리</h1>
+    <h1 onclick="titleTap()">재고관리</h1>
     <span class="sub">위례 에브리업의원 · 통합 재고</span>
     <span class="asof" id="asof"></span>
     <span class="syncpill off" id="syncpill">미리보기</span>
@@ -193,7 +199,12 @@
       <input id="q" type="text" placeholder="품목명 · 회사 검색">
     </div>
     <button class="btn ghost" id="newBtn" onclick="openForm('new')">+ 신규품목</button>
+    <button class="btn save" id="saveNowBtn" onclick="saveNow()">💾 지금 저장</button>
     <button class="btn primary" id="xlsxBtn" onclick="exportXlsx()">엑셀 다운로드</button>
+    <button class="btn ghost" id="fullXlsxBtn" onclick="backupFullXlsx()">전체 백업(엑셀)</button>
+    <button class="btn ghost" id="jsonBtn" onclick="backupJson(false)">완전 백업(.json)</button>
+    <button class="btn del" id="restoreBtn" onclick="pickRestore()" style="display:none">↩ 복원</button>
+    <input type="file" id="restoreFile" accept=".json,application/json" style="display:none" onchange="onRestoreFile(event)">
   </div>
 
   <div id="selbar">
@@ -710,6 +721,128 @@ function pushCloud(){
     .catch(()=>{ pushing=false; setStatus("err","저장 실패"); });
 }
 function commit(){ render(); pushCloud(); }   // 데이터 바뀔 때: 화면 갱신 + 클라우드 저장
+
+/* ---- 지금 저장 (수동 저장 + 진짜 반영됐는지 확인) ---- */
+function saveNow(){
+  if(!cloudOn()){ alert("클라우드(구글시트)에 연결돼 있지 않아요."); return; }
+  if(!items || items.length===0){ alert("저장할 품목이 없어요. (안전을 위해 빈 데이터는 저장하지 않습니다.)"); return; }
+  if(!syncedOK){
+    if(!confirm("아직 시트에서 불러오기가 확인되지 않았어요.\n지금 화면 내용으로 시트를 덮어써도 될까요?")) return;
+    syncedOK = true;
+  }
+  const btn=document.getElementById("saveNowBtn");
+  if(btn){ btn.disabled=true; btn.textContent="저장 중…"; }
+  setStatus("saving","저장 중…");
+  // 저장 순간의 갯수/내용을 기억해 뒀다가, 시트에 실제로 들어갔는지 대조
+  const expectLen = items.filter(i=>!i.deleted).length;
+  const expectSig = items.map(i=>(i.id)+":"+qtyOf(i)).join("|");
+  fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({items})})
+    .then(()=>{ setStatus("saving","저장 확인 중…"); setTimeout(()=>verifySave(expectLen, expectSig), 1800); })
+    .catch(()=>{ endSaveBtn(); setStatus("err","저장 실패"); alert("저장 요청이 실패했어요.\n인터넷 연결을 확인하고 다시 눌러주세요."); });
+}
+function endSaveBtn(){ const b=document.getElementById("saveNowBtn"); if(b){ b.disabled=false; b.textContent="💾 지금 저장"; } }
+function verifySave(expectLen, expectSig){
+  const cb="cbv_"+Date.now();
+  window[cb]=(data)=>{
+    try{ delete window[cb]; }catch(e){}
+    const sc=document.getElementById(cb); if(sc) sc.remove();
+    try{
+      const obj=(typeof data==="string")?JSON.parse(data):data;
+      const arr=(obj&&Array.isArray(obj.items))?obj.items:[];
+      const norm = arr.map(x=>Object.assign({logs:[],baseTs:0},x));
+      const gotLen = norm.filter(i=>!i.deleted).length;
+      const gotSig = norm.map(i=>(i.id)+":"+qtyOf(i)).join("|");
+      endSaveBtn();
+      if(gotLen===expectLen && gotSig===expectSig){
+        setStatus("ok","저장 확인됨 ✓");
+        toast("시트에 저장이 확인됐어요 ✓");
+      }else if(arr.length>0){
+        setStatus("err","저장 안 됨");
+        alert("⚠️ 방금 내용이 시트에 반영되지 않았어요.\n\n가장 흔한 원인은 앱스스크립트 '액세스 권한'이 '모든 사용자'가 아니어서예요.\n배포 관리에서 확인하거나, 엑셀 다운로드로 먼저 백업해 주세요.");
+      }else{
+        setStatus("err","확인 실패");
+        alert("저장은 요청됐지만 시트 확인에 실패했어요. 엑셀 다운로드로 먼저 백업해 주세요.");
+      }
+    }catch(err){ endSaveBtn(); setStatus("err","확인 실패"); }
+  };
+  const s=document.createElement("script"); s.id=cb;
+  s.src=CLOUD.EXEC_URL+(CLOUD.EXEC_URL.includes("?")?"&":"?")+"callback="+cb+"&t="+Date.now();
+  s.onerror=()=>{ endSaveBtn(); setStatus("err","확인 실패"); const x=document.getElementById(cb); if(x) x.remove(); };
+  document.body.appendChild(s);
+}
+function toast(msg){
+  let t=document.getElementById("toast");
+  if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t); }
+  t.textContent=msg; t.className="show";
+  clearTimeout(toast._t); toast._t=setTimeout(()=>{ t.className=""; }, 2600);
+}
+
+/* ---- 전체 백업 (엑셀, 모든 칸 포함) ---- */
+function backupFullXlsx(){
+  if(typeof XLSX==="undefined"){ alert("엑셀 기능을 불러오지 못했어요.\n인터넷 연결 상태에서 github.io 주소로 열어 다시 시도해주세요."); return; }
+  const head=["부서","분류","회사","품목","규격","단위","현재수량","기준수량","최소수량","입고일","유통기한","실사일","보관위치","구입처","메모","삭제됨"];
+  const rows=[head];
+  items.slice().sort((a,b)=> (a.dept||"").localeCompare(b.dept||"","ko") || (a.cat||"").localeCompare(b.cat||"","ko") || (a.name||"").localeCompare(b.name||"","ko"))
+    .forEach(it=>rows.push([it.dept||"",it.cat||"",it.company||"",it.name||"",it.spec||"",it.unit||"",qtyOf(it),Number(it.baseQty)||0,Number(it.min)||0,it.inDate||"",it.exp||"",it.chk||"",it.loc||"",it.src||"",it.memo||"",it.deleted?"삭제":""]));
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[{wch:10},{wch:14},{wch:14},{wch:24},{wch:12},{wch:8},{wch:9},{wch:9},{wch:9},{wch:10},{wch:10},{wch:10},{wch:18},{wch:10},{wch:24},{wch:8}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "전체백업");
+  XLSX.writeFile(wb, "에브리업재고_전체백업_"+today()+".xlsx");
+  toast("전체 엑셀 백업을 내려받았어요");
+}
+
+/* ---- 완전 백업 (.json, 하나도 빠짐없이) ---- */
+function backupJson(auto){
+  const payload={ app:"everyup-inventory", version:1, exportedAt:new Date().toISOString(), count:items.length, items:items };
+  const blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download="에브리업재고_"+(auto?"복원전자동백업":"완전백업")+"_"+today()+".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  if(!auto) toast("완전 백업(.json)을 내려받았어요");
+}
+
+/* ---- 복원 잠금 해제 (제목 3번 탭 → 숫자) ---- */
+let _tt=0,_ttTimer=null;
+function titleTap(){
+  _tt++; clearTimeout(_ttTimer); _ttTimer=setTimeout(()=>{_tt=0;},1200);
+  if(_tt>=3){
+    _tt=0;
+    const pin=prompt("복원 메뉴 잠금 해제 (숫자 4자리)");
+    if(pin===null) return;
+    if(String(pin).trim()==="0318"){ const b=document.getElementById("restoreBtn"); if(b) b.style.display=""; toast("복원 메뉴가 열렸어요"); }
+    else alert("숫자가 맞지 않아요.");
+  }
+}
+
+/* ---- 복원 (.json 불러오기) ---- */
+function pickRestore(){ document.getElementById("restoreFile").click(); }
+function onRestoreFile(ev){
+  const f=ev.target.files&&ev.target.files[0]; ev.target.value="";
+  if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    let obj;
+    try{ obj=JSON.parse(rd.result); }catch(e){ alert("이 파일은 백업 파일이 아니에요.\n에브리업재고_완전백업_….json 파일을 골라주세요."); return; }
+    const arr=Array.isArray(obj)?obj:((obj&&Array.isArray(obj.items))?obj.items:null);
+    if(!arr||arr.length===0){ alert("백업 내용이 비어있거나 형식이 맞지 않아요.\n안전을 위해 복원을 취소했어요."); return; }
+    const when=(obj&&obj.exportedAt)?new Date(obj.exportedAt).toLocaleString():"알 수 없는 시점";
+    backupJson(true); // 1) 되돌리기 전에 지금 상태부터 자동 백업
+    // 2) 최종 확인
+    if(!confirm("↩ 복원 확인\n\n먼저 '지금 상태'를 백업 파일로 내려받았어요.\n\n선택한 파일("+arr.length+"개 품목 · "+when+")로 지금 재고를 전부 되돌릴까요?\n지금 화면의 내용은 이 파일 내용으로 완전히 바뀝니다.")) { toast("복원을 취소했어요"); return; }
+    // 3) 적용
+    items=arr.map(x=>Object.assign({logs:[],baseTs:0},x));
+    syncedOK=true; render();
+    // 4) 시트에도 저장
+    setStatus("saving","복원 저장 중…");
+    fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({items})})
+      .then(()=>{ setStatus("ok","복원됨 ✓"); toast("복원이 완료됐어요 ✓"); })
+      .catch(()=>{ setStatus("err","복원 저장 실패"); alert("복원은 화면에 적용됐지만 시트 저장에 실패했어요.\n💾 지금 저장을 눌러 다시 시도해주세요."); });
+  };
+  rd.readAsText(f,"utf-8");
+}
 function scheduleRefresh(){
   if(!cloudOn()) return;
   setInterval(()=>{
