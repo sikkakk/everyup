@@ -103,8 +103,14 @@
   .welcome .w-part{font-size:13px;color:var(--muted);margin-top:4px}
   .welcome .w-msg{font-size:15px;margin-top:14px;color:var(--ink)}
   .welcome .w-note{font-size:12.5px;color:var(--muted);margin-top:20px;line-height:1.6}
+  .btn-fill{
+    display:block;width:100%;margin-top:20px;background:var(--accent);border:none;
+    color:#fff;border-radius:14px;padding:16px;font-size:16px;font-weight:600;
+    cursor:pointer;font-family:inherit;letter-spacing:-.01em;
+  }
+  .btn-fill:active{opacity:.9;transform:scale(.99)}
   .btn-line{
-    display:inline-block;margin-top:20px;background:none;border:1px solid var(--line);
+    display:inline-block;margin-top:12px;background:none;border:1px solid var(--line);
     color:var(--muted);border-radius:12px;padding:11px 20px;font-size:14px;
     cursor:pointer;font-family:inherit;
   }
@@ -125,7 +131,7 @@
   </div>
 
   <div class="card">
-    <div class="card-head">
+    <div class="card-head" id="cardHead">
       <button class="back" id="backBtn" aria-label="뒤로">‹</button>
       <div>
         <p class="card-title" id="cardTitle">누구세요?</p>
@@ -154,7 +160,7 @@
         <div class="w-name" id="wName"></div>
         <div class="w-part" id="wPart"></div>
         <div class="w-msg">환영합니다. 오늘도 좋은 하루 되세요.</div>
-        <div class="w-note">로그인이 확인되었습니다.<br>다음 단계에서 이 화면 뒤에 통합 메뉴를 연결합니다.</div>
+        <button class="btn-fill" id="goInventory">📦 재고 현황 열기</button>
         <br>
         <button class="btn-line" id="logoutBtn">다른 계정으로</button>
       </div>
@@ -167,6 +173,9 @@
 <script>
 /* ===== 백엔드 주소 (원장님 /exec) ===== */
 const API = "https://script.google.com/macros/s/AKfycbwdkDpy-g8oqg3cYOKOhkAWcZI2_Q-HsSsXqS3kra6QD4ij9n9XNTdV-0uEzrvXCwwA/exec";
+
+/* ===== 로그인 후 이동할 앱 주소 ===== */
+const INVENTORY_URL = "https://sikkakk.github.io/everyup/%EC%9E%AC%EA%B3%A0%EA%B4%80%EB%A6%AC.html";
 
 /* ===== JSONP 헬퍼 (읽기 전용, CORS 우회) ===== */
 function api(params){
@@ -203,6 +212,7 @@ function show(view){
   viewPad.style.display    = view==="pad"     ? "" : "none";
   viewWelcome.style.display= view==="welcome" ? "" : "none";
   backBtn.style.display    = view==="pad"     ? "block" : "none";
+  $("cardHead").style.display = view==="welcome" ? "none" : "flex"; // 환영 화면에선 제목 줄 숨김
 }
 
 /* ===== 이름 목록 ===== */
@@ -338,6 +348,7 @@ function welcome(){
 }
 
 /* ===== 뒤로 / 로그아웃 ===== */
+$("goInventory").onclick=()=>{ location.href = INVENTORY_URL; };
 backBtn.onclick=()=>{ buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
 $("logoutBtn").onclick=()=>{ cur=null; buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
 
