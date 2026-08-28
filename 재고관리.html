@@ -39,6 +39,9 @@
   /* view toggle */
   .viewtabs{display:inline-flex; gap:4px; background:var(--surface); border:1px solid var(--line);
         border-radius:11px; padding:3px; box-shadow:var(--shadow); margin-bottom:14px}
+  .tabrow{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px}
+  .tabrow .viewtabs{margin-bottom:0}
+  .topbtns{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
   .viewtabs button{border:0; background:transparent; padding:8px 16px; border-radius:8px; cursor:pointer;
         font-family:inherit; font-size:13.5px; font-weight:700; color:var(--ink-soft)}
   .viewtabs button.on{background:var(--primary-ink); color:#fff}
@@ -179,10 +182,19 @@
     <span class="syncpill off" id="syncpill">미리보기</span>
   </header>
 
-  <div class="viewtabs" id="viewtabs">
-    <button data-v="stock" class="on" onclick="setView('stock')">재고 현황</button>
-    <button data-v="history" onclick="setView('history')">입고 내역</button>
-    <button data-v="trash" onclick="setView('trash')">삭제된 항목</button>
+  <div class="tabrow">
+    <div class="viewtabs" id="viewtabs">
+      <button data-v="stock" class="on" onclick="setView('stock')">재고 현황</button>
+      <button data-v="history" onclick="setView('history')">입고 내역</button>
+      <button data-v="trash" onclick="setView('trash')">삭제된 항목</button>
+    </div>
+    <div class="topbtns">
+      <button class="btn save" id="saveNowBtn" onclick="saveNow()">💾 지금 저장</button>
+      <button class="btn ghost" id="fullXlsxBtn" onclick="backupFullXlsx()">전체 백업(엑셀)</button>
+      <button class="btn ghost" id="jsonBtn" onclick="backupJson(false)">완전 백업(.json)</button>
+      <button class="btn del" id="restoreBtn" onclick="pickRestore()" style="display:none">↩ 복원</button>
+      <input type="file" id="restoreFile" accept=".json,application/json" style="display:none" onchange="onRestoreFile(event)">
+    </div>
   </div>
 
   <div class="demo-banner" id="demoBanner">
@@ -199,12 +211,7 @@
       <input id="q" type="text" placeholder="품목명 · 회사 검색">
     </div>
     <button class="btn ghost" id="newBtn" onclick="openForm('new')">+ 신규품목</button>
-    <button class="btn save" id="saveNowBtn" onclick="saveNow()">💾 지금 저장</button>
     <button class="btn primary" id="xlsxBtn" onclick="exportXlsx()">엑셀 다운로드</button>
-    <button class="btn ghost" id="fullXlsxBtn" onclick="backupFullXlsx()">전체 백업(엑셀)</button>
-    <button class="btn ghost" id="jsonBtn" onclick="backupJson(false)">완전 백업(.json)</button>
-    <button class="btn del" id="restoreBtn" onclick="pickRestore()" style="display:none">↩ 복원</button>
-    <input type="file" id="restoreFile" accept=".json,application/json" style="display:none" onchange="onRestoreFile(event)">
   </div>
 
   <div id="selbar">
@@ -237,7 +244,7 @@
    실사조정 = 실제 센 값으로 기준을 다시 맞춤 (기준시각 갱신)
    출고 기능 없음 → 재고 감소는 실사조정으로만
 ================= */
-const DEPTS = ["장비재료","간호","피부","비품"];
+const DEPTS = ["장비재료","간호","피부","비품","데모"];
 // 재고 표 열 정의 (tbody 셀 순서와 반드시 일치)
 const STOCK_COLS = [
   {label:"상태", w:60, align:"left"},
