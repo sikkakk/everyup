@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>에브리업의원 로그인</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F1EEE8;
+    --surface:#FFFFFF;
+    --ink:#24282C;
+    --muted:#8C9198;
+    --line:#E5E0D7;
+    --accent:#33625D;
+    --accent-soft:#EAF0EE;
+    --danger:#B0473C;
+    --shadow:0 1px 2px rgba(30,30,30,.04),0 8px 24px rgba(40,50,48,.06);
+    --radius:20px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:'Pretendard','Pretendard Variable',-apple-system,system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);
+    display:flex;align-items:center;justify-content:center;
+    padding:24px 18px;min-height:100dvh;
+  }
+  .app{width:100%;max-width:400px}
+
+  /* ── 브랜드 헤더 ── */
+  .brand{text-align:center;margin-bottom:22px}
+  .brand .eyebrow{
+    font-family:'Playfair Display',serif;
+    letter-spacing:.34em;font-size:11px;color:var(--muted);
+    text-transform:uppercase;margin:0 0 4px;padding-left:.34em;
+  }
+  .brand h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em}
+  .brand .tag{font-size:12.5px;color:var(--muted);margin:7px 0 0;letter-spacing:-.01em}
+
+  /* ── 카드 ── */
+  .card{
+    background:var(--surface);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:22px 20px 24px;
+  }
+  .card-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .back{
+    border:none;background:none;font-size:22px;line-height:1;color:var(--muted);
+    padding:4px 8px 4px 0;cursor:pointer;margin-left:-4px;display:none;
+  }
+  .card-title{font-size:16px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .card-sub{font-size:13px;color:var(--muted);margin:2px 0 0;letter-spacing:-.01em}
+
+  /* ── 이름 선택 ── */
+  .names{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .name-btn{
+    background:var(--surface);border:1px solid var(--line);border-radius:15px;
+    padding:16px 12px;text-align:left;cursor:pointer;transition:.12s;
+    display:flex;flex-direction:column;gap:3px;
+  }
+  .name-btn:active{transform:scale(.97);background:var(--accent-soft);border-color:var(--accent)}
+  .name-btn .nm{font-size:16px;font-weight:600;letter-spacing:-.02em}
+  .name-btn .pt{font-size:12px;color:var(--muted)}
+  .loading,.err-load{text-align:center;color:var(--muted);font-size:14px;padding:30px 0}
+  .err-load{color:var(--danger)}
+
+  /* ── 비밀번호 입력 ── */
+  .who{
+    display:flex;align-items:baseline;gap:7px;justify-content:center;
+    margin-bottom:20px;
+  }
+  .who .nm{font-size:18px;font-weight:700;letter-spacing:-.02em}
+  .who .pt{font-size:12.5px;color:var(--muted)}
+  .dots{display:flex;gap:13px;justify-content:center;margin:6px 0 8px}
+  .dot{width:13px;height:13px;border-radius:50%;background:var(--line);transition:.15s}
+  .dot.on{background:var(--accent);transform:scale(1.08)}
+  .dot.err{background:var(--danger)}
+  .msg{text-align:center;font-size:13px;min-height:20px;margin:10px 0 4px;letter-spacing:-.01em}
+  .msg.bad{color:var(--danger)}
+  .msg.hint{color:var(--muted)}
+
+  .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:12px}
+  .key{
+    background:var(--surface);border:1px solid var(--line);border-radius:15px;
+    font-size:23px;font-weight:500;color:var(--ink);
+    height:62px;cursor:pointer;transition:.1s;font-family:inherit;
+  }
+  .key:active{background:var(--accent-soft);transform:scale(.96);border-color:var(--accent)}
+  .key.ghost{background:none;border:none;box-shadow:none;cursor:default}
+  .key.util{font-size:15px;color:var(--muted);font-weight:600}
+  .key:disabled{opacity:.4;pointer-events:none}
+
+  /* ── 환영 화면 ── */
+  .welcome{text-align:center;padding:14px 4px 6px}
+  .welcome .check{
+    width:56px;height:56px;border-radius:50%;background:var(--accent-soft);
+    color:var(--accent);display:flex;align-items:center;justify-content:center;
+    font-size:28px;margin:0 auto 16px;
+  }
+  .welcome .w-name{font-size:22px;font-weight:700;letter-spacing:-.02em}
+  .welcome .w-part{font-size:13px;color:var(--muted);margin-top:4px}
+  .welcome .w-msg{font-size:15px;margin-top:14px;color:var(--ink)}
+  .welcome .w-note{font-size:12.5px;color:var(--muted);margin-top:20px;line-height:1.6}
+  .btn-line{
+    display:inline-block;margin-top:20px;background:none;border:1px solid var(--line);
+    color:var(--muted);border-radius:12px;padding:11px 20px;font-size:14px;
+    cursor:pointer;font-family:inherit;
+  }
+  .btn-line:active{background:var(--accent-soft)}
+
+  .foot{text-align:center;font-size:11px;color:var(--muted);margin-top:18px;letter-spacing:.02em}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="brand">
+    <p class="eyebrow">The Clinic</p>
+    <h1>에브리업의원</h1>
+    <p class="tag">아름다움은 감이 아닙니다. 해부학입니다.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <button class="back" id="backBtn" aria-label="뒤로">‹</button>
+      <div>
+        <p class="card-title" id="cardTitle">누구세요?</p>
+        <p class="card-sub" id="cardSub">이름을 선택하세요</p>
+      </div>
+    </div>
+
+    <!-- 이름 선택 -->
+    <div id="viewNames">
+      <div class="loading" id="nameLoading">불러오는 중…</div>
+      <div class="names" id="nameGrid" style="display:none"></div>
+    </div>
+
+    <!-- 비밀번호 / 변경 (키패드 공용) -->
+    <div id="viewPad" style="display:none">
+      <div class="who"><span class="nm" id="whoName"></span><span class="pt" id="whoPart"></span></div>
+      <div class="dots" id="dots"></div>
+      <div class="msg hint" id="padMsg"></div>
+      <div class="pad" id="pad"></div>
+    </div>
+
+    <!-- 환영 -->
+    <div id="viewWelcome" style="display:none">
+      <div class="welcome">
+        <div class="check">✓</div>
+        <div class="w-name" id="wName"></div>
+        <div class="w-part" id="wPart"></div>
+        <div class="w-msg">환영합니다. 오늘도 좋은 하루 되세요.</div>
+        <div class="w-note">로그인이 확인되었습니다.<br>다음 단계에서 이 화면 뒤에 통합 메뉴를 연결합니다.</div>
+        <br>
+        <button class="btn-line" id="logoutBtn">다른 계정으로</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="foot">에브리업의원 내부 시스템</p>
+</div>
+
+<script>
+/* ===== 백엔드 주소 (원장님 /exec) ===== */
+const API = "https://script.google.com/macros/s/AKfycbwdkDpy-g8oqg3cYOKOhkAWcZI2_Q-HsSsXqS3kra6QD4ij9n9XNTdV-0uEzrvXCwwA/exec";
+
+/* ===== JSONP 헬퍼 (읽기 전용, CORS 우회) ===== */
+function api(params){
+  return new Promise((resolve,reject)=>{
+    const cb = "cb_" + Math.random().toString(36).slice(2);
+    const timer = setTimeout(()=>{ cleanup(); reject(new Error("timeout")); }, 12000);
+    function cleanup(){ clearTimeout(timer); delete window[cb]; s.remove(); }
+    window[cb] = (data)=>{ cleanup(); resolve(data); };
+    const qs = Object.entries(params).map(([k,v])=>k+"="+encodeURIComponent(v)).join("&");
+    const s = document.createElement("script");
+    s.src = API + "?callback=" + cb + "&" + qs;
+    s.onerror = ()=>{ cleanup(); reject(new Error("network")); };
+    document.body.appendChild(s);
+  });
+}
+
+/* ===== 상태 ===== */
+let STAFF = [];
+let cur = null;                 // 선택된 사람 {name, part}
+let mode = "login";             // login | change_new | change_confirm
+let buf = "";                   // 입력 중인 숫자
+let newPw = "";                 // 변경 시 첫 입력 저장
+let busy = false;
+
+/* ===== 요소 ===== */
+const $ = id => document.getElementById(id);
+const viewNames=$("viewNames"), viewPad=$("viewPad"), viewWelcome=$("viewWelcome");
+const cardTitle=$("cardTitle"), cardSub=$("cardSub"), backBtn=$("backBtn");
+const padMsg=$("padMsg"), dotsBox=$("dots");
+
+/* ===== 화면 전환 ===== */
+function show(view){
+  viewNames.style.display  = view==="names"  ? "" : "none";
+  viewPad.style.display    = view==="pad"     ? "" : "none";
+  viewWelcome.style.display= view==="welcome" ? "" : "none";
+  backBtn.style.display    = view==="pad"     ? "block" : "none";
+}
+
+/* ===== 이름 목록 ===== */
+async function loadNames(){
+  try{
+    const r = await api({action:"list"});
+    if(!r.ok) throw new Error(r.msg||"목록 오류");
+    STAFF = r.list;
+    const grid = $("nameGrid");
+    grid.innerHTML = "";
+    STAFF.forEach(p=>{
+      const b = document.createElement("button");
+      b.className = "name-btn";
+      b.innerHTML = `<span class="nm">${p.name}</span><span class="pt">${p.part||""}</span>`;
+      b.onclick = ()=>pickName(p);
+      grid.appendChild(b);
+    });
+    $("nameLoading").style.display="none";
+    grid.style.display="grid";
+  }catch(e){
+    $("nameLoading").className="err-load";
+    $("nameLoading").textContent="연결에 실패했어요. 인터넷을 확인하고 새로고침 해주세요.";
+  }
+}
+
+/* ===== 이름 선택 → 로그인 입력 ===== */
+function pickName(p){
+  cur = p; mode="login"; buf=""; newPw="";
+  $("whoName").textContent = p.name;
+  $("whoPart").textContent = p.part||"";
+  cardTitle.textContent = "비밀번호";
+  cardSub.textContent = "숫자 6자리를 눌러주세요";
+  setMsg("", "hint");
+  renderDots(); show("pad");
+}
+
+/* ===== 점(진행 표시) ===== */
+function renderDots(err){
+  dotsBox.innerHTML="";
+  for(let i=0;i<6;i++){
+    const d=document.createElement("div");
+    d.className="dot"+(i<buf.length?" on":"")+(err?" err":"");
+    dotsBox.appendChild(d);
+  }
+}
+function setMsg(t,kind){ padMsg.textContent=t; padMsg.className="msg "+(kind||"hint"); }
+
+/* ===== 키패드 ===== */
+function buildPad(){
+  const keys=["1","2","3","4","5","6","7","8","9","del","0","ok"];
+  const pad=$("pad"); pad.innerHTML="";
+  keys.forEach(k=>{
+    const b=document.createElement("button");
+    if(k==="del"){ b.className="key util"; b.textContent="지우기"; b.onclick=onDel; }
+    else if(k==="ok"){ b.className="key ghost"; b.disabled=true; } // 6자리 되면 자동 진행
+    else { b.className="key"; b.textContent=k; b.onclick=()=>onDigit(k); }
+    pad.appendChild(b);
+  });
+}
+function onDigit(n){
+  if(busy || buf.length>=6) return;
+  buf+=n; renderDots();
+  if(buf.length===6) setTimeout(submit,120);
+}
+function onDel(){ if(busy||!buf.length) return; buf=buf.slice(0,-1); renderDots(); setMsg(currentHint(),"hint"); }
+function currentHint(){
+  if(mode==="change_new") return "새 비밀번호 6자리";
+  if(mode==="change_confirm") return "한 번 더 입력";
+  return "";
+}
+function shake(){
+  renderDots(true);
+  setTimeout(()=>{ buf=""; renderDots(); }, 550);
+}
+
+/* ===== 제출 처리 ===== */
+async function submit(){
+  if(busy) return;
+  const pw=buf;
+
+  /* 1) 로그인 */
+  if(mode==="login"){
+    busy=true; setMsg("확인 중…","hint");
+    try{
+      const r=await api({action:"login",name:cur.name,pw});
+      busy=false;
+      if(!r.ok){ setMsg(r.msg||"비밀번호가 틀렸습니다.","bad"); shake(); return; }
+      if(r.mustChange){
+        mode="change_new"; buf=""; newPw="";
+        cardTitle.textContent="비밀번호 변경";
+        cardSub.textContent="처음이시네요. 새 비밀번호를 정해주세요";
+        setMsg("새 비밀번호 6자리 (000000 불가)","hint");
+        renderDots();
+      }else{
+        welcome();
+      }
+    }catch(e){ busy=false; setMsg("연결이 불안정해요. 다시 눌러주세요.","bad"); shake(); }
+    return;
+  }
+
+  /* 2) 새 비밀번호 1차 */
+  if(mode==="change_new"){
+    if(pw==="000000"){ setMsg("000000은 사용할 수 없어요.","bad"); shake(); return; }
+    newPw=pw; mode="change_confirm"; buf="";
+    setMsg("확인을 위해 한 번 더 입력","hint"); renderDots();
+    return;
+  }
+
+  /* 3) 새 비밀번호 2차(확인) → 저장 */
+  if(mode==="change_confirm"){
+    if(pw!==newPw){
+      setMsg("두 번 입력이 달라요. 처음부터 다시.","bad"); shake();
+      mode="change_new"; newPw="";
+      setTimeout(()=>setMsg("새 비밀번호 6자리 (000000 불가)","hint"),560);
+      return;
+    }
+    busy=true; setMsg("저장 중…","hint");
+    try{
+      const r=await api({action:"change",name:cur.name,pw:newPw});
+      busy=false;
+      if(!r.ok){ setMsg(r.msg||"변경 실패","bad"); shake(); mode="change_new"; newPw=""; return; }
+      welcome();
+    }catch(e){ busy=false; setMsg("연결이 불안정해요. 다시 시도해주세요.","bad"); shake(); }
+    return;
+  }
+}
+
+/* ===== 환영 ===== */
+function welcome(){
+  $("wName").textContent = cur.name + "님";
+  $("wPart").textContent = cur.part||"";
+  show("welcome");
+}
+
+/* ===== 뒤로 / 로그아웃 ===== */
+backBtn.onclick=()=>{ buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
+$("logoutBtn").onclick=()=>{ cur=null; buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
+
+/* ===== 시작 ===== */
+buildPad();
+show("names");
+loadNames();
+</script>
+</body>
+</html>
