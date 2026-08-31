@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>팀 근태 관리</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#f8f7f4;--surface:#ffffff;--surface2:#f1efe8;
+    --border:#e0ddd5;--border2:#ccc9bf;
+    --text:#1a1917;--text2:#6b6860;--text3:#9b9890;
+    --purple:#534AB7;--purple-light:#EEEDFE;--purple-text:#3C3489;
+    --green:#1D9E75;--green-light:#EAF3DE;--green-text:#3B6D11;
+    --amber:#BA7517;--amber-light:#FAEEDA;--amber-text:#854F0B;
+    --red:#A32D2D;--red-light:#FCEBEB;--red-text:#791F1F;
+    --blue:#185FA5;--blue-light:#E6F1FB;--blue-text:#0C447C;
+    --radius:8px;--radius-lg:12px;
+  }
+  body{background:var(--bg);font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;color:var(--text);font-size:14px;min-height:100vh}
+  /* layout */
+  .layout{display:flex;min-height:100vh}
+  .sidebar{width:200px;background:var(--surface);border-right:0.5px solid var(--border);padding:1.5rem 0;flex-shrink:0;display:flex;flex-direction:column}
+  .sidebar-logo{padding:0 1.25rem 1.5rem;font-size:16px;font-weight:600;color:var(--text);border-bottom:0.5px solid var(--border);margin-bottom:1rem}
+  .sidebar-logo span{color:var(--purple)}
+  .nav-item{display:flex;align-items:center;gap:8px;padding:.65rem 1.25rem;cursor:pointer;color:var(--text2);font-size:13px;border-left:2px solid transparent;transition:all .15s}
+  .nav-item:hover{background:var(--surface2);color:var(--text)}
+  .nav-item.active{color:var(--purple);background:var(--purple-light);border-left-color:var(--purple);font-weight:500}
+  .nav-item svg{width:16px;height:16px;flex-shrink:0}
+  .sidebar-footer{margin-top:auto;padding:1rem 1.25rem;border-top:0.5px solid var(--border);display:flex;flex-direction:column;gap:6px}
+  .main{flex:1;overflow-y:auto}
+  .main-header{padding:1.25rem 1.5rem;border-bottom:0.5px solid var(--border);background:var(--surface);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+  .main-header-title{font-size:15px;font-weight:600}
+  .main-content{padding:1.5rem}
+  .page{display:none}.page.active{display:block}
+  /* buttons */
+  .btn{padding:7px 14px;border-radius:var(--radius);font-size:13px;cursor:pointer;border:0.5px solid var(--border2);background:transparent;color:var(--text);font-family:inherit;transition:all .12s}
+  .btn:hover{background:var(--surface2)}
+  .btn-primary{background:var(--text);color:#fff;border-color:var(--text)}
+  .btn-primary:hover{opacity:.85;background:var(--text)}
+  .btn-sm{padding:3px 9px;font-size:12px}
+  .btn-export{background:var(--green-light);color:var(--green-text);border-color:#9FE1CB}
+  .btn-export:hover{background:#d0edd9}
+  .btn-import{background:var(--blue-light);color:var(--blue-text);border-color:#85B7EB}
+  .btn-import:hover{background:#cce0f5}
+  /* metrics */
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem}
+  .metric{background:var(--surface2);border-radius:var(--radius);padding:.9rem 1rem}
+  .metric-label{font-size:11px;color:var(--text2);margin-bottom:4px}
+  .metric-value{font-size:20px;font-weight:600}
+  /* cards */
+  .card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem}
+  .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+  .card-title{font-size:14px;font-weight:500}
+  /* tables */
+  .tbl-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;padding:8px 10px;font-size:11px;color:var(--text2);font-weight:500;border-bottom:0.5px solid var(--border);white-space:nowrap;background:var(--surface2)}
+  td{padding:9px 10px;border-bottom:0.5px solid var(--border);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:var(--surface2)}
+  /* badges */
+  .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500}
+  .bg-green{background:var(--green-light);color:var(--green-text)}
+  .bg-amber{background:var(--amber-light);color:var(--amber-text)}
+  .bg-red{background:var(--red-light);color:var(--red-text)}
+  .bg-blue{background:var(--blue-light);color:var(--blue-text)}
+  .bg-purple{background:var(--purple-light);color:var(--purple-text)}
+  .bg-gray{background:var(--surface2);color:var(--text2)}
+  /* avatar */
+  .avatar{width:28px;height:28px;border-radius:50%;background:var(--purple-light);color:var(--purple-text);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;margin-right:6px;vertical-align:middle;flex-shrink:0}
+  .ename{display:flex;align-items:center}
+  /* top row */
+  .top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+  .sec-title{font-size:15px;font-weight:600}
+  /* modal */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center}
+  .overlay.open{display:flex}
+  .modal{background:var(--surface);border-radius:var(--radius-lg);padding:1.5rem;width:100%;max-width:480px;border:0.5px solid var(--border)}
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+  .modal-title{font-size:15px;font-weight:600}
+  /* forms */
+  .row{display:flex;gap:10px;margin-bottom:.85rem}
+  .fg{flex:1}
+  .fg label,.form-label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:500}
+  input[type=text],input[type=date],input[type=number],input[type=month],select,textarea{
+    width:100%;padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);
+    font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;transition:border .12s}
+  input:focus,select:focus,textarea:focus{border-color:var(--purple)}
+  textarea{resize:none}
+  /* month nav */
+  .month-nav{display:flex;align-items:center;gap:8px}
+  .month-nav span{font-size:14px;font-weight:500;min-width:90px;text-align:center}
+  /* bar chart */
+  .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .bar-label{width:55px;font-size:12px;color:var(--text2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar-track{flex:1;background:var(--surface2);border-radius:4px;height:16px;overflow:hidden;border:0.5px solid var(--border)}
+  .bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;font-size:11px;font-weight:600;color:#fff;transition:width .4s}
+  /* ot cards */
+  .ot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+  .ot-cell{background:var(--surface2);border-radius:var(--radius);padding:.9rem;cursor:pointer;border:0.5px solid var(--border);transition:border-color .12s}
+  .ot-cell:hover{border-color:var(--purple)}
+  .ot-cell-name{font-size:12px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+  .ot-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text2);margin-bottom:3px;gap:6px;white-space:nowrap}
+  .ot-row span:first-child{flex-shrink:0}
+  .ot-row span:last-child{font-weight:600;color:var(--text);white-space:nowrap}
+  .ot-remain{font-size:14px;font-weight:700;color:var(--purple);margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)}
+  /* 로그인 게이트 */
+  #login-gate{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:1rem}
+  #login-gate.hidden{display:none}
+  .login-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2.25rem 2rem;width:100%;max-width:360px;box-shadow:0 10px 40px rgba(0,0,0,.06);text-align:center}
+  .login-logo{font-size:20px;font-weight:700;margin-bottom:6px}
+  .login-logo span{color:var(--purple)}
+  .login-sub{font-size:12px;color:var(--text2);margin-bottom:1.5rem}
+  .login-badge{display:inline-block;font-size:11px;font-weight:600;color:var(--purple-text);background:var(--purple-light);border-radius:20px;padding:4px 12px;margin-bottom:1.5rem}
+  #login-pw{width:100%;padding:11px 14px;border:0.5px solid var(--border2);border-radius:var(--radius);font-size:15px;font-family:inherit;text-align:center;letter-spacing:2px;margin-bottom:10px}
+  #login-pw:focus{outline:none;border-color:var(--purple)}
+  .login-btn{width:100%;padding:11px;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;border:none;background:var(--purple);color:#fff;font-family:inherit;transition:opacity .12s}
+  .login-btn:hover{opacity:.88}
+  .login-keep{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:var(--text2);margin:12px 0 4px;cursor:pointer;user-select:none}
+  .login-keep input{cursor:pointer}
+  .login-err{font-size:12px;color:var(--red);min-height:16px;margin-top:8px}
+  .login-change{font-size:11px;color:var(--text3);margin-top:14px;cursor:pointer;text-decoration:underline;background:none;border:none;font-family:inherit}
+  .login-change:hover{color:var(--text2)}
+  /* colors */
+  .c-green{color:var(--green)}.c-amber{color:var(--amber)}.c-red{color:var(--red)}.c-purple{color:var(--purple)}.c-blue{color:var(--blue)}
+  /* util */
+  .mini{font-size:11px;color:var(--text3)}
+  .empty-state{text-align:center;padding:2.5rem;color:var(--text2)}
+  .divider{height:0.5px;background:var(--border);margin:.75rem 0}
+  .action-btns{display:flex;gap:4px;flex-wrap:wrap}
+  input[type=number]{-moz-appearance:textfield}
+  input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{opacity:1}
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--text);color:#fff;padding:.7rem 1.2rem;border-radius:var(--radius);font-size:13px;z-index:200;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- 로그인 게이트 (송우철 원장 전용) -->
+<div id="login-gate">
+  <div class="login-card">
+    <div class="login-logo">에브리업 <span>근태관리</span></div>
+    <div class="login-sub">위례 에브리업의원</div>
+    <div class="login-badge">🔒 송우철 원장 전용</div>
+    <input type="password" id="login-pw" placeholder="비밀번호" autocomplete="current-password" inputmode="text">
+    <button class="login-btn" id="login-btn">로그인</button>
+    <label class="login-keep"><input type="checkbox" id="login-keep"> 이 기기에서 로그인 유지</label>
+    <div class="login-err" id="login-err"></div>
+    <button class="login-change" id="login-change">비밀번호 변경</button>
+  </div>
+</div>
+<div class="layout">
+  <!-- 사이드바 -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">근태<span>관리</span></div>
+    <div class="nav-item active" data-page="leave">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      휴가·연차
+    </div>
+    <div class="nav-item" data-page="ot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+      OT 관리
+    </div>
+    <div class="nav-item" data-page="report">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      월간 리포트
+    </div>
+    <div class="nav-item" data-page="team">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      팀원 관리
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn btn-export" id="btn-export">
+        ⬇ 데이터 저장 (.json)
+      </button>
+      <label for="import-file" class="btn btn-import" style="cursor:pointer;display:block;text-align:center;box-sizing:border-box">
+        ⬆ 데이터 불러오기
+      </label>
+      <input type="file" id="import-file" accept=".json" style="display:none">
+      <button class="btn" id="btn-reset" style="font-size:12px;color:var(--text2);border-color:var(--border)">
+        🔄 기본 데이터로 초기화
+      </button>
+      <button class="btn" id="btn-logout" style="font-size:12px;color:var(--text2);border-color:var(--border)">
+        🔒 로그아웃
+      </button>
+    </div>
+  </nav>
+
+  <!-- 메인 -->
+  <div class="main">
+    <div class="main-header">
+      <span class="main-header-title" id="page-title">휴가·연차 관리</span>
+      <span class="mini" id="save-info">데이터는 JSON으로 저장·불러오기 가능합니다</span>
+    </div>
+    <div class="main-content">
+
+      <!-- 휴가·연차 -->
+      <div id="page-leave" class="page active">
+        <div class="top-row">
+          <span class="sec-title">휴가·연차 내역</span>
+          <button class="btn btn-primary" onclick="openModal('lm')">+ 신청 추가</button>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="tbl-wrap"><table>
+            <thead><tr><th style="width:130px">팀원</th><th style="width:70px">종류</th><th style="width:170px">기간</th><th style="width:55px">일수</th><th style="width:65px">상태</th><th>액션</th></tr></thead>
+            <tbody id="leave-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- OT -->
+      <div id="page-ot" class="page">
+        <div class="top-row">
+          <span class="sec-title">OT 관리</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div class="month-nav">
+              <button class="btn btn-sm" onclick="otChangeMonth(-1)">‹</button>
+              <span id="ot-month-label"></span>
+              <button class="btn btn-sm" onclick="otChangeMonth(1)">›</button>
+            </div>
+            <button class="btn" onclick="openModal('odm')">+ 건별 발생 추가</button>
+            <button class="btn btn-primary" onclick="openOTEarnModal()">✎ 월별 발생 입력</button>
+          </div>
+        </div>
+
+        <!-- 건별 OT 발생 내역 -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem .5rem">
+            <span class="card-title">건별 OT 발생 내역 <span class="mini" style="margin-left:4px">점심 미사용 등 그때그때 입력</span></span>
+          </div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th style="width:110px">팀원</th><th style="width:95px">날짜</th><th style="width:90px">시간</th><th style="width:130px">사유</th><th style="width:100px">관리</th></tr></thead>
+            <tbody id="ot-daily-tbody"></tbody>
+          </table></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">월별 OT 발생 현황 <span class="mini" style="margin-left:4px">(월별 입력 + 건별 합산)</span></span>
+            <span class="mini">카드 클릭 시 월별 수정</span>
+          </div>
+          <div class="ot-grid" id="ot-earn-cards"></div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden;display:none" id="retired-ot-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem .5rem">
+            <span class="card-title" style="color:var(--green-text)">퇴직자 OT 정산 · 노무사 제출용 <span class="mini" style="margin-left:4px;color:var(--text2)">잔여 발생 = 미지급 수당 대상 시간</span></span>
+          </div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th style="width:120px">팀원</th><th style="width:100px">퇴사일</th><th style="width:90px">누적 발생</th><th style="width:90px">총 사용</th><th style="width:110px;color:var(--green-text)">잔여 발생(지급)</th><th style="width:110px">사유</th></tr></thead>
+            <tbody id="retired-ot-tbody"></tbody>
+          </table></div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem .5rem">
+            <span class="card-title">OT 사용 내역</span>
+            <button class="btn btn-sm btn-primary" onclick="openModal('oum')">+ 사용 추가</button>
+          </div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th style="width:110px">팀원</th><th style="width:95px">날짜</th><th style="width:90px">시간</th><th style="width:130px">메모</th><th style="width:100px">관리</th></tr></thead>
+            <tbody id="ot-used-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- 월간 리포트 -->
+      <div id="page-report" class="page">
+        <div class="top-row">
+          <span class="sec-title">월간 리포트</span>
+          <div class="month-nav">
+            <button class="btn btn-sm" onclick="rpChangeMonth(-1)">‹</button>
+            <span id="rp-month-label"></span>
+            <button class="btn btn-sm" onclick="rpChangeMonth(1)">›</button>
+          </div>
+        </div>
+        <div class="grid4">
+          <div class="metric"><div class="metric-label">총 팀원</div><div class="metric-value" id="r-total">-</div></div>
+          <div class="metric"><div class="metric-label">이달 휴가 신청</div><div class="metric-value c-blue" id="r-apps">-</div></div>
+          <div class="metric"><div class="metric-label">잔여 연차 평균</div><div class="metric-value c-green" id="r-avg-leave">-</div></div>
+          <div class="metric"><div class="metric-label">잔여 OT 평균</div><div class="metric-value c-purple" id="r-avg-ot">-</div></div>
+        </div>
+        <div class="card"><div class="card-title" style="margin-bottom:.75rem">연차 소진율</div><div id="leave-bars"></div></div>
+        <div class="card"><div class="card-title" style="margin-bottom:.75rem">OT 잔여 현황</div><div id="ot-bars"></div></div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:1rem 1.25rem .5rem;font-size:14px;font-weight:500">이달 휴가 내역</div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>팀원</th><th>종류</th><th>기간</th><th>일수</th><th>상태</th></tr></thead>
+            <tbody id="rp-leave-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- 팀원 관리 -->
+      <div id="page-team" class="page">
+        <div class="top-row">
+          <span class="sec-title">팀원 현황</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn" id="btn-show-retired" onclick="toggleRetired()" style="font-size:12px">퇴사자 보기</button>
+            <button class="btn btn-primary" onclick="openModal('em')">+ 팀원 추가</button>
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="tbl-wrap"><table>
+            <thead><tr>
+              <th style="width:120px">팀원</th><th style="width:60px">직급</th><th style="width:90px">입사일</th>
+              <th style="width:60px">총 연차</th><th style="width:50px">사용</th><th style="width:50px">잔여</th>
+              <th style="width:65px">OT 발생</th><th style="width:50px">사용</th><th style="width:50px">잔여</th><th style="width:110px">관리</th>
+            </tr></thead>
+            <tbody id="team-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 모달들 -->
+<!-- 휴가 신청 -->
+<div class="overlay" id="lm">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">휴가 신청 등록</span><button class="btn btn-sm" onclick="closeModal('lm')">✕</button></div>
+    <div class="row">
+      <div class="fg"><label>팀원</label><select id="lf-emp"></select></div>
+      <div class="fg"><label>휴가 종류</label><select id="lf-type"><option>연차</option><option>반차</option><option>병가</option><option>경조사</option><option>공가</option></select></div>
+    </div>
+    <div class="row">
+      <div class="fg"><label>시작일</label><input type="date" id="lf-start" onchange="if(!ge('lf-end').value||ge('lf-end').value<this.value)ge('lf-end').value=this.value"></div>
+      <div class="fg"><label>종료일</label><input type="date" id="lf-end"></div>
+    </div>
+    <div style="margin-bottom:1rem"><label class="form-label">사유 (선택)</label><textarea id="lf-reason" rows="2" placeholder="사유를 입력하세요"></textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="closeModal('lm')">취소</button><button class="btn btn-primary" onclick="submitLeave()">등록</button></div>
+  </div>
+</div>
+
+<!-- 건별 OT 발생 추가 -->
+<div class="overlay" id="odm">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">건별 OT 발생 추가</span><button class="btn btn-sm" onclick="closeModal('odm')">✕</button></div>
+    <div class="row">
+      <div class="fg"><label>팀원</label><select id="od-emp"></select></div>
+      <div class="fg"><label>날짜</label><input type="date" id="od-date"></div>
+    </div>
+    <div class="row">
+      <div class="fg"><label>시간</label><input type="number" id="od-hours" min="0" max="23" step="1" value="0" placeholder="0"></div>
+      <div class="fg"><label>분</label><input type="number" id="od-mins" min="0" max="59" step="1" value="0" placeholder="0"></div>
+    </div>
+    <div class="fg" style="margin-bottom:.85rem"><label>사유</label><input type="text" id="od-memo" placeholder="예: 점심 미사용, 야근 등"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="closeModal('odm')">취소</button><button class="btn btn-primary" onclick="submitOTDaily()">추가</button></div>
+  </div>
+</div>
+
+<!-- 건별 OT 발생 수정 -->
+<div class="overlay" id="odm-edit">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">건별 OT 발생 수정</span><button class="btn btn-sm" onclick="closeModal('odm-edit')">✕</button></div>
+    <input type="hidden" id="ode-id">
+    <div class="row">
+      <div class="fg"><label>팀원</label><select id="ode-emp"></select></div>
+      <div class="fg"><label>날짜</label><input type="date" id="ode-date"></div>
+    </div>
+    <div class="row">
+      <div class="fg"><label>시간</label><input type="number" id="ode-hours" min="0" max="23" step="1" placeholder="0"></div>
+      <div class="fg"><label>분</label><input type="number" id="ode-mins" min="0" max="59" step="1" placeholder="0"></div>
+    </div>
+    <div class="fg" style="margin-bottom:.85rem"><label>사유</label><input type="text" id="ode-memo" placeholder="예: 점심 미사용, 야근 등"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="closeModal('odm-edit')">취소</button><button class="btn btn-primary" onclick="saveOTDailyEdit()">저장</button></div>
+  </div>
+</div>
+
+<!-- OT 발생 일괄 입력 -->
+<div class="overlay" id="oem">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header"><span class="modal-title" id="oem-title">OT 발생 입력</span><button class="btn btn-sm" onclick="closeModal('oem')">✕</button></div>
+    <p class="mini" style="margin-bottom:1rem" id="oem-sub"></p>
+    <div id="oem-rows"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:.75rem"><button class="btn" onclick="closeModal('oem')">취소</button><button class="btn btn-primary" onclick="saveOTEarn()">저장</button></div>
+  </div>
+</div>
+
+<!-- OT 사용 추가 -->
+<div class="overlay" id="oum">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">OT 사용 추가</span><button class="btn btn-sm" onclick="closeModal('oum')">✕</button></div>
+    <div class="row">
+      <div class="fg"><label>팀원</label><select id="ou-emp"></select></div>
+      <div class="fg"><label>날짜</label><input type="date" id="ou-date"></div>
+    </div>
+    <div class="row">
+      <div class="fg"><label>시간</label><input type="number" id="ou-hours" min="0" max="23" step="1" value="0" placeholder="0"></div>
+      <div class="fg"><label>분</label><input type="number" id="ou-mins" min="0" max="59" step="1" value="0" placeholder="0"></div>
+    </div>
+    <div class="fg" style="margin-bottom:.85rem"><label>메모</label><input type="text" id="ou-memo" placeholder="선택 사항"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="closeModal('oum')">취소</button><button class="btn btn-primary" onclick="submitOTUsed()">추가</button></div>
+  </div>
+</div>
+
+<!-- OT 사용 수정 -->
+<div class="overlay" id="oum-edit">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">OT 사용 수정</span><button class="btn btn-sm" onclick="closeModal('oum-edit')">✕</button></div>
+    <input type="hidden" id="oe-id">
+    <div class="row">
+      <div class="fg"><label>팀원</label><select id="oe-emp"></select></div>
+      <div class="fg"><label>날짜</label><input type="date" id="oe-date"></div>
+    </div>
+    <div class="row">
+      <div class="fg"><label>시간</label><input type="number" id="oe-hours" min="0" max="23" step="1" placeholder="0"></div>
+      <div class="fg"><label>분</label><input type="number" id="oe-mins" min="0" max="59" step="1" placeholder="0"></div>
+    </div>
+    <div class="fg" style="margin-bottom:.85rem"><label>메모</label><input type="text" id="oe-memo" placeholder="선택 사항"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="closeModal('oum-edit')">취소</button><button class="btn btn-primary" onclick="saveOTUsedEdit()">저장</button></div>
+  </div>
+</div>
+
+<!-- 직원 프로필 모달 -->
+<div class="overlay" id="profile-modal" style="align-items:flex-start;padding:1.5rem;overflow-y:auto">
+  <div class="modal" style="max-width:620px;margin:auto">
+    <div class="modal-header">
+      <span class="modal-title" id="profile-title">직원 프로필</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-primary" onclick="saveProfile()">저장</button>
+        <button class="btn btn-sm" onclick="closeModal('profile-modal')">✕</button>
+      </div>
+    </div>
+    <input type="hidden" id="profile-emp-id">
+
+    <!-- 기본 정보 -->
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.5rem;padding-bottom:.35rem;border-bottom:0.5px solid var(--border)">기본 정보</div>
+    <div class="row" style="margin-bottom:.75rem">
+      <div class="fg"><label>이름</label><input type="text" id="pf-name"></div>
+      <div class="fg"><label>직급</label><input type="text" id="pf-role"></div>
+    </div>
+    <div class="row" style="margin-bottom:.75rem">
+      <div class="fg"><label>입사일</label><input type="date" id="pf-join"></div>
+      <div class="fg"><label>총 연차 (일)</label><input type="number" id="pf-leave" min="1"></div>
+    </div>
+    <div class="row" style="margin-bottom:1rem">
+      <div class="fg">
+        <label>주민번호 앞 6자리 <span style="color:var(--text2);font-weight:400">(생년월일 YYMMDD)</span></label>
+        <input type="text" id="pf-jumin" maxlength="6" placeholder="예: 901231" oninput="this.value=this.value.replace(/[^0-9]/g,'');calcAge()">
+      </div>
+      <div class="fg">
+        <label>나이 (자동 계산)</label>
+        <div style="padding:8px 10px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--surface2);font-size:13px;color:var(--text2);min-height:36px" id="pf-age-display">주민번호 입력 시 자동 계산</div>
+      </div>
+    </div>
+
+    <!-- 급여 정보 -->
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.5rem;padding-bottom:.35rem;border-bottom:0.5px solid var(--border)">급여 정보</div>
+    <div class="row" style="margin-bottom:.5rem">
+      <div class="fg">
+        <label>월 실수령액 (만원)</label>
+        <input type="number" id="pf-take-home" min="0" step="1" placeholder="예: 300" oninput="calcSalary()">
+      </div>
+      <div class="fg">
+        <label>세전 월급 (자동 계산)</label>
+        <div style="padding:8px 10px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--surface2);font-size:13px;min-height:36px" id="pf-pretax-display">—</div>
+      </div>
+    </div>
+    <div style="margin-bottom:1rem">
+      <div style="padding:10px 14px;background:var(--purple-light);border-radius:var(--radius);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--purple-text)">연봉 (세전 월급 × 12)</span>
+        <span style="font-size:16px;font-weight:600;color:var(--purple)" id="pf-annual-display">—</span>
+      </div>
+    </div>
+
+    <!-- 이전 경력 -->
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.5rem;padding-bottom:.35rem;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <span>이전 직장 경력</span>
+      <button class="btn btn-sm" onclick="addCareer()" style="font-size:11px">+ 추가</button>
+    </div>
+    <div id="career-list" style="margin-bottom:1rem"></div>
+
+    <!-- 자격증 -->
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.5rem;padding-bottom:.35rem;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <span>자격증</span>
+      <button class="btn btn-sm" onclick="addCert()" style="font-size:11px">+ 추가</button>
+    </div>
+    <div id="cert-list" style="margin-bottom:1rem"></div>
+
+    <!-- 메모 -->
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.5rem;padding-bottom:.35rem;border-bottom:0.5px solid var(--border)">메모</div>
+    <textarea id="pf-memo" rows="3" placeholder="특이사항, 면담 내용 등 자유롭게 입력" style="width:100%;padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);resize:none;margin-bottom:1rem"></textarea>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn" onclick="closeModal('profile-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveProfile()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 퇴사 처리 모달 -->
+<div class="overlay" id="retire-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">퇴사 처리</span><button class="btn btn-sm" onclick="closeModal('retire-modal')">✕</button></div>
+    <input type="hidden" id="retire-emp-id">
+    <div style="margin-bottom:1rem;font-size:14px">
+      <span id="retire-emp-name" style="font-weight:600"></span> 님을 퇴사 처리합니다.<br>
+      <span style="font-size:12px;color:var(--text2)">퇴사 처리 후에도 기록은 보존되며, 언제든 복직할 수 있습니다.</span>
+    </div>
+    <div class="row">
+      <div class="fg"><label>퇴사일</label><input type="date" id="retire-date"></div>
+      <div class="fg"><label>퇴사 사유 (선택)</label><input type="text" id="retire-reason" placeholder="예: 개인 사정, 계약 만료 등"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:.5rem">
+      <button class="btn" onclick="closeModal('retire-modal')">취소</button>
+      <button class="btn" style="background:var(--red);color:#fff;border-color:var(--red)" onclick="confirmRetire()">퇴사 처리</button>
+    </div>
+  </div>
+</div>
+
+<!-- 팀원 추가 -->
+<div class="overlay" id="em">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">팀원 추가</span><button class="btn btn-sm" onclick="closeModal('em')">✕</button></div>
+    <div class="row">
+      <div class="fg"><label>이름</label><input type="text" id="ef-name" placeholder="홍길동"></div>
+      <div class="fg"><label>직급</label><input type="text" id="ef-role" placeholder="사원"></div>
+    </div>
+    <div class="row">
+      <div class="fg"><label>입사일</label><input type="date" id="ef-join"></div>
+      <div class="fg"><label>총 연차 (일)</label><input type="number" id="ef-leave" value="15" min="1"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:.25rem"><button class="btn" onclick="closeModal('em')">취소</button><button class="btn btn-primary" onclick="submitEmp()">추가</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 데이터 마이그레이션 (구버전 JSON 호환) ──────────────────────────────
+function migrateState(parsed){
+  if(!parsed.otDaily)       parsed.otDaily = [];
+  if(!parsed.nextOTDId)     parsed.nextOTDId = 1;
+  if(!parsed.nextLeaveId)   parsed.nextLeaveId = 1;
+  if(!parsed.nextOTUId)     parsed.nextOTUId = 1;
+  if(!parsed.nextEmpId)     parsed.nextEmpId = 1;
+  if(!parsed.otEarned)      parsed.otEarned = [];
+  if(!parsed.otUsed)        parsed.otUsed = [];
+  if(!parsed.leaves)        parsed.leaves = [];
+  parsed.empList = (parsed.empList||[]).map(e=>({
+    retired:false, retireDate:'', retireReason:'',
+    jumin:'', takeHome:0, memo:'', careers:[], certs:[],
+    ...e,
+  }));
+  parsed.otEarned = parsed.otEarned.map(o=>{
+    if(o.mins===undefined && o.hours!==undefined)
+      return {ym:o.ym, empId:o.empId, mins:Math.round(o.hours*60)};
+    return o;
+  });
+  parsed.otUsed = parsed.otUsed.map(o=>{
+    if(o.mins===undefined && o.hours!==undefined)
+      return {id:o.id, empId:o.empId, date:o.date, mins:Math.round(o.hours*60), memo:o.memo||''};
+    return o;
+  });
+  return parsed;
+}
+
+// ── 데이터 ──────────────────────────────
+const DEFAULT_STATE = {"empList":[{"retired":true,"retireDate":"2026-05-31","retireReason":"권고사직","jumin":"","takeHome":0,"memo":"","careers":[],"certs":[],"id":1,"name":"신보영","role":"상담팀장","joinDate":"2025-07-10","totalLeave":11,"initials":"신보"},{"retired":true,"retireDate":"2026-06-30","retireReason":"권고사직","jumin":"860305","takeHome":300,"memo":"","careers":[],"certs":[],"id":2,"name":"황유란","role":"피부팀장","joinDate":"2025-05-02","totalLeave":15,"initials":"황유"},{"retired":true,"retireDate":"2026-07-25","retireReason":"개인 사정","jumin":"910425","takeHome":250,"memo":"","careers":[],"certs":[],"id":3,"name":"이지영","role":"간호","joinDate":"2026-01-19","totalLeave":11,"initials":"이지"},{"retired":true,"retireDate":"2026-07-16","retireReason":"개인 사정","jumin":"921023","takeHome":260,"memo":"","careers":[],"certs":[],"id":4,"name":"조수진","role":"피부","joinDate":"2026-03-02","totalLeave":11,"initials":"조수"},{"retired":false,"retireDate":"","retireReason":"","jumin":"891212","takeHome":280,"memo":"","careers":[],"certs":[],"id":5,"name":"한희수","role":"부실장","joinDate":"2026-05-06","totalLeave":11,"initials":"한희"},{"retired":false,"retireDate":"","retireReason":"","jumin":"","takeHome":300,"memo":"","careers":[],"certs":[{"name":"간호조무사","date":""}],"id":6,"name":"권은지","role":"실장","joinDate":"2026-06-15","totalLeave":11,"initials":"권은"},{"retired":false,"retireDate":"","retireReason":"","jumin":"","takeHome":0,"memo":"","careers":[],"certs":[],"id":7,"name":"노지원","role":"사원","joinDate":"2026-07-02","totalLeave":11,"initials":"노지"},{"retired":false,"retireDate":"","retireReason":"","jumin":"","takeHome":0,"memo":"","careers":[],"certs":[],"id":8,"name":"김혜진","role":"사원","joinDate":"2026-07-07","totalLeave":11,"initials":"김혜"},{"retired":false,"retireDate":"","retireReason":"","jumin":"","takeHome":0,"memo":"","careers":[],"certs":[],"id":9,"name":"이효정","role":"피부","joinDate":"2026-08-03","totalLeave":11,"initials":"이효"},{"retired":false,"retireDate":"","retireReason":"","jumin":"","takeHome":240,"memo":"","careers":[],"certs":[],"id":10,"name":"조현희","role":"간호","joinDate":"2026-08-10","totalLeave":11,"initials":"조현"}],"leaves":[{"id":1,"empId":4,"type":"연차","start":"2026-05-18","end":"2026-05-18","days":1,"status":"승인","reason":""},{"id":2,"empId":2,"type":"연차","start":"2026-05-09","end":"2026-05-09","days":1,"status":"승인","reason":"경조사"},{"id":3,"empId":2,"type":"연차","start":"2026-04-27","end":"2026-04-27","days":1,"status":"승인","reason":""},{"id":4,"empId":2,"type":"연차","start":"2026-06-01","end":"2026-06-01","days":1,"status":"승인","reason":""},{"id":5,"empId":5,"type":"연차","start":"2026-05-22","end":"2026-05-23","days":2,"status":"승인","reason":""},{"id":6,"empId":4,"type":"연차","start":"2026-05-11","end":"2026-05-11","days":1,"status":"승인","reason":""},{"id":7,"empId":5,"type":"연차","start":"2026-07-27","end":"2026-07-28","days":2,"status":"승인","reason":"여름 휴가 연차"},{"id":8,"empId":6,"type":"연차","start":"2026-07-27","end":"2026-07-28","days":2,"status":"승인","reason":"여름 휴가 연차"},{"id":9,"empId":8,"type":"연차","start":"2026-07-27","end":"2026-07-28","days":2,"status":"승인","reason":"여름 휴가 연차"}],"otEarned":[{"ym":"2026-01","empId":1,"mins":2400},{"ym":"2026-02","empId":1,"mins":786},{"ym":"2026-03","empId":1,"mins":230},{"ym":"2026-04","empId":1,"mins":50},{"ym":"2026-04","empId":2,"mins":73},{"ym":"2026-04","empId":3,"mins":101},{"ym":"2026-04","empId":4,"mins":50},{"ym":"2026-03","empId":3,"mins":108},{"ym":"2026-03","empId":4,"mins":51},{"ym":"2026-02","empId":3,"mins":23},{"ym":"2026-05","empId":5,"mins":20},{"ym":"2026-05","empId":4,"mins":138},{"ym":"2026-05","empId":2,"mins":95},{"ym":"2026-05","empId":3,"mins":170},{"ym":"2026-03","empId":2,"mins":85},{"ym":"2026-01","empId":3,"mins":21},{"ym":"2026-06","empId":3,"mins":61},{"ym":"2026-06","empId":4,"mins":29},{"ym":"2026-06","empId":5,"mins":72},{"ym":"2026-06","empId":6,"mins":32},{"ym":"2026-08","empId":5,"mins":121},{"ym":"2026-08","empId":6,"mins":105},{"ym":"2026-08","empId":7,"mins":27},{"ym":"2026-08","empId":8,"mins":27}],"otUsed":[{"id":1,"empId":1,"date":"2026-05-19","mins":240,"memo":""},{"id":3,"empId":1,"date":"2026-05-15","mins":90,"memo":""},{"id":4,"empId":1,"date":"2026-05-11","mins":120,"memo":""},{"id":6,"empId":2,"date":"2026-05-06","mins":180,"memo":""},{"id":7,"empId":1,"date":"2026-05-04","mins":270,"memo":""},{"id":8,"empId":1,"date":"2026-04-29","mins":210,"memo":""},{"id":11,"empId":1,"date":"2026-04-17","mins":210,"memo":""},{"id":12,"empId":1,"date":"2026-04-11","mins":360,"memo":""},{"id":15,"empId":1,"date":"2026-04-09","mins":480,"memo":"아버지"},{"id":16,"empId":1,"date":"2026-04-08","mins":80,"memo":""},{"id":17,"empId":2,"date":"2026-04-08","mins":120,"memo":""},{"id":18,"empId":1,"date":"2026-04-06","mins":30,"memo":""},{"id":19,"empId":1,"date":"2026-04-03","mins":150,"memo":""},{"id":22,"empId":1,"date":"2026-03-13","mins":120,"memo":""},{"id":24,"empId":1,"date":"2026-03-09","mins":360,"memo":""},{"id":25,"empId":1,"date":"2026-03-05","mins":60,"memo":""},{"id":26,"empId":1,"date":"2026-03-02","mins":120,"memo":""},{"id":27,"empId":4,"date":"2026-04-30","mins":309,"memo":"4월 전체"},{"id":28,"empId":4,"date":"2026-03-31","mins":44,"memo":"3월 전체"},{"id":29,"empId":3,"date":"2026-03-31","mins":112,"memo":"3월전체"},{"id":30,"empId":3,"date":"2026-04-30","mins":248,"memo":"4월전체"},{"id":31,"empId":3,"date":"2026-06-08","mins":30,"memo":""},{"id":32,"empId":2,"date":"2026-06-11","mins":120,"memo":""},{"id":33,"empId":5,"date":"2026-06-15","mins":60,"memo":""},{"id":34,"empId":3,"date":"2026-06-15","mins":30,"memo":""},{"id":35,"empId":4,"date":"2026-06-15","mins":30,"memo":""},{"id":36,"empId":2,"date":"2026-06-18","mins":60,"memo":""},{"id":37,"empId":2,"date":"2026-06-25","mins":17,"memo":""},{"id":38,"empId":2,"date":"2026-06-23","mins":45,"memo":""},{"id":39,"empId":4,"date":"2026-06-23","mins":36,"memo":""},{"id":40,"empId":3,"date":"2026-06-23","mins":36,"memo":""},{"id":41,"empId":3,"date":"2026-06-18","mins":30,"memo":""},{"id":42,"empId":2,"date":"2026-06-04","mins":30,"memo":""},{"id":43,"empId":3,"date":"2026-06-04","mins":30,"memo":""},{"id":44,"empId":4,"date":"2026-06-04","mins":30,"memo":""},{"id":45,"empId":5,"date":"2026-06-04","mins":30,"memo":""},{"id":46,"empId":3,"date":"2026-06-30","mins":30,"memo":""},{"id":47,"empId":4,"date":"2026-06-30","mins":30,"memo":""},{"id":48,"empId":5,"date":"2026-07-07","mins":138,"memo":""},{"id":49,"empId":4,"date":"2026-07-07","mins":13,"memo":""},{"id":50,"empId":3,"date":"2026-07-07","mins":55,"memo":""},{"id":51,"empId":3,"date":"2026-07-16","mins":262,"memo":""},{"id":52,"empId":4,"date":"2026-07-16","mins":187,"memo":""},{"id":53,"empId":8,"date":"2026-08-06","mins":161,"memo":""},{"id":54,"empId":5,"date":"2026-08-10","mins":180,"memo":""},{"id":55,"empId":6,"date":"2026-08-14","mins":120,"memo":""},{"id":56,"empId":6,"date":"2026-08-12","mins":75,"memo":""}],"otDaily":[{"id":1,"empId":2,"date":"2026-05-26","mins":60,"memo":"점심"},{"id":2,"empId":3,"date":"2026-05-26","mins":60,"memo":"점심"},{"id":3,"empId":4,"date":"2026-05-26","mins":60,"memo":"점심"},{"id":4,"empId":5,"date":"2026-05-26","mins":60,"memo":"점심"},{"id":5,"empId":2,"date":"2026-05-23","mins":30,"memo":"점심 미사용"},{"id":6,"empId":3,"date":"2026-06-17","mins":180,"memo":""},{"id":7,"empId":2,"date":"2026-06-23","mins":30,"memo":"점심미사용"},{"id":8,"empId":2,"date":"2026-06-25","mins":11,"memo":"점심미사용"},{"id":13,"empId":6,"date":"2026-08-31","mins":121,"memo":""}],"nextLeaveId":10,"nextOTUId":57,"nextEmpId":11,"nextOTDId":14};
+
+let state = migrateState(JSON.parse(JSON.stringify(DEFAULT_STATE)));
+
+const _now=new Date();
+let otViewY=_now.getFullYear(),otViewM=_now.getMonth()+1,rpY=_now.getFullYear(),rpM=_now.getMonth()+1;
+
+// ── 유틸 ──────────────────────────────
+const ge = id => document.getElementById(id);
+const emp = id => state.empList.find(e=>e.id===id);
+const ym = (y,m) => y+'-'+(m<10?'0':'')+m;
+const earnedTotal = id => {
+  const monthly = state.otEarned.filter(o=>o.empId===id).reduce((s,o)=>s+o.mins,0);
+  const daily = (state.otDaily||[]).filter(o=>o.empId===id).reduce((s,o)=>s+o.mins,0);
+  return monthly + daily;
+};
+const usedOTTotal = id => state.otUsed.filter(o=>o.empId===id).reduce((s,o)=>s+o.mins,0);
+// 잔여 OT = 발생*1.5 - 사용  (발생 1시간당 1.5시간 사용 가능)
+const otRemain = id => Math.max(0, Math.round(earnedTotal(id)*1.5) - usedOTTotal(id));
+const usedLeave = id => state.leaves.filter(l=>l.empId===id&&['연차','반차'].includes(l.type)&&l.status!=='반려').reduce((s,l)=>s+l.days,0);
+const badge = (cls,txt) => `<span class="badge ${cls}">${txt}</span>`;
+const statusCls = s => s==='승인'?'bg-green':s==='대기'?'bg-amber':'bg-red';
+const avatarEl = e => `<div class="ename"><span class="avatar">${e.initials}</span>${e.name}</div>`;
+function fmtMins(m){
+  if(!m||m===0) return '0분';
+  const h=Math.floor(m/60),min=m%60;
+  if(h>0&&min>0) return `${h}시간 ${min}분`;
+  if(h>0) return `${h}시간`;
+  return `${min}분`;
+}
+
+function showToast(msg){
+  const t=ge('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ── 페이지 전환 ──────────────────────────────
+const pageTitles = {leave:'휴가·연차 관리',ot:'OT 관리',report:'월간 리포트',team:'팀원 관리'};
+function showPage(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  ge('page-'+name).classList.add('active');
+  el.classList.add('active');
+  ge('page-title').textContent=pageTitles[name];
+  if(name==='report')renderReport();
+  if(name==='ot')renderOT();
+  if(name==='team')renderTeam();
+}
+
+// ── 모달 ──────────────────────────────
+const activeEmpOptions = () => state.empList.filter(e=>!e.retired).map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+
+function openModal(id){
+  if(id==='lm'){
+    ge('lf-emp').innerHTML=activeEmpOptions();
+    const t=new Date().toISOString().split('T')[0];
+    ge('lf-start').value=t;ge('lf-end').value=t;ge('lf-reason').value='';
+  }
+  if(id==='em'){ge('ef-name').value='';ge('ef-role').value='사원';ge('ef-join').value='';ge('ef-leave').value=15;}
+  if(id==='odm'){
+    ge('od-emp').innerHTML=activeEmpOptions();
+    ge('od-date').value=new Date().toISOString().split('T')[0];
+    ge('od-hours').value=0;ge('od-mins').value=0;ge('od-memo').value='';
+  }
+  if(id==='oum'){
+    ge('ou-emp').innerHTML=activeEmpOptions();
+    ge('ou-date').value=new Date().toISOString().split('T')[0];
+    ge('ou-hours').value=2;ge('ou-mins').value=0;ge('ou-memo').value='';
+  }
+  ge(id).classList.add('open');
+}
+function closeModal(id){ge(id).classList.remove('open')}
+
+// ── 휴가 ──────────────────────────────
+function submitLeave(){
+  const empId=parseInt(ge('lf-emp').value);
+  const type=ge('lf-type').value;
+  const start=ge('lf-start').value,end=ge('lf-end').value;
+  if(!start||!end){alert('날짜를 입력하세요');return}
+  const days=type==='반차'?0.5:Math.round((new Date(end)-new Date(start))/86400000+1);
+  state.leaves.push({id:state.nextLeaveId++,empId,type,start,end,days,status:'대기',reason:ge('lf-reason').value});
+  closeModal('lm');renderLeave();renderTeam();showToast('휴가 신청이 등록되었습니다');
+}
+function setStatus(id,s){const l=state.leaves.find(x=>x.id===id);if(l)l.status=s;renderLeave();renderTeam()}
+function delLeave(id){if(!confirm('삭제하시겠습니까?'))return;state.leaves=state.leaves.filter(l=>l.id!==id);renderLeave();renderTeam()}
+
+function renderLeave(){
+  const tb=ge('leave-tbody');
+  // 퇴사자 제외
+  const visibleLeaves = [...state.leaves].reverse().filter(l=>{
+    const e=emp(l.empId);
+    return e && !e.retired;
+  });
+  if(!visibleLeaves.length){tb.innerHTML=`<tr><td colspan="6" class="empty-state">내역이 없습니다</td></tr>`;return}
+  tb.innerHTML=visibleLeaves.map(l=>{
+    const e=emp(l.empId);if(!e)return'';
+    return`<tr>
+      <td>${avatarEl(e)}</td>
+      <td>${badge('bg-blue',l.type)}</td>
+      <td style="font-size:12px">${l.start} ~ ${l.end}</td>
+      <td>${l.days}일</td>
+      <td>${badge(statusCls(l.status),l.status)}</td>
+      <td><div class="action-btns">${l.status==='대기'?`<button class="btn btn-sm" onclick="setStatus(${l.id},'승인')">승인</button><button class="btn btn-sm" onclick="setStatus(${l.id},'반려')">반려</button>`:''}<button class="btn btn-sm" style="color:var(--text2)" onclick="delLeave(${l.id})">삭제</button></div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── OT ──────────────────────────────
+function openOTEarnModal(){
+  const ymStr=ym(otViewY,otViewM);
+  ge('oem-title').textContent=`OT 발생 입력 — ${otViewY}년 ${otViewM}월`;
+  ge('oem-sub').textContent='각 팀원의 이달 발생 OT를 입력하세요';
+  ge('oem-rows').innerHTML=state.empList.filter(e=>!e.retired).map(e=>{
+    const ex=state.otEarned.find(o=>o.ym===ymStr&&o.empId===e.id);
+    const exH=ex?Math.floor(ex.mins/60):0;
+    const exM=ex?ex.mins%60:0;
+    return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem;padding-bottom:.75rem;border-bottom:0.5px solid var(--border)">
+      <div style="width:100px;font-size:13px;display:flex;align-items:center;gap:6px;flex-shrink:0"><span class="avatar">${e.initials}</span>${e.name}</div>
+      <div style="display:flex;gap:6px;flex:1;align-items:flex-end">
+        <div class="fg"><label style="font-size:11px;color:var(--text2)">시간</label><input type="number" id="oei-h-${e.id}" min="0" max="200" step="1" value="${exH}" placeholder="0"></div>
+        <div class="fg"><label style="font-size:11px;color:var(--text2)">분</label><input type="number" id="oei-m-${e.id}" min="0" max="59" step="1" value="${exM}" placeholder="0"></div>
+      </div>
+    </div>`;
+  }).join('');
+  ge('oem').classList.add('open');
+}
+function saveOTEarn(){
+  const ymStr=ym(otViewY,otViewM);
+  document.querySelectorAll('#oem-rows [id^="oei-h-"]').forEach(hInput=>{
+    const empId=parseInt(hInput.id.replace('oei-h-',''));
+    const mInput=ge('oei-m-'+empId);
+    const h=parseInt(hInput.value)||0;
+    const m=parseInt(mInput?mInput.value:0)||0;
+    const mins=h*60+m;
+    const idx=state.otEarned.findIndex(o=>o.ym===ymStr&&o.empId===empId);
+    if(mins>0){idx>=0?state.otEarned[idx].mins=mins:state.otEarned.push({ym:ymStr,empId,mins});}
+    else if(idx>=0)state.otEarned.splice(idx,1);
+  });
+  closeModal('oem');renderOT();renderTeam();showToast('OT 발생 내역이 저장되었습니다');
+}
+function editOneOT(empId){
+  const ymStr=ym(otViewY,otViewM);const e=emp(empId);
+  const ex=state.otEarned.find(o=>o.ym===ymStr&&o.empId===empId);
+  const exH=ex?Math.floor(ex.mins/60):0;
+  const exM=ex?ex.mins%60:0;
+  ge('oem-title').textContent=`OT 수정 — ${e.name} (${otViewY}년 ${otViewM}월)`;
+  ge('oem-sub').textContent='';
+  ge('oem-rows').innerHTML=`<div style="display:flex;gap:10px">
+    <div class="fg"><label style="font-size:12px;color:var(--text2)">시간</label><input type="number" id="oei-h-${empId}" min="0" max="200" step="1" value="${exH}"></div>
+    <div class="fg"><label style="font-size:12px;color:var(--text2)">분</label><input type="number" id="oei-m-${empId}" min="0" max="59" step="1" value="${exM}"></div>
+  </div>`;
+  ge('oem').classList.add('open');
+}
+function submitOTUsed(){
+  const empId=parseInt(ge('ou-emp').value);
+  const date=ge('ou-date').value;
+  const h=parseInt(ge('ou-hours').value)||0;
+  const m=parseInt(ge('ou-mins').value)||0;
+  const mins=h*60+m;
+  if(!date||mins<=0){alert('날짜와 시간을 입력하세요');return}
+  state.otUsed.push({id:state.nextOTUId++,empId,date,mins,memo:ge('ou-memo').value});
+  closeModal('oum');renderOT();renderTeam();showToast('OT 사용이 추가되었습니다');
+}
+function delOTUsed(id){if(!confirm('삭제하시겠습니까?'))return;state.otUsed=state.otUsed.filter(o=>o.id!==id);renderOT();renderTeam()}
+function openOTUsedEdit(id){
+  const o=state.otUsed.find(x=>x.id===id);if(!o)return;
+  ge('oe-id').value=id;
+  ge('oe-emp').innerHTML=state.empList.map(e=>`<option value="${e.id}"${e.id===o.empId?' selected':''}>${e.name}</option>`).join('');
+  ge('oe-date').value=o.date;
+  ge('oe-hours').value=Math.floor(o.mins/60);
+  ge('oe-mins').value=o.mins%60;
+  ge('oe-memo').value=o.memo||'';
+  ge('oum-edit').classList.add('open');
+}
+function saveOTUsedEdit(){
+  const id=parseInt(ge('oe-id').value);
+  const o=state.otUsed.find(x=>x.id===id);if(!o)return;
+  const h=parseInt(ge('oe-hours').value)||0;
+  const m=parseInt(ge('oe-mins').value)||0;
+  const mins=h*60+m;
+  if(!ge('oe-date').value||mins<=0){alert('날짜와 시간을 입력하세요');return}
+  o.empId=parseInt(ge('oe-emp').value);
+  o.date=ge('oe-date').value;
+  o.mins=mins;
+  o.memo=ge('oe-memo').value;
+  closeModal('oum-edit');renderOT();renderTeam();saveLocal();showToast('수정되었습니다');
+}
+function otChangeMonth(d){otViewM+=d;if(otViewM>12){otViewM=1;otViewY++}if(otViewM<1){otViewM=12;otViewY--}renderOT()}
+
+function submitOTDaily(){
+  const empId=parseInt(ge('od-emp').value);
+  const date=ge('od-date').value;
+  const h=parseInt(ge('od-hours').value)||0;
+  const m=parseInt(ge('od-mins').value)||0;
+  const mins=h*60+m;
+  if(!date||mins<=0){alert('날짜와 시간을 입력하세요');return}
+  if(!state.otDaily) state.otDaily=[];
+  state.otDaily.push({id:state.nextOTDId++,empId,date,mins,memo:ge('od-memo').value});
+  closeModal('odm');renderOT();renderTeam();saveLocal();showToast('건별 OT 발생이 추가되었습니다');
+}
+function openOTDailyEdit(id){
+  if(!state.otDaily) return;
+  const o=state.otDaily.find(x=>x.id===id);if(!o)return;
+  ge('ode-id').value=id;
+  ge('ode-emp').innerHTML=state.empList.map(e=>`<option value="${e.id}"${e.id===o.empId?' selected':''}>${e.name}</option>`).join('');
+  ge('ode-date').value=o.date;
+  ge('ode-hours').value=Math.floor(o.mins/60);
+  ge('ode-mins').value=o.mins%60;
+  ge('ode-memo').value=o.memo||'';
+  ge('odm-edit').classList.add('open');
+}
+function saveOTDailyEdit(){
+  const id=parseInt(ge('ode-id').value);
+  const o=state.otDaily.find(x=>x.id===id);if(!o)return;
+  const h=parseInt(ge('ode-hours').value)||0;
+  const m=parseInt(ge('ode-mins').value)||0;
+  const mins=h*60+m;
+  if(!ge('ode-date').value||mins<=0){alert('날짜와 시간을 입력하세요');return}
+  o.empId=parseInt(ge('ode-emp').value);
+  o.date=ge('ode-date').value;
+  o.mins=mins;
+  o.memo=ge('ode-memo').value;
+  closeModal('odm-edit');renderOT();renderTeam();saveLocal();showToast('수정되었습니다');
+}
+function delOTDaily(id){
+  if(!confirm('삭제하시겠습니까?'))return;
+  state.otDaily=state.otDaily.filter(o=>o.id!==id);
+  renderOT();renderTeam();saveLocal();
+}
+
+function renderOT(){
+  ge('ot-month-label').textContent=`${otViewY}년 ${otViewM}월`;
+  const ymStr=ym(otViewY,otViewM);
+
+  // 건별 OT 발생 내역 - 퇴사자 제외
+  const dailyList=state.otDaily||[];
+  const dtb=ge('ot-daily-tbody');
+  const sortedDaily=[...dailyList].sort((a,b)=>b.date.localeCompare(a.date)).filter(o=>{
+    const e=emp(o.empId); return e && !e.retired;
+  });
+  if(!sortedDaily.length){
+    dtb.innerHTML=`<tr><td colspan="5" class="empty-state">건별 발생 내역 없음 — "+ 건별 발생 추가" 버튼으로 추가하세요</td></tr>`;
+  } else {
+    dtb.innerHTML=sortedDaily.map(o=>{
+      const e=emp(o.empId);if(!e)return'';
+      const memo=o.memo||'-';
+      const memoShort=memo.length>10?memo.slice(0,10)+'…':memo;
+      return`<tr>
+        <td>${avatarEl(e)}</td>
+        <td style="font-size:12px;white-space:nowrap">${o.date}</td>
+        <td style="white-space:nowrap">${fmtMins(o.mins)}</td>
+        <td style="font-size:12px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${memo}">${memoShort}</td>
+        <td><div style="display:flex;gap:4px"><button class="btn btn-sm" onclick="openOTDailyEdit(${o.id})">수정</button><button class="btn btn-sm" style="color:var(--red)" onclick="delOTDaily(${o.id})">삭제</button></div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // 월별 OT 발생 카드 (월별입력 + 해당월 건별 합산) - 현직원만
+  const activeEmpsOT = state.empList.filter(e=>!e.retired);
+  ge('ot-earn-cards').innerHTML=activeEmpsOT.map(e=>{
+    const rec=state.otEarned.find(o=>o.ym===ymStr&&o.empId===e.id);
+    const monthlyMins=rec?rec.mins:0;
+    const dailyMins=(state.otDaily||[]).filter(o=>o.empId===e.id&&o.date.slice(0,7)===ymStr).reduce((s,o)=>s+o.mins,0);
+    const em=monthlyMins+dailyMins;
+    const te=earnedTotal(e.id);
+    const usable=Math.round(te*1.5);
+    const tu=usedOTTotal(e.id);
+    const tr=otRemain(e.id);
+    const rEarn=Math.round(tr*2/3); // 잔여 발생 = 잔여(사용가능) × 2/3 (수당 지급 기준)
+    return`<div class="ot-cell" onclick="editOneOT(${e.id})" style="${em>0?'border-color:#AFA9EC':''}">
+      <div class="ot-cell-name"><span class="avatar">${e.initials}</span>${e.name}</div>
+      <div class="ot-row"><span>이달 발생</span><span>${fmtMins(em)}</span></div>
+      <div class="ot-row"><span>누적 발생</span><span>${fmtMins(te)}</span></div>
+      <div class="ot-row" style="color:var(--green-text)" title="퇴직 시 수당 지급 기준 시간 (잔여 사용가능 × 2/3)"><span>잔여 발생</span><span style="font-weight:600;color:var(--green-text)">${fmtMins(rEarn)}</span></div>
+      <div class="ot-row" style="color:var(--purple-text)"><span>사용 가능(×1.5)</span><span style="font-weight:600">${fmtMins(usable)}</span></div>
+      <div class="ot-row"><span>총 사용</span><span>${fmtMins(tu)}</span></div>
+      <div class="ot-remain" style="color:${tr>0?'var(--purple)':'var(--text2)'}">잔여 ${fmtMins(tr)}</div>
+    </div>`;
+  }).join('');
+
+  // 퇴직자 OT 정산 (노무사 제출용) - 잔여 발생 있는 퇴사자만
+  const retiredCard=ge('retired-ot-card');
+  const retiredOT=state.empList.filter(e=>e.retired && earnedTotal(e.id)>0);
+  if(retiredOT.length){
+    retiredCard.style.display='';
+    ge('retired-ot-tbody').innerHTML=retiredOT
+      .sort((a,b)=>(b.retireDate||'').localeCompare(a.retireDate||''))
+      .map(e=>{
+        const te=earnedTotal(e.id), tu=usedOTTotal(e.id), tr=otRemain(e.id);
+        const rEarn=Math.round(tr*2/3);
+        return`<tr>
+          <td>${avatarEl(e)}</td>
+          <td style="font-size:12px">${e.retireDate||'-'}</td>
+          <td>${fmtMins(te)}</td>
+          <td>${fmtMins(tu)}</td>
+          <td style="font-weight:700;color:var(--green-text)">${fmtMins(rEarn)}</td>
+          <td style="font-size:12px;color:var(--text2)">${e.retireReason||'-'}</td>
+        </tr>`;
+      }).join('');
+  } else {
+    retiredCard.style.display='none';
+    ge('retired-ot-tbody').innerHTML='';
+  }
+
+  // OT 사용 내역 - 퇴사자 제외
+  const tb=ge('ot-used-tbody');
+  const sorted=[...state.otUsed].sort((a,b)=>b.date.localeCompare(a.date)).filter(o=>{
+    const e=emp(o.empId); return e && !e.retired;
+  });
+  if(!sorted.length){tb.innerHTML=`<tr><td colspan="5" class="empty-state">사용 내역 없음</td></tr>`;return}
+  tb.innerHTML=sorted.map(o=>{
+    const e=emp(o.empId);if(!e)return'';
+    const memo=o.memo||'-';
+    const memoShort=memo.length>10?memo.slice(0,10)+'…':memo;
+    return`<tr>
+      <td>${avatarEl(e)}</td>
+      <td style="font-size:12px;white-space:nowrap">${o.date}</td>
+      <td style="white-space:nowrap">${fmtMins(o.mins)}</td>
+      <td style="font-size:12px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${memo}">${memoShort}</td>
+      <td><div style="display:flex;gap:4px"><button class="btn btn-sm" onclick="openOTUsedEdit(${o.id})">수정</button><button class="btn btn-sm" style="color:var(--red)" onclick="delOTUsed(${o.id})">삭제</button></div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── 팀원 ──────────────────────────────
+let showRetired = false;
+
+function toggleRetired(){
+  showRetired = !showRetired;
+  const btn = ge('btn-show-retired');
+  if(showRetired){
+    btn.textContent = '현직원만 보기';
+    btn.style.background = 'var(--amber-light)';
+    btn.style.color = 'var(--amber-text)';
+    btn.style.borderColor = '#FAC775';
+  } else {
+    btn.textContent = '퇴사자 보기';
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+  }
+  renderTeam();
+}
+
+function retireEmp(id){
+  const e = state.empList.find(x=>x.id===id);
+  if(!e) return;
+  ge('retire-emp-id').value = id;
+  ge('retire-emp-name').textContent = e.name;
+  ge('retire-date').value = new Date().toISOString().split('T')[0];
+  ge('retire-reason').value = '';
+  ge('retire-modal').classList.add('open');
+}
+
+function confirmRetire(){
+  const id = parseInt(ge('retire-emp-id').value);
+  const e = state.empList.find(x=>x.id===id);
+  if(!e) return;
+  e.retired = true;
+  e.retireDate = ge('retire-date').value;
+  e.retireReason = ge('retire-reason').value;
+  closeModal('retire-modal');
+  renderTeam(); renderLeave(); renderOT(); renderReport();
+  saveLocal(); showToast(`${e.name} 님을 퇴사 처리했습니다`);
+}
+
+function reinstateEmp(id){
+  const e = state.empList.find(x=>x.id===id);
+  if(!e) return;
+  if(!confirm(`${e.name} 님을 복직 처리하시겠습니까?`)) return;
+  e.retired = false;
+  e.retireDate = '';
+  e.retireReason = '';
+  renderTeam(); renderLeave(); renderOT(); renderReport();
+  saveLocal(); showToast(`${e.name} 님을 복직 처리했습니다`);
+}
+
+function submitEmp(){
+  const name=ge('ef-name').value.trim();
+  if(!name){alert('이름을 입력하세요');return}
+  state.empList.push({id:state.nextEmpId++,name,role:ge('ef-role').value||'사원',joinDate:ge('ef-join').value||'',totalLeave:parseInt(ge('ef-leave').value)||15,initials:name.slice(0,2),retired:false});
+  closeModal('em');renderTeam();showToast('팀원이 추가되었습니다');
+}
+function delEmp(id){
+  if(!confirm('팀원을 완전히 삭제하면 모든 기록도 삭제됩니다.\n퇴사 처리를 원하시면 취소 후 퇴사 버튼을 이용하세요.\n계속하시겠습니까?'))return;
+  state.empList=state.empList.filter(e=>e.id!==id);
+  state.leaves=state.leaves.filter(l=>l.empId!==id);
+  state.otEarned=state.otEarned.filter(o=>o.empId!==id);
+  state.otUsed=state.otUsed.filter(o=>o.empId!==id);
+  if(state.otDaily) state.otDaily=state.otDaily.filter(o=>o.empId!==id);
+  renderTeam();renderLeave();renderOT();saveLocal();
+}
+
+// ── 직원 프로필 ──────────────────────────────
+function calcAge(){
+  const v = ge('pf-jumin').value.trim();
+  const el = ge('pf-age-display');
+  if(v.length !== 6){ el.textContent='주민번호 입력 시 자동 계산'; el.style.color='var(--text2)'; return; }
+  const yy=parseInt(v.slice(0,2)), mm=parseInt(v.slice(2,4)), dd=parseInt(v.slice(4,6));
+  if(mm<1||mm>12||dd<1||dd>31){ el.textContent='형식 오류 (YYMMDD)'; el.style.color='var(--red)'; return; }
+  const now=new Date();
+  const fullYear = yy <= (now.getFullYear()-2000) ? 2000+yy : 1900+yy;
+  const birth = new Date(fullYear, mm-1, dd);
+  let age = now.getFullYear()-birth.getFullYear();
+  if(now < new Date(now.getFullYear(), mm-1, dd)) age--;
+  el.textContent = `만 ${age}세  (${fullYear}년생)`;
+  el.style.color = 'var(--text)';
+}
+
+function calcSalary(){
+  const raw = parseFloat(ge('pf-take-home').value)||0;
+  const pretax = ge('pf-pretax-display');
+  const annual = ge('pf-annual-display');
+  if(!raw){ pretax.textContent='—'; annual.textContent='—'; return; }
+  // 실수령 → 세전: 국민연금(4.5%) + 건강보험(3.545%) + 장기요양(0.459%) + 고용보험(0.9%) + 소득세 근사치
+  // 공제율 약 12.5% 적용 (간이세액 포함)
+  const pretaxVal = Math.round(raw / 0.875 * 10) / 10;
+  pretax.textContent = `약 ${pretaxVal}만원`;
+  pretax.style.color = 'var(--text)';
+  annual.textContent = `약 ${Math.round(pretaxVal * 12 * 10) / 10}만원`;
+}
+
+let careerCount = 0;
+let certCount = 0;
+
+function addCareer(data=null){
+  careerCount++;
+  const id = `career-${careerCount}`;
+  const div = document.createElement('div');
+  div.id = id;
+  div.style.cssText = 'display:flex;gap:6px;align-items:flex-end;margin-bottom:6px;';
+  div.innerHTML = `
+    <div class="fg"><label style="font-size:11px;color:var(--text2)">직장명</label><input type="text" class="career-company" value="${data?data.company||'':''}" placeholder="이전 직장명"></div>
+    <div style="width:90px"><label style="font-size:11px;color:var(--text2)">기간(년)</label><input type="number" class="career-years" min="0" max="50" step="0.5" value="${data?data.years||'':''}" placeholder="예: 2.5" style="width:100%"></div>
+    <div class="fg"><label style="font-size:11px;color:var(--text2)">직무</label><input type="text" class="career-role" value="${data?data.role||'':''}" placeholder="담당 업무"></div>
+    <button class="btn btn-sm" style="color:var(--text2);flex-shrink:0;margin-bottom:1px" onclick="ge('${id}').remove()">✕</button>`;
+  ge('career-list').appendChild(div);
+}
+
+function addCert(data=null){
+  certCount++;
+  const id = `cert-${certCount}`;
+  const div = document.createElement('div');
+  div.id = id;
+  div.style.cssText = 'display:flex;gap:6px;align-items:flex-end;margin-bottom:6px;';
+  div.innerHTML = `
+    <div class="fg"><label style="font-size:11px;color:var(--text2)">자격증명</label><input type="text" class="cert-name" value="${data?data.name||'':''}" placeholder="예: 간호조무사, 피부미용사 등"></div>
+    <div style="width:110px"><label style="font-size:11px;color:var(--text2)">취득일</label><input type="date" class="cert-date" value="${data?data.date||'':''}" style="width:100%"></div>
+    <button class="btn btn-sm" style="color:var(--text2);flex-shrink:0;margin-bottom:1px" onclick="ge('${id}').remove()">✕</button>`;
+  ge('cert-list').appendChild(div);
+}
+
+function openProfile(empId){
+  const e = state.empList.find(x=>x.id===empId);
+  if(!e) return;
+  ge('profile-emp-id').value = empId;
+  ge('profile-title').textContent = `${e.name} — 프로필`;
+  ge('pf-name').value = e.name||'';
+  ge('pf-role').value = e.role||'';
+  ge('pf-join').value = e.joinDate||'';
+  ge('pf-leave').value = e.totalLeave||15;
+  ge('pf-jumin').value = e.jumin||'';
+  ge('pf-take-home').value = e.takeHome||'';
+  ge('pf-memo').value = e.memo||'';
+  ge('career-list').innerHTML=''; careerCount=0;
+  (e.careers||[]).forEach(c=>addCareer(c));
+  ge('cert-list').innerHTML=''; certCount=0;
+  (e.certs||[]).forEach(c=>addCert(c));
+  calcAge(); calcSalary();
+  ge('profile-modal').classList.add('open');
+}
+
+function saveProfile(){
+  const id = parseInt(ge('profile-emp-id').value);
+  const e = state.empList.find(x=>x.id===id);
+  if(!e) return;
+  const name = ge('pf-name').value.trim();
+  if(!name){alert('이름을 입력하세요');return}
+  e.name = name;
+  e.initials = name.slice(0,2);
+  e.role = ge('pf-role').value;
+  e.joinDate = ge('pf-join').value;
+  e.totalLeave = parseInt(ge('pf-leave').value)||15;
+  e.jumin = ge('pf-jumin').value;
+  e.takeHome = parseFloat(ge('pf-take-home').value)||0;
+  e.memo = ge('pf-memo').value;
+  // 경력
+  e.careers = [...ge('career-list').querySelectorAll('[id^=career-]')].map(div=>({
+    company: div.querySelector('.career-company').value.trim(),
+    years: parseFloat(div.querySelector('.career-years').value)||0,
+    role: div.querySelector('.career-role').value.trim()
+  })).filter(c=>c.company);
+  // 자격증
+  e.certs = [...ge('cert-list').querySelectorAll('[id^=cert-]')].map(div=>({
+    name: div.querySelector('.cert-name').value.trim(),
+    date: div.querySelector('.cert-date').value
+  })).filter(c=>c.name);
+  closeModal('profile-modal');
+  renderTeam(); saveLocal(); showToast(`${e.name} 님의 프로필을 저장했습니다`);
+}
+
+
+function renderTeam(){
+  const tb=ge('team-tbody');
+  const list = showRetired
+    ? state.empList
+    : state.empList.filter(e=>!e.retired);
+
+  if(!list.length){
+    tb.innerHTML=`<tr><td colspan="10" style="text-align:center;padding:1.5rem;color:var(--text2)">${showRetired?'등록된 팀원이 없습니다':'현재 재직 중인 팀원이 없습니다'}</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML=list.map(e=>{
+    const ul=usedLeave(e.id),rl=Math.max(0,e.totalLeave-ul);
+    const pct=e.totalLeave?Math.round(ul/e.totalLeave*100):0;
+    const lCls=pct>=80?'c-red':pct>=50?'c-amber':'c-green';
+    const te=earnedTotal(e.id),tu=usedOTTotal(e.id),tr=otRemain(e.id);
+    const isRetired = e.retired;
+    const rowStyle = isRetired ? 'opacity:0.55;background:#faf9f7' : '';
+    const retireBadge = isRetired
+      ? `<span style="display:inline-block;padding:1px 6px;border-radius:10px;font-size:10px;background:var(--red-light);color:var(--red-text);margin-left:4px">퇴사</span>`
+      : '';
+    const actionBtns = isRetired
+      ? `<button class="btn btn-sm" style="color:var(--green-text);border-color:var(--green)" onclick="reinstateEmp(${e.id})">복직</button>
+         <button class="btn btn-sm" style="color:var(--red)" onclick="delEmp(${e.id})">삭제</button>`
+      : `<button class="btn btn-sm" style="color:var(--amber-text);border-color:var(--amber)" onclick="retireEmp(${e.id})">퇴사</button>
+         <button class="btn btn-sm" style="color:var(--red)" onclick="delEmp(${e.id})">삭제</button>`;
+    return`<tr style="${rowStyle}">
+      <td><div class="emp-name"><span class="avatar" style="${isRetired?'background:#eee;color:#999':''}">${e.initials}</span><a href="#" style="color:var(--text);text-decoration:none;font-weight:500;border-bottom:1px dashed var(--border2)" onclick="openProfile(${e.id});return false;">${e.name}</a>${retireBadge}</div></td>
+      <td style="font-size:12px;color:var(--text2)">${e.role}</td>
+      <td style="font-size:12px">${e.joinDate||'-'}${isRetired&&e.retireDate?`<br><span style="color:var(--red-text);font-size:11px">퇴사 ${e.retireDate}</span>`:''}
+      </td>
+      <td>${e.totalLeave}일</td><td>${ul}일</td><td class="${lCls}" style="font-weight:600">${rl}일</td>
+      <td style="color:var(--purple);font-weight:600">${fmtMins(te)}</td><td>${fmtMins(tu)}</td>
+      <td style="color:${tr>0?'var(--green)':'var(--text2)'};font-weight:600">${fmtMins(tr)}</td>
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap">${actionBtns}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── 리포트 ──────────────────────────────
+function rpChangeMonth(d){rpM+=d;if(rpM>12){rpM=1;rpY++}if(rpM<1){rpM=12;rpY--}renderReport()}
+function renderReport(){
+  ge('rp-month-label').textContent=`${rpY}년 ${rpM}월`;
+  const ml=state.leaves.filter(l=>{const d=new Date(l.start);return d.getFullYear()===rpY&&d.getMonth()+1===rpM});
+  const activeEmps = state.empList.filter(e=>!e.retired);
+  ge('r-total').textContent=activeEmps.length+'명';
+  ge('r-apps').textContent=ml.length+'건';
+  const avgL=activeEmps.length?Math.round(activeEmps.map(e=>Math.max(0,e.totalLeave-usedLeave(e.id))).reduce((a,b)=>a+b,0)/activeEmps.length):0;
+  const avgOTmins=activeEmps.length?Math.round(activeEmps.map(e=>otRemain(e.id)).reduce((a,b)=>a+b,0)/activeEmps.length):0;
+  ge('r-avg-leave').textContent=avgL+'일';
+  ge('r-avg-ot').textContent=fmtMins(avgOTmins);
+  ge('leave-bars').innerHTML=activeEmps.map(e=>{
+    const u=usedLeave(e.id),pct=e.totalLeave?Math.round(u/e.totalLeave*100):0;
+    const c=pct>=80?'#A32D2D':pct>=50?'#BA7517':'#1D9E75';
+    return`<div class="bar-row"><span class="bar-label">${e.name.slice(0,3)}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${c}">${pct}%</div></div><span style="font-size:11px;color:var(--text2);min-width:58px">${u}/${e.totalLeave}일</span></div>`;
+  }).join('');
+  const maxOT=Math.max(...activeEmps.map(e=>Math.round(earnedTotal(e.id)*1.5)),1);
+  ge('ot-bars').innerHTML=activeEmps.map(e=>{
+    const te=earnedTotal(e.id),tu=usedOTTotal(e.id),tr=otRemain(e.id);
+    const usable=Math.round(te*1.5);
+    const pct=usable>0?Math.min(100,Math.round(tu/usable*100)):0;
+    return`<div class="bar-row"><span class="bar-label">${e.name.slice(0,3)}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--purple)">&nbsp;</div></div><span style="font-size:11px;color:var(--text2);min-width:140px">가능 ${fmtMins(usable)} / 잔여 ${fmtMins(tr)}</span></div>`;
+  }).join('');
+  const rtb=ge('rp-leave-tbody');
+  if(!ml.length){rtb.innerHTML=`<tr><td colspan="5" class="empty-state">이달 내역 없음</td></tr>`;}
+  else rtb.innerHTML=ml.map(l=>{const e=emp(l.empId);if(!e)return'';return`<tr><td>${avatarEl(e)}</td><td>${badge('bg-blue',l.type)}</td><td style="font-size:12px">${l.start} ~ ${l.end}</td><td>${l.days}일</td><td>${badge(statusCls(l.status),l.status)}</td></tr>`;}).join('');
+}
+
+// ── 자동저장 ──────────────────────────────
+const STORAGE_KEY = 'geuntae_v3'; // 이전 캐시 무시
+function saveLocal(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+}
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const parsed = JSON.parse(raw);
+    if(!parsed.empList||!parsed.leaves) return false;
+    state = migrateState(parsed);
+    return true;
+  } catch(e){ return false; }
+}
+
+// ── JSON 내보내기 / 가져오기 ──────────────────────────────
+function exportData(){
+  const json=JSON.stringify(state,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const today=new Date().toISOString().split('T')[0];
+  a.href=url;a.download=`근태관리_${today}.json`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast('백업 파일이 저장되었습니다');
+}
+
+function importData(ev){
+  const file = ev.target.files[0];
+  if(!file){ return; }
+  const reader = new FileReader();
+  reader.onload = function(e2){
+    try{
+      const parsed = JSON.parse(e2.target.result);
+      if(!parsed.empList || !Array.isArray(parsed.empList)){
+        alert('올바른 근태관리 JSON 파일이 아닙니다.');
+        return;
+      }
+      state = migrateState(parsed);
+      try{ localStorage.removeItem('geuntae_v1'); }catch(ex){}
+      try{ localStorage.removeItem('geuntae_v2'); }catch(ex){}
+      try{ localStorage.removeItem('geuntae_v3'); }catch(ex){}
+      saveLocal();
+      renderLeave();
+      renderTeam();
+      renderOT();
+      renderReport();
+      showToast('✅ 데이터를 불러왔습니다 (' + state.empList.length + '명)');
+    } catch(err){
+      alert('불러오기 실패: ' + err.message);
+    }
+    ev.target.value = '';
+  };
+  reader.onerror = function(){
+    alert('파일 읽기 오류가 발생했습니다.');
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function resetToDefault(){
+  if(!confirm('저장된 데이터를 지우고 파일에 내장된 기본 데이터로 초기화합니다.\n계속하시겠습니까?')) return;
+  try{ localStorage.removeItem('geuntae_v1'); }catch(ex){}
+  try{ localStorage.removeItem('geuntae_v2'); }catch(ex){}
+  try{ localStorage.removeItem('geuntae_v3'); }catch(ex){}
+  state = migrateState(JSON.parse(JSON.stringify(DEFAULT_STATE)));
+  saveLocal();
+  renderLeave();renderTeam();renderOT();renderReport();
+  showToast('🔄 기본 데이터로 초기화했습니다');
+}
+
+// saveLocal을 모든 데이터 변경 시점에 자동 호출하도록 기존 함수들에 삽입
+const _origSubmitLeave = submitLeave;
+const _origSetStatus = setStatus;
+const _origDelLeave = delLeave;
+const _origSaveOTEarn = saveOTEarn;
+const _origSubmitOTUsed = submitOTUsed;
+const _origDelOTUsed = delOTUsed;
+const _origSubmitEmp = submitEmp;
+const _origDelEmp = delEmp;
+
+submitLeave = function(){ _origSubmitLeave(); saveLocal(); }
+setStatus = function(id,s){ _origSetStatus(id,s); saveLocal(); }
+delLeave = function(id){ _origDelLeave(id); saveLocal(); }
+saveOTEarn = function(){ _origSaveOTEarn(); saveLocal(); }
+submitOTUsed = function(){ _origSubmitOTUsed(); saveLocal(); }
+delOTUsed = function(id){ _origDelOTUsed(id); saveLocal(); }
+submitEmp = function(){ _origSubmitEmp(); saveLocal(); }
+delEmp = function(id){ _origDelEmp(id); saveLocal(); }
+
+// ── 초기화 ──────────────────────────────
+try{ localStorage.removeItem('geuntae_v1'); }catch(e){}
+try{ localStorage.removeItem('geuntae_v2'); }catch(e){}
+if(!loadLocal()){
+  state = migrateState(JSON.parse(JSON.stringify(DEFAULT_STATE)));
+  saveLocal();
+}
+renderLeave();renderTeam();renderOT();renderReport();
+
+// ── 모든 버튼 이벤트 연결 (onclick 대신 addEventListener) ──────────────────────────────
+// 사이드바 저장/불러오기/초기화
+document.getElementById('btn-export').addEventListener('click', exportData);
+document.getElementById('btn-reset').addEventListener('click', resetToDefault);
+document.getElementById('import-file').addEventListener('change', importData);
+
+// 사이드바 nav 클릭
+document.querySelectorAll('.nav-item[data-page]').forEach(function(el){
+  el.addEventListener('click', function(){ showPage(el.dataset.page, el); });
+});
+
+// ── 로그인 게이트 (송우철 원장 전용) ──────────────────────────────
+// 초기 비밀번호: everyup2026  (로그인 후 '비밀번호 변경'에서 바꾸세요)
+const DEFAULT_PW_HASH='23ce015e538aae4050de110ad8bd322c50990aa41af6c1c33bae0e85af1f1457';
+const AUTH_HASH_KEY='geuntae_auth_hash';   // 변경된 비밀번호 해시(기기 저장)
+const AUTH_FLAG_KEY='geuntae_authed';      // 로그인 유지 플래그
+
+// crypto.subtle 우선, 없으면 순수 JS SHA-256 사용 (file:// 대비)
+function sha256js(ascii){
+  function rr(n,x){return (x>>>n)|(x<<(32-n));}
+  var m=Math.pow,M=m(2,32),i,j,result='',words=[],asciiBitLength=ascii.length*8;
+  var hash=sha256js.h=sha256js.h||[],k=sha256js.k=sha256js.k||[],primeCounter=k.length;
+  var isComposite={};
+  for(var candidate=2;primeCounter<64;candidate++){
+    if(!isComposite[candidate]){
+      for(i=0;i<313;i+=candidate)isComposite[i]=candidate;
+      hash[primeCounter]=(m(candidate,.5)*M)|0;
+      k[primeCounter++]=(m(candidate,1/3)*M)|0;
+    }
+  }
+  ascii+='\x80';
+  while(ascii.length%64-56)ascii+='\x00';
+  for(i=0;i<ascii.length;i++){
+    j=ascii.charCodeAt(i);
+    if(j>>8)return;
+    words[i>>2]|=j<<((3-i)%4)*8;
+  }
+  words[words.length]=(asciiBitLength/M)|0;
+  words[words.length]=asciiBitLength;
+  for(j=0;j<words.length;){
+    var w=words.slice(j,j+=16),oldHash=hash;
+    hash=hash.slice(0,8);
+    for(i=0;i<64;i++){
+      var w15=w[i-15],w2=w[i-2];
+      var a=hash[0],e=hash[4];
+      var temp1=hash[7]+(rr(6,e)^rr(11,e)^rr(25,e))+((e&hash[5])^((~e)&hash[6]))+k[i]+
+        (w[i]=(i<16)?w[i]:(w[i-16]+(rr(7,w15)^rr(18,w15)^(w15>>>3))+w[i-7]+(rr(17,w2)^rr(19,w2)^(w2>>>10)))|0);
+      var temp2=(rr(2,a)^rr(13,a)^rr(22,a))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+      hash=[(temp1+temp2)|0].concat(hash);
+      hash[4]=(hash[4]+temp1)|0;
+    }
+    for(i=0;i<8;i++)hash[i]=(hash[i]+oldHash[i])|0;
+  }
+  for(i=0;i<8;i++)for(j=3;j+1;j--){
+    var b=(hash[i]>>(j*8))&255;
+    result+=((b<16)?0:'')+b.toString(16);
+  }
+  return result;
+}
+async function sha256(str){
+  try{
+    if(window.crypto&&crypto.subtle){
+      const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+      return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+  }catch(e){}
+  return sha256js(str);
+}
+function currentPwHash(){
+  try{ return localStorage.getItem(AUTH_HASH_KEY)||DEFAULT_PW_HASH; }catch(e){ return DEFAULT_PW_HASH; }
+}
+function hideGate(){ document.getElementById('login-gate').classList.add('hidden'); }
+async function doLogin(){
+  const pw=document.getElementById('login-pw').value;
+  const err=document.getElementById('login-err');
+  if(!pw){ err.textContent='비밀번호를 입력하세요'; return; }
+  const h=await sha256(pw);
+  if(h===currentPwHash()){
+    err.textContent='';
+    if(document.getElementById('login-keep').checked){
+      try{ localStorage.setItem(AUTH_FLAG_KEY,'1'); }catch(e){}
+    }
+    hideGate();
+  }else{
+    err.textContent='비밀번호가 올바르지 않습니다';
+    document.getElementById('login-pw').value='';
+    document.getElementById('login-pw').focus();
+  }
+}
+async function changePw(){
+  const cur=prompt('현재 비밀번호를 입력하세요');
+  if(cur===null) return;
+  if((await sha256(cur))!==currentPwHash()){ alert('현재 비밀번호가 올바르지 않습니다'); return; }
+  const np=prompt('새 비밀번호를 입력하세요 (4자 이상)');
+  if(np===null) return;
+  if(np.length<4){ alert('4자 이상으로 설정하세요'); return; }
+  const np2=prompt('새 비밀번호를 한 번 더 입력하세요');
+  if(np2===null) return;
+  if(np!==np2){ alert('두 비밀번호가 일치하지 않습니다'); return; }
+  try{ localStorage.setItem(AUTH_HASH_KEY, await sha256(np)); }catch(e){}
+  alert('✅ 비밀번호가 변경되었습니다. 이 기기에 저장됩니다.');
+}
+function doLogout(){
+  try{ localStorage.removeItem(AUTH_FLAG_KEY); }catch(e){}
+  try{ sessionStorage.removeItem('everyup_att_session'); sessionStorage.removeItem('everyup_att_ok'); }catch(e){}
+  location.reload();
+}
+// 이벤트 연결
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('login-pw').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+document.getElementById('login-change').addEventListener('click', changePw);
+document.getElementById('btn-logout').addEventListener('click', doLogout);
+// 로그인 확인 → 게이트 통과, 아니면 표시
+(function(){
+  // 1) 로그인 화면(원장님)을 거쳐 넘어왔는지 확인 — 같은 사이트 세션 신호
+  try{
+    const t=sessionStorage.getItem('everyup_att_ok');
+    if(t && (Date.now()-Number(t) < 120000)){        // 2분 이내에 넘어온 정상 진입
+      sessionStorage.removeItem('everyup_att_ok');    // 신호는 일회성으로 소비
+      sessionStorage.setItem('everyup_att_session','1'); // 이 탭이 열려있는 동안 유지
+      hideGate(); return;
+    }
+    if(sessionStorage.getItem('everyup_att_session')==='1'){ hideGate(); return; } // 같은 탭에서 재방문
+  }catch(e){}
+  // 2) '이 기기에서 로그인 유지' 확인
+  let authed=false;
+  try{ authed=localStorage.getItem(AUTH_FLAG_KEY)==='1'; }catch(e){}
+  if(authed){ hideGate(); }
+  else{ setTimeout(function(){ document.getElementById('login-pw').focus(); }, 100); }
+})();
+</script>
+</body>
+</html>
