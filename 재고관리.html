@@ -898,7 +898,7 @@ function pushCloud(){
 }
 function postItems(arr){
   if(!arr||arr.length===0){ pushing=false; setStatus("err","저장 안 됨"); return; } // 빈 데이터는 절대 저장 안 함
-  fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({items:arr})})
+  fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"full",items:arr})})
     .then(()=>{ pushing=false; setStatus("ok","저장됨"); if(pendingPush){ pendingPush=false; pushCloud(); } })
     .catch(()=>{ pushing=false; setStatus("err","저장 실패"); if(pendingPush){ pendingPush=false; pushCloud(); } });
 }
@@ -919,7 +919,7 @@ function saveNow(){
   const finishPush=(arr)=>{
     const expectLen = arr.filter(i=>!i.deleted).length;
     const expectSig = arr.map(i=>(i.id)+":"+qtyOf(i)).join("|");
-    fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({items:arr})})
+    fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"full",items:arr})})
       .then(()=>{ pushing=false; setStatus("saving","저장 확인 중…"); setTimeout(()=>verifySave(expectLen, expectSig), 1800); if(pendingPush){ pendingPush=false; pushCloud(); } })
       .catch(()=>{ pushing=false; endSaveBtn(); setStatus("err","저장 실패"); alert("저장 요청이 실패했어요.\n인터넷 연결을 확인하고 다시 눌러주세요."); });
   };
@@ -1026,7 +1026,7 @@ function onRestoreFile(ev){
     syncedOK=true; render();
     // 4) 시트에도 저장
     setStatus("saving","복원 저장 중…");
-    fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({items})})
+    fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"full",items:items})})
       .then(()=>{ setStatus("ok","복원됨 ✓"); toast("복원이 완료됐어요 ✓"); })
       .catch(()=>{ setStatus("err","복원 저장 실패"); alert("복원은 화면에 적용됐지만 시트 저장에 실패했어요.\n💾 지금 저장을 눌러 다시 시도해주세요."); });
   };
