@@ -158,6 +158,8 @@
   .field label{display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:5px}
   .field input,.field select{width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-family:inherit; font-size:14px; color:var(--ink); background:var(--surface)}
   .field input:focus,.field select:focus{outline:2px solid var(--primary-soft); border-color:var(--primary)}
+  .field textarea{width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-family:inherit; font-size:14px; color:var(--ink); background:var(--surface); resize:vertical; line-height:1.5; min-height:64px}
+  .field textarea:focus{outline:2px solid var(--primary-soft); border-color:var(--primary)}
   .field .ro{background:var(--line-soft); border-radius:10px; padding:10px 12px; font-weight:800; font-size:16px; color:var(--ink)}
   .field .hint{font-size:11.5px; color:var(--ink-soft); font-weight:500; margin-top:4px}
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
@@ -174,6 +176,34 @@
     header.top .asof{width:100%; margin-left:0}
     .grid2{grid-template-columns:1fr}
   }
+
+  /* 검색창 지우기(X) */
+  .search .clearx{position:absolute; right:8px; top:50%; transform:translateY(-50%); width:22px; height:22px;
+    border:none; background:var(--line); color:#fff; border-radius:50%; cursor:pointer; font-size:13px; line-height:1;
+    text-align:center; padding:0; display:none}
+  .search .clearx:hover{background:var(--ink-soft)}
+  /* 상단 필터 바 */
+  .filterbar{display:flex; gap:8px 10px; flex-wrap:wrap; align-items:center; margin:0 2px 12px}
+  .filterbar .fitem{display:flex; align-items:center; gap:5px}
+  .filterbar label{font-size:12px; font-weight:700; color:var(--ink-soft)}
+  .filterbar select{border:1px solid var(--line); background:var(--surface); border-radius:9px; padding:7px 9px;
+    font-family:inherit; font-size:13px; color:var(--ink); box-shadow:var(--shadow); max-width:180px}
+  .filterbar select:focus{outline:2px solid var(--primary-soft); border-color:var(--primary)}
+  .filterbar .fclear{border:1px solid var(--line); background:var(--surface); border-radius:9px; padding:7px 11px;
+    font-family:inherit; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer}
+  .filterbar .fclear:hover{background:var(--primary-soft); border-color:var(--primary)}
+  /* 품목명 정렬 토글 */
+  .sortbtn{margin-left:6px; border:1px solid var(--line); background:var(--surface); color:var(--ink-soft);
+    border-radius:6px; font-size:11px; font-weight:700; padding:1px 6px; cursor:pointer; font-family:inherit; vertical-align:middle}
+  .sortbtn.on{background:var(--primary); color:#fff; border-color:var(--primary)}
+  /* 클릭 가능한 품목명 */
+  td .name.clickable{cursor:pointer; text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:2px}
+  td .name.clickable:hover{color:var(--primary); text-decoration-color:var(--primary)}
+  /* 상세보기 모달 */
+  .detail-grid{display:grid; grid-template-columns:96px 1fr; gap:8px 12px; font-size:14px}
+  .detail-grid .dk{color:var(--ink-soft); font-weight:700; font-size:12.5px; padding-top:2px}
+  .detail-grid .dv{color:var(--ink); white-space:pre-wrap; word-break:break-word}
+  .detail-grid .dv.empty{color:var(--ink-soft)}
 </style>
 </head>
 <body>
@@ -215,10 +245,13 @@
     <div class="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       <input id="q" type="text" placeholder="품목명 · 회사 검색">
+      <button type="button" class="clearx" id="clearx" onclick="clearQuery()" title="검색어 지우기">✕</button>
     </div>
     <button class="btn ghost" id="newBtn" onclick="openForm('new')">+ 신규품목</button>
     <button class="btn primary" id="xlsxBtn" onclick="exportXlsx()">엑셀 다운로드</button>
   </div>
+
+  <div class="filterbar" id="filterbar"></div>
 
   <div id="selbar">
     <span class="selcount">0개 선택</span>
@@ -277,6 +310,23 @@ let items = seed();
 let filterDept = "전체";
 let query = "";
 let view = "stock";
+let fStatus = "전체", fCat = "전체", fLoc = "전체", fSrc = "전체";  // 상단 필터
+let sortMode = "none";   // none | asc | desc (품목명 정렬)
+
+/* 마지막으로 보던 화면(부서·뷰·필터·정렬) 기억 */
+function saveUI(){
+  try{ localStorage.setItem("everyup_ui", JSON.stringify({view,filterDept,fStatus,fCat,fLoc,fSrc,sortMode})); }catch(e){}
+}
+function loadUI(){
+  try{
+    const u=JSON.parse(localStorage.getItem("everyup_ui")); if(!u) return;
+    if(u.view) view=u.view;
+    if(u.filterDept) filterDept=u.filterDept;
+    if(u.fStatus) fStatus=u.fStatus; if(u.fCat) fCat=u.fCat;
+    if(u.fLoc) fLoc=u.fLoc; if(u.fSrc) fSrc=u.fSrc;
+    if(u.sortMode) sortMode=u.sortMode;
+  }catch(e){}
+}
 
 function seed(){
   const t = Date.now() - 86400000;
@@ -311,20 +361,56 @@ function refreshDatalists(){
 }
 
 /* ---- 렌더 ---- */
+function stateLabel(it){ const s=stockState(it); return s==="out"?"품절":s==="low"?"부족":"정상"; }
 function visibleItems(){
-  return items.filter(it=>{
+  let list = items.filter(it=>{
     if(it.deleted) return false;
     if(filterDept!=="전체" && it.dept!==filterDept) return false;
     if(query){ if(!(it.name+" "+(it.company||"")).toLowerCase().includes(query.toLowerCase())) return false; }
+    if(fStatus!=="전체" && stateLabel(it)!==fStatus) return false;
+    if(fCat!=="전체" && (it.cat||"")!==fCat) return false;
+    if(fLoc!=="전체" && (it.loc||"")!==fLoc) return false;
+    if(fSrc!=="전체" && (it.src||"")!==fSrc) return false;
     return true;
   });
+  if(sortMode==="asc")  list=list.slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"","ko"));
+  if(sortMode==="desc") list=list.slice().sort((a,b)=>(b.name||"").localeCompare(a.name||"","ko"));
+  return list;
 }
-function setDept(d){ filterDept=d; selected.clear(); render(); }
-function setView(v){ view=v; selected.clear(); render(); }
-document.getElementById("q").addEventListener("input", e=>{ query=e.target.value; selected.clear(); render(); });
+function setDept(d){ filterDept=d; fCat="전체"; fLoc="전체"; fSrc="전체"; selected.clear(); saveUI(); render(); }
+function setView(v){ view=v; selected.clear(); saveUI(); render(); }
+function setFilter(kind,val){ if(kind==="status")fStatus=val; else if(kind==="cat")fCat=val; else if(kind==="loc")fLoc=val; else if(kind==="src")fSrc=val; selected.clear(); saveUI(); render(); }
+function clearFilters(){ fStatus="전체"; fCat="전체"; fLoc="전체"; fSrc="전체"; selected.clear(); saveUI(); render(); }
+function toggleSort(){ sortMode = sortMode==="none"?"asc":sortMode==="asc"?"desc":"none"; saveUI(); render(); }
+function clearQuery(){ query=""; const el=document.getElementById("q"); if(el) el.value=""; selected.clear(); document.getElementById("clearx").style.display="none"; render(); }
+document.getElementById("q").addEventListener("input", e=>{ query=e.target.value; document.getElementById("clearx").style.display=query?"block":"none"; selected.clear(); render(); });
+
+function renderFilters(){
+  const bar=document.getElementById("filterbar");
+  if(view!=="stock"){ bar.style.display="none"; bar.innerHTML=""; return; }
+  bar.style.display="flex";
+  const scope = items.filter(i=>!i.deleted && (filterDept==="전체"||i.dept===filterDept));
+  const uniq = f => [...new Set(scope.map(i=>i[f]).filter(v=>v!==undefined&&v!==null&&v!==""))].sort((a,b)=>String(a).localeCompare(String(b),"ko"));
+  const cats=uniq("cat"), locs=uniq("loc"), srcs=uniq("src");
+  // 현재 선택값이 목록에 없으면 전체로 되돌림
+  if(fCat!=="전체" && !cats.includes(fCat)) fCat="전체";
+  if(fLoc!=="전체" && !locs.includes(fLoc)) fLoc="전체";
+  if(fSrc!=="전체" && !srcs.includes(fSrc)) fSrc="전체";
+  const opt=(list,cur)=>['<option>전체</option>'].concat(list.map(v=>`<option ${v===cur?"selected":""}>${esc(v)}</option>`)).join("");
+  const statusOpt=["전체","정상","부족","품절"].map(s=>`<option ${s===fStatus?"selected":""}>${s}</option>`).join("");
+  const anyOn = (fStatus!=="전체"||fCat!=="전체"||fLoc!=="전체"||fSrc!=="전체");
+  bar.innerHTML =
+    `<div class="fitem"><label>상태</label><select onchange="setFilter('status',this.value)">${statusOpt}</select></div>`+
+    `<div class="fitem"><label>분류</label><select onchange="setFilter('cat',this.value)">${opt(cats,fCat)}</select></div>`+
+    `<div class="fitem"><label>보관위치</label><select onchange="setFilter('loc',this.value)">${opt(locs,fLoc)}</select></div>`+
+    `<div class="fitem"><label>구매처</label><select onchange="setFilter('src',this.value)">${opt(srcs,fSrc)}</select></div>`+
+    (anyOn?`<button class="fclear" onclick="clearFilters()">필터 해제</button>`:``);
+}
 
 function render(){
   refreshDatalists();
+  renderFilters();
+  saveUI();
   const active = items.filter(i=>!i.deleted);
   const scope = filterDept==="전체" ? active : active.filter(i=>i.dept===filterDept);
   const lowCnt = scope.filter(i=>stockState(i)!=="ok").length;
@@ -375,9 +461,12 @@ function renderStock(){
   document.getElementById("tbl").style.width = total+"px";
   document.getElementById("thead").innerHTML = "<tr>" +
     `<th class="selcol"><input type="checkbox" ${allChecked?"checked":""} onchange="toggleAll(this.checked)" title="전체 선택"></th>` +
-    STOCK_COLS.map((c,i)=>
-      `<th class="${c.align==='right'?'num':''}">${c.label}<span class="rsz" onmousedown="startResize(event,${i})" ontouchstart="startResize(event,${i})"></span></th>`
-    ).join("") + "</tr>";
+    STOCK_COLS.map((c,i)=>{
+      const sortUI = c.label==="품목"
+        ? `<button class="sortbtn ${sortMode!=='none'?'on':''}" onclick="toggleSort()" title="품목명 정렬">${sortMode==='asc'?'가나다↓':sortMode==='desc'?'가나다↑':'정렬'}</button>`
+        : "";
+      return `<th class="${c.align==='right'?'num':''}">${c.label}${sortUI}<span class="rsz" onmousedown="startResize(event,${i})" ontouchstart="startResize(event,${i})"></span></th>`;
+    }).join("") + "</tr>";
   const tb=document.getElementById("rows"), emp=document.getElementById("empty");
   if(!list.length){ tb.innerHTML=""; emp.querySelector("b").textContent="표시할 내용이 없어요"; emp.style.display="block"; return; }
   emp.style.display="none";
@@ -397,7 +486,7 @@ function renderStock(){
       <td class="selcell"><input type="checkbox" ${selected.has(it.id)?"checked":""} onchange="toggleOne(${it.id},this.checked)"><span class="grip" draggable="true" ondragstart="dragStart(event,${idx})" title="드래그로 순서 이동">⠿</span></td>
       <td>${chip}</td>
       <td><span class="depttag">${esc(it.dept)}</span><div class="cat">${esc(it.cat||"")}</div></td>
-      <td><div class="name">${esc(it.name)}</div><div class="spec">${esc(it.company||"")}</div></td>
+      <td><div class="name clickable" onclick="openDetail(${it.id})" title="자세히 보기">${esc(it.name)}</div><div class="spec">${esc(it.company||"")}</div></td>
       <td class="spec">${esc(it.spec||"-")}</td>
       <td class="num"><span class="qty ${q<=0?'zero':''}">${q}<span class="u">${esc(it.unit||"")}</span></span>${it.chk?`<div class="chkdate">${esc(it.chk)}</div>`:""}</td>
       <td class="num minq">${it.min>0?it.min:"-"}</td>
@@ -505,6 +594,35 @@ overlay.addEventListener("click", e=>{ if(e.target===overlay) closeModal(); });
 document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeModal(); });
 function find(id){ return items.find(x=>x.id===id); }
 
+/* ---- 품목 상세 보기 (품목명 클릭) ---- */
+function openDetail(id){
+  const it=find(id); if(!it) return;
+  const q=qtyOf(it);
+  const e=expInfo(it.exp);
+  const expTxt = e ? (e.days<0?`${e.label} (만료)`:`${e.label} (D-${e.days})`) : "-";
+  const row=(k,v)=>{ const empty=(v===undefined||v===null||v==="")?" empty":""; return `<div class="dk">${k}</div><div class="dv${empty}">${empty?"-":esc(v)}</div>`; };
+  modal.innerHTML=`
+    <h3>${esc(it.name)}</h3>
+    <div class="msub">${esc(it.dept)}${it.cat?(" · "+esc(it.cat)):""}</div>
+    <div class="body">
+      <div class="detail-grid">
+        ${row("회사", it.company)}
+        ${row("규격", it.spec)}
+        ${row("현재수량", q+" "+(it.unit||""))}
+        ${row("최소재고", it.min>0?it.min:"-")}
+        ${row("사용기한", expTxt)}
+        ${row("보관위치", it.loc)}
+        ${row("구매처", it.src)}
+        ${row("입고일", it.inDate)}
+        ${row("실사일", it.chk)}
+        ${row("메모", it.memo)}
+        ${row("효과 / 사용방법", it.effect)}
+      </div>
+    </div>
+    <div class="foot"><button class="btn ghost" onclick="closeModal()">닫기</button><button class="btn primary" onclick="openForm('edit',${id})">수정</button></div>`;
+  overlay.classList.add("show");
+}
+
 /* ---- 입고 ---- */
 function openIn(id){
   const it=find(id), q=qtyOf(it);
@@ -590,6 +708,7 @@ function openForm(mode, id){
         <div class="field"><label>구매처</label><input id="f_src" list="dl-src" value="${esc(it.src)}" placeholder="예: 약이오"></div>
       </div>
       <div class="field"><label>메모</label><input id="f_memo" value="${esc(it.memo)}" placeholder="비고"></div>
+      <div class="field"><label>효과 / 사용방법</label><textarea id="f_effect" rows="3" placeholder="효과 · 사용법 · 주의사항 (메인 목록에는 표시되지 않아요)">${esc(it.effect||"")}</textarea></div>
     </div>
     <div class="foot">${isEdit?`<button class="btn del" onclick="doDelete(${id})">삭제</button>`:""}<button class="btn ghost" onclick="closeModal()">취소</button><button class="btn primary" onclick="${isEdit?`doEdit(${id})`:"doNew()"}">${isEdit?"저장":"추가"}</button></div>`;
   overlay.classList.add("show");
@@ -599,7 +718,7 @@ function readForm(){
   const g=id=>document.getElementById(id).value.trim();
   return {dept:g("f_dept"),cat:g("f_cat"),company:g("f_company"),name:g("f_name"),spec:g("f_spec"),
     unit:g("f_unit")||"개",min:parseInt(g("f_min")||"0"),exp:fromDateInput(document.getElementById("f_exp").value),
-    loc:g("f_loc"),src:g("f_src"),memo:g("f_memo")};
+    loc:g("f_loc"),src:g("f_src"),memo:g("f_memo"),effect:g("f_effect")};
 }
 function doNew(){
   const f=readForm(); if(!f.name){ document.getElementById("f_name").focus(); return; }
@@ -703,8 +822,40 @@ const CLOUD = {
 };
 let syncedOK = false;   // 최초 불러오기 성공 전에는 저장 금지(데이터 보호)
 let pushing  = false;
+let pendingPush = false;
+let lastSynced = [];    // 마지막으로 서버와 맞춘 상태(내 변경분 계산 기준)
 function cloudOn(){ return !!CLOUD.EXEC_URL; }
 function setStatus(state,msg){ const el=document.getElementById("syncpill"); if(!el) return; el.className="syncpill "+state; el.textContent=msg; }
+
+/* 서버 최신본에 '내가 바꾼 품목'만 얹어 병합 (다른 사람이 고친 품목은 안 건드림) */
+function snapshot(a){ try{ return JSON.parse(JSON.stringify(a||[])); }catch(e){ return []; } }
+function mergeChanges(server, mine, base){
+  const baseById=new Map((base||[]).map(x=>[x.id,x]));
+  const serverById=new Map(server.map(x=>[x.id,x]));
+  const out=new Map(server.map(x=>[x.id,x]));   // 서버 최신본에서 시작
+  mine.forEach(m=>{
+    const b=baseById.get(m.id);
+    const changed = !b || JSON.stringify(b)!==JSON.stringify(m);
+    if(changed) out.set(m.id, m);                       // 내가 바꾼 품목 → 내 버전
+    else if(!serverById.has(m.id)) out.set(m.id, m);    // 안 바꿨는데 서버에 아직 없음 → 내 것 유지
+    // 안 바꿨고 서버에 있음 → 서버 버전(다른 사람 수정 반영) 유지
+  });
+  const ordered=[], used=new Set();
+  mine.forEach(m=>{ if(out.has(m.id)){ ordered.push(out.get(m.id)); used.add(m.id);} });   // 내 순서 우선
+  server.forEach(s=>{ if(!used.has(s.id)&&out.has(s.id)){ ordered.push(out.get(s.id)); used.add(s.id);} }); // 서버에만 있는 새 품목은 뒤에
+  return ordered;
+}
+function jsonpGet(onData,onErr){
+  const cb="cbp_"+Date.now()+"_"+Math.floor(Math.random()*10000);
+  let done=false;
+  const t=setTimeout(()=>{ if(done)return; done=true; cleanup(); onErr&&onErr(); }, 12000);
+  function cleanup(){ try{delete window[cb];}catch(e){} const s=document.getElementById(cb); if(s) s.remove(); clearTimeout(t); }
+  window[cb]=(data)=>{ if(done)return; done=true; cleanup(); try{ const obj=(typeof data==="string")?JSON.parse(data):data; onData(obj); }catch(e){ onErr&&onErr(); } };
+  const s=document.createElement("script"); s.id=cb;
+  s.src=CLOUD.EXEC_URL+(CLOUD.EXEC_URL.includes("?")?"&":"?")+"callback="+cb+"&t="+Date.now();
+  s.onerror=()=>{ if(done)return; done=true; cleanup(); onErr&&onErr(); };
+  document.body.appendChild(s);
+}
 
 function pullCloud(initial){
   if(!cloudOn()) return;
@@ -715,8 +866,8 @@ function pullCloud(initial){
     try{
       const obj=(typeof data==="string")?JSON.parse(data):data;
       const arr=(obj&&Array.isArray(obj.items))?obj.items.map(x=>Object.assign({logs:[],baseTs:0},x)):[];
-      if(arr.length>0){ items=arr; syncedOK=true; setStatus("ok","연결됨"); render(); }
-      else if(initial){ items=seed(); syncedOK=true; setStatus("ok","연결됨"); render(); pushCloud(); } // 시트가 비어있으면 현재 215개로 초기화
+      if(arr.length>0){ items=arr; syncedOK=true; lastSynced=snapshot(arr); setStatus("ok","연결됨"); render(); }
+      else if(initial){ items=seed(); syncedOK=true; lastSynced=snapshot(items); setStatus("ok","연결됨"); render(); pushCloud(); } // 시트가 비어있으면 현재 215개로 초기화
       else { syncedOK=true; setStatus("ok","연결됨"); }
     }catch(err){ setStatus("err","불러오기 오류"); if(initial) showLoadError(); }
   };
@@ -732,12 +883,26 @@ function showLoadError(){
 function pushCloud(){
   if(!cloudOn()||!syncedOK) return;        // 최초 불러오기 성공 전엔 저장 안 함
   if(!items||items.length===0) return;     // 빈 데이터는 저장 안 함
+  if(pushing){ pendingPush=true; return; } // 저장 진행 중이면 끝나고 한 번 더
   pushing=true; setStatus("saving","저장 중…");
-  fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({items})})
-    .then(()=>{ pushing=false; setStatus("ok","저장됨"); })
-    .catch(()=>{ pushing=false; setStatus("err","저장 실패"); });
+  const mineNow=snapshot(items);
+  jsonpGet(
+    (obj)=>{  // 서버 최신본 받아 병합 후 저장
+      const server=(obj&&Array.isArray(obj.items))?obj.items.map(x=>Object.assign({logs:[],baseTs:0},x)):[];
+      const merged=mergeChanges(server, mineNow, lastSynced);
+      items=merged; lastSynced=snapshot(merged); render();
+      postItems(merged);
+    },
+    ()=>{ postItems(items); }  // 최신 불러오기 실패 시 폴백: 내 것 저장
+  );
 }
-function commit(){ render(); pushCloud(); }   // 데이터 바뀔 때: 화면 갱신 + 클라우드 저장
+function postItems(arr){
+  if(!arr||arr.length===0){ pushing=false; setStatus("err","저장 안 됨"); return; } // 빈 데이터는 절대 저장 안 함
+  fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({items:arr})})
+    .then(()=>{ pushing=false; setStatus("ok","저장됨"); if(pendingPush){ pendingPush=false; pushCloud(); } })
+    .catch(()=>{ pushing=false; setStatus("err","저장 실패"); if(pendingPush){ pendingPush=false; pushCloud(); } });
+}
+function commit(){ render(); pushCloud(); }   // 데이터 바뀔 때: 화면 갱신 + 클라우드 저장(병합)
 
 /* ---- 지금 저장 (수동 저장 + 진짜 반영됐는지 확인) ---- */
 function saveNow(){
@@ -750,12 +915,19 @@ function saveNow(){
   const btn=document.getElementById("saveNowBtn");
   if(btn){ btn.disabled=true; btn.textContent="저장 중…"; }
   setStatus("saving","저장 중…");
-  // 저장 순간의 갯수/내용을 기억해 뒀다가, 시트에 실제로 들어갔는지 대조
-  const expectLen = items.filter(i=>!i.deleted).length;
-  const expectSig = items.map(i=>(i.id)+":"+qtyOf(i)).join("|");
-  fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({items})})
-    .then(()=>{ setStatus("saving","저장 확인 중…"); setTimeout(()=>verifySave(expectLen, expectSig), 1800); })
-    .catch(()=>{ endSaveBtn(); setStatus("err","저장 실패"); alert("저장 요청이 실패했어요.\n인터넷 연결을 확인하고 다시 눌러주세요."); });
+  const mineNow=snapshot(items);
+  const finishPush=(arr)=>{
+    const expectLen = arr.filter(i=>!i.deleted).length;
+    const expectSig = arr.map(i=>(i.id)+":"+qtyOf(i)).join("|");
+    fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({items:arr})})
+      .then(()=>{ pushing=false; setStatus("saving","저장 확인 중…"); setTimeout(()=>verifySave(expectLen, expectSig), 1800); if(pendingPush){ pendingPush=false; pushCloud(); } })
+      .catch(()=>{ pushing=false; endSaveBtn(); setStatus("err","저장 실패"); alert("저장 요청이 실패했어요.\n인터넷 연결을 확인하고 다시 눌러주세요."); });
+  };
+  pushing=true;
+  jsonpGet(
+    (obj)=>{ const server=(obj&&Array.isArray(obj.items))?obj.items.map(x=>Object.assign({logs:[],baseTs:0},x)):[]; const merged=mergeChanges(server, mineNow, lastSynced); items=merged; lastSynced=snapshot(merged); render(); finishPush(merged); },
+    ()=>{ finishPush(items); }
+  );
 }
 function endSaveBtn(){ const b=document.getElementById("saveNowBtn"); if(b){ b.disabled=false; b.textContent="💾 지금 저장"; } }
 function verifySave(expectLen, expectSig){
@@ -874,6 +1046,7 @@ function scheduleRefresh(){
 try{
   document.getElementById("asof").textContent="오늘 "+today();
   loadW();
+  loadUI();
   if(cloudOn()){
     document.getElementById("demoBanner").style.display="none";
     setStatus("saving","불러오는 중…");
