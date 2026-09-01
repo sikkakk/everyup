@@ -550,13 +550,13 @@ function saveLogEdit(itemId, ts){
   g.date=fromDateInput(document.getElementById("le_date").value)||g.date;
   g.src=document.getElementById("le_src").value.trim();
   g.memo=document.getElementById("le_memo").value.trim();
-  closeModal(); commit();
+  closeModal(); commitItem(it);
 }
 function deleteLog(itemId, ts){
   const it=find(itemId); if(!it) return;
   if(!confirm("이 입고 기록을 삭제할까요? 현재수량에서도 빠집니다.")) return;
   it.logs=(it.logs||[]).filter(x=>x.ts!==ts);
-  closeModal(); commit();
+  closeModal(); commitItem(it);
 }
 
 
@@ -653,7 +653,7 @@ function doIn(id){
   it.logs.push({ts:Date.now(), amt:n, date, src, memo});
   if(src) it.src=src; it.inDate=date;
   if(!it.chk || date>it.chk) it.chk=date;
-  closeModal(); commit();
+  closeModal(); commitItem(it);
 }
 
 /* ---- 실사 ---- */
@@ -672,7 +672,7 @@ function openAudit(id){
 }
 function doAudit(id){
   const it=find(id); const v=Math.max(0,parseInt(document.getElementById("real").value||"0"));
-  it.baseQty=v; it.baseTs=Date.now(); it.logs=[]; it.chk=today(); closeModal(); commit();
+  it.baseQty=v; it.baseTs=Date.now(); it.logs=[]; it.chk=today(); closeModal(); commitItem(it);
 }
 
 /* ---- 신규 / 수정 (수량은 신규에서만 입력, 수정에서는 못 바꿈) ---- */
@@ -724,22 +724,23 @@ function doNew(){
   const f=readForm(); if(!f.name){ document.getElementById("f_name").focus(); return; }
   const id=Math.max(0,...items.map(i=>i.id))+1;
   const qty=parseInt(document.getElementById("f_qty").value||"0");
-  items.push({id,...f,baseQty:qty,baseTs:Date.now(),logs:[],inDate:"",chk:today()});
+  const nu={id,...f,baseQty:qty,baseTs:Date.now(),logs:[],inDate:"",chk:today()};
+  items.push(nu);
   filterDept=f.dept; query=""; document.getElementById("q").value=""; view="stock";
-  closeModal(); commit();
+  closeModal(); commitItem(nu);
 }
 function doEdit(id){
   const it=find(id); const f=readForm(); if(!f.name){ document.getElementById("f_name").focus(); return; }
   Object.assign(it, f); // 수량 관련(baseQty/baseTs/logs)은 건드리지 않음
-  closeModal(); commit();
+  closeModal(); commitItem(it);
 }
 function doDelete(id){
   const it=find(id); it.deleted=true;   // 영구삭제 아님 → '삭제된 항목' 탭으로 이동
-  closeModal(); commit();
+  closeModal(); commitItem(it);
 }
 function restoreItem(id){
   const it=find(id); it.deleted=false;
-  commit();
+  commitItem(it);
 }
 
 /* ---- 선택 & 순서 이동 ---- */
@@ -760,12 +761,12 @@ function moveSelected(where){
   else if(where==="bottom"){ list=[...list.filter(it=>!sel(it)), ...list.filter(sel)]; }
   else if(where==="up"){ for(let i=1;i<list.length;i++){ if(sel(list[i])&&!sel(list[i-1])){ [list[i-1],list[i]]=[list[i],list[i-1]]; } } }
   else if(where==="down"){ for(let i=list.length-2;i>=0;i--){ if(sel(list[i])&&!sel(list[i+1])){ [list[i+1],list[i]]=[list[i],list[i+1]]; } } }
-  reorderMaster(list); commit();
+  reorderMaster(list); commitOrder();
 }
 /* ---- 드래그로 한 줄씩 이동 ---- */
 function dragStart(e,i){ dragFrom=i; e.dataTransfer.effectAllowed="move"; try{e.dataTransfer.setData("text/plain",String(i));}catch(x){} }
 function dragOver(e,i){ if(dragFrom<0) return; e.preventDefault(); const rows=document.querySelectorAll("#rows tr"); rows.forEach(r=>r.classList.remove("drop-target")); if(rows[i]) rows[i].classList.add("drop-target"); }
-function dragDrop(e,i){ e.preventDefault(); if(dragFrom<0||dragFrom===i){ dragEnd(); return; } const list=stockList.slice(); const [m]=list.splice(dragFrom,1); list.splice(i,0,m); reorderMaster(list); dragFrom=-1; commit(); }
+function dragDrop(e,i){ e.preventDefault(); if(dragFrom<0||dragFrom===i){ dragEnd(); return; } const list=stockList.slice(); const [m]=list.splice(dragFrom,1); list.splice(i,0,m); reorderMaster(list); dragFrom=-1; commitOrder(); }
 function dragEnd(){ dragFrom=-1; document.querySelectorAll("#rows tr").forEach(r=>r.classList.remove("drop-target")); }
 
 /* ---- 열 너비 조절 ---- */
@@ -903,6 +904,30 @@ function postItems(arr){
     .catch(()=>{ pushing=false; setStatus("err","저장 실패"); if(pendingPush){ pendingPush=false; pushCloud(); } });
 }
 function commit(){ render(); pushCloud(); }   // 데이터 바뀔 때: 화면 갱신 + 클라우드 저장(병합)
+
+/* ---- 개별 저장: 바뀐 품목 하나만 시트에 반영 (동시편집 안전) ---- */
+function pushUpsert(it){
+  if(!cloudOn()||!syncedOK) return;
+  if(!it || it.id==null) return;
+  if(pushing){ pendingPush=true; return; }   // 다른 저장 진행 중이면 끝난 뒤 전체저장으로 한 번 더
+  pushing=true; setStatus("saving","저장 중…");
+  const item=snapshot(it);
+  fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"upsert",item:item})})
+    .then(()=>{ pushing=false; lastSynced=snapshot(items); setStatus("ok","저장됨"); if(pendingPush){ pendingPush=false; pushCloud(); } })
+    .catch(()=>{ pushing=false; setStatus("err","저장 실패"); if(pendingPush){ pendingPush=false; pushCloud(); } });
+}
+/* ---- 순서만 저장 ---- */
+function pushOrder(){
+  if(!cloudOn()||!syncedOK) return;
+  if(pushing){ pendingPush=true; return; }
+  pushing=true; setStatus("saving","순서 저장 중…");
+  const ids=items.map(i=>i.id);
+  fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"order",ids:ids})})
+    .then(()=>{ pushing=false; lastSynced=snapshot(items); setStatus("ok","저장됨"); if(pendingPush){ pendingPush=false; pushCloud(); } })
+    .catch(()=>{ pushing=false; setStatus("err","저장 실패"); if(pendingPush){ pendingPush=false; pushCloud(); } });
+}
+function commitItem(it){ render(); if(cloudOn()&&syncedOK) pushUpsert(it); }   // 품목 1개 변경
+function commitOrder(){ render(); if(cloudOn()&&syncedOK) pushOrder(); }        // 순서 변경
 
 /* ---- 지금 저장 (수동 저장 + 진짜 반영됐는지 확인) ---- */
 function saveNow(){
