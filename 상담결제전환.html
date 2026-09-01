@@ -7,7 +7,7 @@
 <style>
   :root{
     --navy:#1C2B4A; --navy2:#2C3E50;
-    --teal:#0EA5A0; --teal-lt:#E6F7F6;
+    --teal:#1E8E54; --teal-lt:#EAFAF1;  /* 상담전환 포인트색: 초록 */
     --blue:#2E86C1; --blue-lt:#EAF2FB;
     --purple:#7D3C98; --purple-lt:#F4ECF7;
     --green:#1E8E54; --green-lt:#EAFAF1;
@@ -28,26 +28,28 @@
 
   /* ---- top bar ---- */
   header{
-    background:var(--navy); color:#fff; padding:14px 20px;
-    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
-    position:sticky; top:0; z-index:30;
+    background:#fff; color:var(--ink); padding:11px 20px;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    position:sticky; top:0; z-index:30; border-bottom:1px solid var(--line);
   }
-  .brand{font-weight:800; font-size:17px; letter-spacing:-.2px; display:flex; align-items:center; gap:9px}
-  .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 4px rgba(14,165,160,.25)}
-  .tabs{display:flex; gap:4px; background:rgba(255,255,255,.08); padding:4px; border-radius:11px}
+  .brand{display:flex; align-items:center; gap:12px}
+  .brand .hdr-logo{height:30px; width:auto; display:block}
+  .brand .hdr-div{width:1px; height:22px; background:#D5DBE2}
+  .brand .hdr-appname{font-weight:800; font-size:17px; letter-spacing:-.3px; color:var(--navy)}
+  .tabs{display:flex; gap:4px; background:#EFF3F7; padding:4px; border-radius:11px}
   .tabs button{
-    border:0; background:transparent; color:#cdd6e4; font-weight:700; font-size:14px;
+    border:0; background:transparent; color:var(--muted); font-weight:700; font-size:14px;
     padding:8px 18px; border-radius:8px; transition:.15s;
   }
-  .tabs button.on{background:#fff; color:var(--navy)}
+  .tabs button.on{background:var(--teal); color:#fff}
   .spacer{flex:1}
   .topbtn{
-    border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.06); color:#e7ecf3;
+    border:1px solid var(--line); background:#fff; color:var(--navy2);
     font-weight:600; font-size:12.5px; padding:8px 13px; border-radius:9px; transition:.15s;
   }
-  .topbtn:hover{background:rgba(255,255,255,.16)}
-  .save-chip{font-size:12px; color:#9fb0c4; display:flex; align-items:center; gap:6px}
-  .save-chip b{color:#7fe3dd; font-weight:700}
+  .topbtn:hover{background:#F1F4F7}
+  .save-chip{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px}
+  .save-chip b{color:#1E8E54; font-weight:700}
 
   main{max-width:1180px; margin:0 auto; padding:22px 20px 60px}
   .view{display:none}
@@ -247,7 +249,7 @@
     .grid{grid-template-columns:repeat(2,1fr)}
     .statgrid{grid-template-columns:1fr}
     .nav .lbl{min-width:120px; font-size:12.5px}
-    .brand{font-size:15px}
+    .brand .hdr-appname{font-size:15px} .brand .hdr-logo{height:26px}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none !important}}
   /* ---- 접근 게이트 ---- */
@@ -290,7 +292,13 @@
 </div>
 
 <header>
-  <div class="brand"><span class="dot"></span>에브리업의원 · 상담 결제 전환 관리</div>
+  <div class="brand">
+    <img class="hdr-logo" src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원"
+      onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+    <span class="hdr-fallback" style="display:none;font-weight:800;font-size:16px;color:var(--navy)">에브리업의원</span>
+    <span class="hdr-div"></span>
+    <span class="hdr-appname">상담전환관리</span>
+  </div>
   <div class="tabs">
     <button id="tabInput" class="on" onclick="switchView('input')">상담 입력</button>
     <button id="tabDash" onclick="switchView('dash')">대시보드</button>
@@ -557,8 +565,8 @@ function saveNotesObj(n){ try{ localStorage.setItem(NOTE_KEY, JSON.stringify(n))
 /* 상태 표시 */
 function setChip(html){ const c=document.getElementById('saveChip'); if(c) c.innerHTML=html; }
 function chipSaved(){ setChip(cloudOn?'<b>●</b> 구글 시트에 저장됨':'<b>●</b> 자동 저장됨(이 PC)'); }
-function chipSyncing(){ setChip('<b style="color:#8fd3ff">↻</b> 동기화 중…'); }
-function chipError(){ setChip('<b style="color:#ffb84d">●</b> 동기화 실패 · 로컬 저장됨'); }
+function chipSyncing(){ setChip('<b style="color:#2E86C1">↻</b> 동기화 중…'); }
+function chipError(){ setChip('<b style="color:#D97706">●</b> 동기화 실패 · 로컬 저장됨'); }
 
 /* saveAll(): 로컬에 먼저 저장 → 클라우드로 전송 */
 function saveAll(){
@@ -569,12 +577,12 @@ function saveAll(){
 function pushCloud(){
   if(!cloudOn) return;
   if(!syncedOK){
-    setChip('<b style="color:#ffb84d">●</b> 시트 미동기화 · 로컬만 저장');
+    setChip('<b style="color:#D97706">●</b> 시트 미동기화 · 로컬만 저장');
     toast('아직 구글 시트를 불러오지 못해 시트 저장을 보류했습니다. 새로고침(↻)으로 시트를 먼저 불러오세요.', true);
     return;
   }
   if(!Array.isArray(records) || records.length===0){
-    setChip('<b style="color:#ffb84d">●</b> 빈 데이터 · 시트 저장 안 함');
+    setChip('<b style="color:#D97706">●</b> 빈 데이터 · 시트 저장 안 함');
     toast('빈 데이터는 구글 시트에 저장하지 않습니다(시트 데이터 보호).', true);
     return;
   }
@@ -1189,7 +1197,7 @@ if(cloudOn){
     if(!ok) toast('구글 시트에서 데이터를 불러오지 못했습니다. 새로고침(↻)을 눌러 다시 시도하세요.', true);
   });
 }else if(!storageOK){
-  setChip('<b style="color:#ffb84d">●</b> 미리보기(저장 안 됨)');
+  setChip('<b style="color:#D97706">●</b> 미리보기(저장 안 됨)');
 }else{
   chipSaved();
 }
