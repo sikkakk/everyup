@@ -165,6 +165,7 @@
         <button class="btn-fill" id="goInventory">📦 재고 현황</button>
         <button class="btn-fill" id="goAttendance" style="display:none">🕐 근태관리</button>
         <button class="btn-fill" id="goReservation" style="display:none">📊 예약통계</button>
+        <button class="btn-fill" id="goConsult" style="display:none">💳 상담전환관리</button>
         <br>
         <button class="btn-line" id="logoutBtn">다른 계정으로</button>
       </div>
@@ -182,6 +183,7 @@ const API = "https://script.google.com/macros/s/AKfycbwUBiyI9x4OfeexcM1nVbdIyOPe
 const INVENTORY_URL = "https://sikkakk.github.io/everyup/%EC%9E%AC%EA%B3%A0%EA%B4%80%EB%A6%AC.html";
 const ATTENDANCE_URL = "https://sikkakk.github.io/everyup/%EA%B7%BC%ED%83%9C%EA%B4%80%EB%A6%AC%EC%95%B1.html"; // 근태관리앱.html (송우철 원장님 전용)
 const RESERVATION_URL = "https://sikkakk.github.io/everyup/%EC%98%88%EC%95%BD%ED%86%B5%EA%B3%84.html"; // 예약통계.html (원장·실장·부실장 전용)
+const CONSULT_URL = "https://sikkakk.github.io/everyup/%EC%83%81%EB%8B%B4%EA%B2%B0%EC%A0%9C%EC%A0%84%ED%99%98.html"; // 상담결제전환.html (원장·실장 전용)
 
 /* ===== JSONP 헬퍼 (읽기 전용, CORS 우회) ===== */
 function api(params){
@@ -357,6 +359,11 @@ function welcome(){
   const RESV_NAMES = ["송우철","박수진","한희수"];
   const canResv = isDirector || RESV_NAMES.includes(cur.name) || (cur.part||"").includes("실장");
   $("goReservation").style.display = canResv ? "block" : "none";
+  // 상담전환관리는 원장·실장만 (부실장 제외)
+  const CONSULT_NAMES = ["송우철","박수진"];
+  const isSiljang = (cur.part||"").includes("실장") && !(cur.part||"").includes("부실장");
+  const canConsult = isDirector || isSiljang || CONSULT_NAMES.includes(cur.name);
+  $("goConsult").style.display = canConsult ? "block" : "none";
   show("welcome");
 }
 
@@ -371,6 +378,11 @@ $("goReservation").onclick=()=>{
   // 로그인을 거쳐 들어간다는 신호를 예약통계 앱에 전달 (원장·실장·부실장)
   try{ sessionStorage.setItem('everyup_resv_ok', String(Date.now())); }catch(e){}
   location.href = RESERVATION_URL;
+};
+$("goConsult").onclick=()=>{
+  // 로그인을 거쳐 들어간다는 신호를 상담전환관리 앱에 전달 (원장·실장)
+  try{ sessionStorage.setItem('everyup_consult_ok', String(Date.now())); }catch(e){}
+  location.href = CONSULT_URL;
 };
 backBtn.onclick=()=>{ buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
 $("logoutBtn").onclick=()=>{ cur=null; buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
