@@ -29,8 +29,13 @@
   .nav-item svg{width:16px;height:16px;flex-shrink:0}
   .sidebar-footer{margin-top:auto;padding:1rem 1.25rem;border-top:0.5px solid var(--border);display:flex;flex-direction:column;gap:6px}
   .main{flex:1;overflow-y:auto}
-  .main-header{padding:1.25rem 1.5rem;border-bottom:0.5px solid var(--border);background:var(--surface);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
-  .main-header-title{font-size:15px;font-weight:600}
+  .main-header{padding:11px 1.5rem;border-bottom:0.5px solid var(--border);background:var(--surface);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;gap:12px;flex-wrap:wrap}
+  .main-header-title{font-size:14px;font-weight:600;color:var(--text2)}
+  .mh-brand{display:flex;align-items:center;gap:12px}
+  .mh-logo{height:30px;width:auto;display:block}
+  .mh-fallback{font-weight:700;font-size:16px;color:var(--text)}
+  .mh-div{width:1px;height:22px;background:var(--border2)}
+  .mh-appname{font-weight:700;font-size:17px;letter-spacing:-.3px;color:var(--text)}
   .main-content{padding:1.5rem}
   .page{display:none}.page.active{display:block}
   /* buttons */
@@ -191,8 +196,14 @@
   <!-- 메인 -->
   <div class="main">
     <div class="main-header">
+      <div class="mh-brand">
+        <img class="mh-logo" src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+        <span class="mh-fallback" style="display:none">에브리업의원</span>
+        <span class="mh-div"></span>
+        <span class="mh-appname">근태관리</span>
+      </div>
       <span class="main-header-title" id="page-title">휴가·연차 관리</span>
-      <span class="mini" id="save-info">데이터는 JSON으로 저장·불러오기 가능합니다</span>
     </div>
     <div class="main-content">
 
