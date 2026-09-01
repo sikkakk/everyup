@@ -164,6 +164,7 @@
         <div class="w-msg">환영합니다. 오늘도 좋은 하루 되세요.</div>
         <button class="btn-fill" id="goInventory">📦 재고 현황</button>
         <button class="btn-fill" id="goAttendance" style="display:none">🕐 근태관리</button>
+        <button class="btn-fill" id="goReservation" style="display:none">📊 예약통계</button>
         <br>
         <button class="btn-line" id="logoutBtn">다른 계정으로</button>
       </div>
@@ -180,6 +181,7 @@ const API = "https://script.google.com/macros/s/AKfycbwUBiyI9x4OfeexcM1nVbdIyOPe
 /* ===== 로그인 후 이동할 앱 주소 ===== */
 const INVENTORY_URL = "https://sikkakk.github.io/everyup/%EC%9E%AC%EA%B3%A0%EA%B4%80%EB%A6%AC.html";
 const ATTENDANCE_URL = "https://sikkakk.github.io/everyup/%EA%B7%BC%ED%83%9C%EA%B4%80%EB%A6%AC%EC%95%B1.html"; // 근태관리앱.html (송우철 원장님 전용)
+const RESERVATION_URL = "https://sikkakk.github.io/everyup/%EC%98%88%EC%95%BD%ED%86%B5%EA%B3%84.html"; // 예약통계.html (원장·실장·부실장 전용)
 
 /* ===== JSONP 헬퍼 (읽기 전용, CORS 우회) ===== */
 function api(params){
@@ -351,6 +353,10 @@ function welcome(){
   // 근태관리는 송우철 원장님으로 로그인했을 때만 표시
   const isDirector = cur.name==="송우철" || (cur.part||"").includes("원장");
   $("goAttendance").style.display = isDirector ? "block" : "none";
+  // 예약통계는 원장·실장·부실장만 표시 (part에 '실장' 포함 시 상담실장·부실장 모두 해당)
+  const RESV_NAMES = ["송우철","박수진","한희수"];
+  const canResv = isDirector || RESV_NAMES.includes(cur.name) || (cur.part||"").includes("실장");
+  $("goReservation").style.display = canResv ? "block" : "none";
   show("welcome");
 }
 
@@ -360,6 +366,11 @@ $("goAttendance").onclick=()=>{
   // 로그인(원장님)을 거쳐 들어간다는 신호를 근태 앱에 전달 (같은 사이트 세션 저장소)
   try{ sessionStorage.setItem('everyup_att_ok', String(Date.now())); }catch(e){}
   location.href = ATTENDANCE_URL;
+};
+$("goReservation").onclick=()=>{
+  // 로그인을 거쳐 들어간다는 신호를 예약통계 앱에 전달 (원장·실장·부실장)
+  try{ sessionStorage.setItem('everyup_resv_ok', String(Date.now())); }catch(e){}
+  location.href = RESERVATION_URL;
 };
 backBtn.onclick=()=>{ buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
 $("logoutBtn").onclick=()=>{ cur=null; buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };

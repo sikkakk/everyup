@@ -110,9 +110,44 @@
     .metrics{grid-template-columns:1fr}
     .brand{font-size:15px}
   }
+
+  /* ---- 접근 게이트 ---- */
+  #accessGate{position:fixed; inset:0; z-index:9999; background:var(--navy);
+    display:flex; align-items:center; justify-content:center; padding:24px;}
+  #accessGate.hidden{display:none;}
+  .gate-card{background:#fff; border-radius:18px; box-shadow:0 20px 60px rgba(0,0,0,.35);
+    width:100%; max-width:380px; padding:34px 30px; text-align:center;}
+  .gate-lock{font-size:40px; line-height:1; margin-bottom:14px;}
+  .gate-title{font-size:19px; font-weight:800; color:var(--navy); letter-spacing:-.3px;}
+  .gate-sub{font-size:13px; color:var(--muted); margin-top:8px; line-height:1.6;}
+  .gate-form{margin-top:22px; display:flex; flex-direction:column; gap:10px;}
+  .gate-form input{padding:13px 14px; border:1px solid var(--line); border-radius:11px;
+    font-size:15px; text-align:center; font-family:inherit; letter-spacing:1px;}
+  .gate-form input:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(14,165,160,.15);}
+  .gate-btn{padding:13px; font-size:15px; font-weight:800; background:var(--teal); color:#fff;
+    border:0; border-radius:11px; cursor:pointer; transition:.15s;}
+  .gate-btn:hover{background:#0c918d;}
+  .gate-err{font-size:12.5px; color:var(--red); font-weight:700; min-height:16px;}
+  .gate-note{font-size:11.5px; color:var(--muted); margin-top:16px; line-height:1.6;}
 </style>
 </head>
 <body>
+
+<!-- ===== 접근 게이트 (원장·실장·부실장 전용) ===== -->
+<div id="accessGate">
+  <div class="gate-card">
+    <div class="gate-lock">🔒</div>
+    <div class="gate-title">예약 통계 · 접근 확인</div>
+    <div class="gate-sub">원장·실장·부실장 전용 페이지입니다.<br>로그인 화면의 <b>예약통계</b> 버튼으로 들어와 주세요.</div>
+    <div class="gate-form">
+      <input type="password" id="gatePw" inputmode="text" autocomplete="off"
+        placeholder="비밀번호" onkeydown="if(event.key==='Enter')gateUnlock()">
+      <div class="gate-err" id="gateErr"></div>
+      <button class="gate-btn" onclick="gateUnlock()">들어가기</button>
+    </div>
+    <div class="gate-note">주소를 직접 아는 사람의 접근을 막기 위한 화면입니다.<br>비밀번호는 원장·실장·부실장만 공유해 주세요.</div>
+  </div>
+</div>
 
 <header>
   <div class="brand"><span class="dot"></span>에브리업의원 · 예약 통계</div>
@@ -200,6 +235,54 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
+/* ===================== 접근 게이트 =====================
+   허용: 원장(송우철) · 실장(박수진) · 부실장(한희수)
+   - 로그인 화면의 '예약통계' 버튼으로 들어오면 신호(everyup_resv_ok)를
+     받아 비밀번호 없이 바로 열림 (같은 탭 세션 동안 유지)
+   - 주소를 직접 아는 사람의 새 창 접근은 막힘 → 비상용 비밀번호 필요
+   - 비상용 비밀번호: yeyak2026  (근태 앱과 다른 비번, 실장·부실장만 공유)
+====================================================== */
+const RESV_HANDOFF_KEY = 'everyup_resv_ok';       // 로그인 화면이 넘겨주는 신호
+const RESV_SESSION_KEY = 'everyup_resv_session';  // 이 탭에서 이미 통과했는지
+const RESV_HANDOFF_MAX_MS = 120000;               // 신호 유효시간 2분
+const RESV_PW_HASH = '2e6d801062345fd68dbbb405878a80a5396f22a4b4eae0af2159a4cda063f911'; // SHA-256('yeyak2026')
+
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function grantAccess(){
+  try{ sessionStorage.setItem(RESV_SESSION_KEY, '1'); }catch(e){}
+  const g = document.getElementById('accessGate');
+  if(g) g.classList.add('hidden');
+}
+function checkAccess(){
+  // 1) 이 탭에서 이미 통과함
+  try{ if(sessionStorage.getItem(RESV_SESSION_KEY) === '1'){ grantAccess(); return; } }catch(e){}
+  // 2) 로그인 화면에서 넘어온 신호 확인
+  try{
+    const ts = parseInt(sessionStorage.getItem(RESV_HANDOFF_KEY) || '0', 10);
+    if(ts && (Date.now() - ts) < RESV_HANDOFF_MAX_MS){
+      sessionStorage.removeItem(RESV_HANDOFF_KEY);  // 1회용
+      grantAccess();
+      return;
+    }
+  }catch(e){}
+  // 3) 그 외 → 비밀번호 화면 유지 (기본 표시 상태)
+  setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); }, 100);
+}
+async function gateUnlock(){
+  const el = document.getElementById('gatePw');
+  const err = document.getElementById('gateErr');
+  const v = (el.value || '').trim();
+  if(!v){ err.textContent = '비밀번호를 입력하세요.'; return; }
+  const h = await sha256Hex(v);
+  if(h === RESV_PW_HASH){ err.textContent=''; grantAccess(); }
+  else{ err.textContent = '비밀번호가 올바르지 않습니다.'; el.value=''; el.focus(); }
+}
+checkAccess();
+/* =================== 접근 게이트 끝 =================== */
+
 const CH = ['전화','네이버','카카오','여신티켓','강남언니','AI'];
 const COLORS = ['#0EA5A0','#2E86C1','#7D3C98','#D97706','#DB2777','#1E8E54'];
 const MK = ['inq','bk','hold','nr'];
