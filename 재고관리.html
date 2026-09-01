@@ -203,7 +203,7 @@
   .detail-grid{display:grid; grid-template-columns:96px 1fr; gap:8px 12px; font-size:14px}
   .detail-grid .dk{color:var(--ink-soft); font-weight:700; font-size:12.5px; padding-top:2px}
   .detail-grid .dv{color:var(--ink); white-space:pre-wrap; word-break:break-word}
-  .detail-grid .dv.empty{color:var(--ink-soft)}
+  .detail-grid .dv.dvem{color:var(--ink-soft)}
 </style>
 </head>
 <body>
@@ -602,8 +602,8 @@ function openDetail(id){
   const expTxt = e ? (e.days<0?`${e.label} (만료)`:`${e.label} (D-${e.days})`) : "-";
   const clean1=(v)=>(v===undefined||v===null)?"":String(v).replace(/\s+/g,' ').trim();            // 한 줄용: 공백·줄바꿈을 모두 한 칸으로
   const cleanML=(v)=>(v===undefined||v===null)?"":String(v).replace(/\r\n?/g,'\n').replace(/[ \t]+$/gm,'').replace(/\n{3,}/g,'\n\n').trim(); // 여러 줄용: 줄바꿈 유지(과한 빈 줄만 정리)
-  const row=(k,v)=>{ const s=clean1(v); const empty=(s===""); return `<div class="dk">${k}</div><div class="dv${empty?" empty":""}">${empty?"-":esc(s)}</div>`; };
-  const rowML=(k,v)=>{ const s=cleanML(v); const empty=(s===""); return `<div class="dk">${k}</div><div class="dv${empty?" empty":""}">${empty?"-":esc(s)}</div>`; };
+  const row=(k,v)=>{ const s=clean1(v); const empty=(s===""); return `<div class="dk">${k}</div><div class="dv${empty?" dvem":""}">${empty?"-":esc(s)}</div>`; };
+  const rowML=(k,v)=>{ const s=cleanML(v); const empty=(s===""); return `<div class="dk">${k}</div><div class="dv${empty?" dvem":""}">${empty?"-":esc(s)}</div>`; };
   modal.innerHTML=`
     <h3>${esc(it.name)}</h3>
     <div class="msub">${esc(it.dept)}${it.cat?(" · "+esc(it.cat)):""}</div>
