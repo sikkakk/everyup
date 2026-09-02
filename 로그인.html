@@ -163,7 +163,7 @@
         <div class="w-part" id="wPart"></div>
         <div class="w-msg">환영합니다. 오늘도 좋은 하루 되세요.</div>
         <button class="btn-fill" id="goInventory">📦 재고 현황</button>
-        <button class="btn-fill" id="goAttendance" style="display:none">🕐 근태관리</button>
+        <button class="btn-fill" id="goAttendance" style="display:none">🕐 직원관리</button>
         <button class="btn-fill" id="goReservation" style="display:none">📊 예약통계</button>
         <button class="btn-fill" id="goConsult" style="display:none">💳 상담전환관리</button>
         <br>
@@ -181,7 +181,7 @@ const API = "https://script.google.com/macros/s/AKfycbwUBiyI9x4OfeexcM1nVbdIyOPe
 
 /* ===== 로그인 후 이동할 앱 주소 ===== */
 const INVENTORY_URL = "https://sikkakk.github.io/everyup/%EC%9E%AC%EA%B3%A0%EA%B4%80%EB%A6%AC.html";
-const ATTENDANCE_URL = "https://sikkakk.github.io/everyup/%EA%B7%BC%ED%83%9C%EA%B4%80%EB%A6%AC%EC%95%B1.html"; // 근태관리앱.html (송우철 원장님 전용)
+const ATTENDANCE_URL = "https://sikkakk.github.io/everyup/%EC%A7%81%EC%9B%90%EA%B4%80%EB%A6%AC.html"; // 직원관리.html (송우철 원장님 전용)
 const RESERVATION_URL = "https://sikkakk.github.io/everyup/%EC%98%88%EC%95%BD%ED%86%B5%EA%B3%84.html"; // 예약통계.html (원장·실장·부실장 전용)
 const CONSULT_URL = "https://sikkakk.github.io/everyup/%EC%83%81%EB%8B%B4%EA%B2%B0%EC%A0%9C%EC%A0%84%ED%99%98.html"; // 상담결제전환.html (원장·실장 전용)
 
@@ -352,7 +352,7 @@ async function submit(){
 function welcome(){
   $("wName").textContent = cur.name + "님";
   $("wPart").textContent = cur.part||"";
-  // 근태관리는 송우철 원장님으로 로그인했을 때만 표시
+  // 직원관리는 송우철 원장님으로 로그인했을 때만 표시
   const isDirector = cur.name==="송우철" || (cur.part||"").includes("원장");
   $("goAttendance").style.display = isDirector ? "block" : "none";
   // 예약통계는 원장·실장·부실장만 표시 (part에 '실장' 포함 시 상담실장·부실장 모두 해당)
@@ -370,7 +370,7 @@ function welcome(){
 /* ===== 뒤로 / 로그아웃 ===== */
 $("goInventory").onclick=()=>{ location.href = INVENTORY_URL; };
 $("goAttendance").onclick=()=>{
-  // 로그인(원장님)을 거쳐 들어간다는 신호를 근태 앱에 전달 (같은 사이트 세션 저장소)
+  // 로그인(원장님)을 거쳐 들어간다는 신호를 직원관리 앱에 전달 (같은 사이트 세션 저장소)
   try{ sessionStorage.setItem('everyup_att_ok', String(Date.now())); }catch(e){}
   location.href = ATTENDANCE_URL;
 };
