@@ -204,6 +204,17 @@
   .detail-grid .dk{color:var(--ink-soft); font-weight:700; font-size:12.5px; padding-top:2px}
   .detail-grid .dv{color:var(--ink); white-space:pre-wrap; word-break:break-word}
   .detail-grid .dv.dvem{color:var(--ink-soft)}
+  /* 수정 이력: 클릭 가능한 날짜 + 목록 */
+  .chkdate.clickable{cursor:pointer; text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:2px}
+  .chkdate.clickable:hover{color:var(--primary); text-decoration-color:var(--primary)}
+  .histlist{display:flex; flex-direction:column; gap:8px}
+  .hrow{display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:var(--surface)}
+  .hrow .hdate{font-size:12.5px; color:var(--ink-soft); font-variant-numeric:tabular-nums; min-width:66px}
+  .hrow .hbadge{font-size:11.5px; font-weight:800; border-radius:6px; padding:2px 7px; white-space:nowrap}
+  .hrow .hbadge.in{background:#E7F3EC; color:#1E8E5A}
+  .hrow .hbadge.au{background:#EAF0F6; color:#3B6FB0}
+  .hrow .hbadge.nu{background:#F2EEE6; color:#8A6D1E}
+  .hrow .hqty{margin-left:auto; font-weight:800; font-size:15px; color:var(--ink); font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -488,7 +499,7 @@ function renderStock(){
       <td><span class="depttag">${esc(it.dept)}</span><div class="cat">${esc(it.cat||"")}</div></td>
       <td><div class="name clickable" onclick="openDetail(${it.id})" title="자세히 보기">${esc(it.name)}</div><div class="spec">${esc(it.company||"")}</div></td>
       <td class="spec">${esc(it.spec||"-")}</td>
-      <td class="num"><span class="qty ${q<=0?'zero':''}">${q}<span class="u">${esc(it.unit||"")}</span></span>${it.chk?`<div class="chkdate">${esc(it.chk)}</div>`:""}</td>
+      <td class="num"><span class="qty ${q<=0?'zero':''}">${q}<span class="u">${esc(it.unit||"")}</span></span>${it.chk?`<div class="chkdate clickable" onclick="openHist(${it.id})" title="수정 이력 보기">${esc(it.chk)}</div>`:""}</td>
       <td class="num minq">${it.min>0?it.min:"-"}</td>
       <td>${expHtml}</td>
       <td class="spec tiny">${esc(it.loc||"-")}</td>
@@ -612,6 +623,7 @@ function openDetail(id){
         ${row("회사", it.company)}
         ${row("규격", it.spec)}
         ${row("현재수량", q+" "+(it.unit||""))}
+        ${row("가격", it.price)}
         ${row("최소재고", it.min>0?it.min:"-")}
         ${row("사용기한", expTxt)}
         ${row("보관위치", it.loc)}
@@ -623,6 +635,37 @@ function openDetail(id){
       </div>
     </div>
     <div class="foot"><button class="btn ghost" onclick="closeModal()">닫기</button><button class="btn primary" onclick="openForm('edit',${id})">수정</button></div>`;
+  overlay.classList.add("show");
+}
+
+/* ---- 수정 이력 (현재수량 밑 날짜 클릭 → 최신순, 5개씩 더보기) ---- */
+let _histId=null, _histShown=0;
+function openHist(id){ _histId=id; _histShown=5; renderHist(); }
+function moreHist(){ _histShown+=5; renderHist(); }
+function renderHist(){
+  const it=find(_histId); if(!it){ closeModal(); return; }
+  const hist=(it.hist||[]).slice().sort((a,b)=>(b.ts||0)-(a.ts||0)); // 최신순
+  const total=hist.length;
+  const shown=hist.slice(0,_histShown);
+  const body = total===0
+    ? `<div class="preview">아직 수정 이력이 없어요.<br>지금부터 입고·실사 기록이 최신순으로 여기에 쌓입니다.</div>`
+    : `<div class="histlist">` + shown.map(h=>{
+        const badge = h.type==="입고" ? `<span class="hbadge in">입고 +${h.delta}</span>`
+                    : h.type==="실사" ? `<span class="hbadge au">실사</span>`
+                    : `<span class="hbadge nu">등록</span>`;
+        return `<div class="hrow"><div class="hdate">${esc(h.date||"")}</div>${badge}<div class="hqty">${h.qty}${esc(it.unit||"")}</div></div>`;
+      }).join("") + `</div>`;
+  const moreBtn = total>_histShown
+    ? `<button class="btn ghost" style="width:100%;justify-content:center;margin-top:10px" onclick="moreHist()">더보기 (${total-_histShown}개 더)</button>`
+    : "";
+  modal.innerHTML=`
+    <h3>수정 이력</h3>
+    <div class="msub">${esc(it.name)} · 현재 ${qtyOf(it)}${esc(it.unit||"")}</div>
+    <div class="body">
+      ${body}
+      ${moreBtn}
+    </div>
+    <div class="foot"><button class="btn ghost" onclick="closeModal()">닫기</button></div>`;
   overlay.classList.add("show");
 }
 
@@ -656,6 +699,8 @@ function doIn(id){
   it.logs.push({ts:Date.now(), amt:n, date, src, memo});
   if(src) it.src=src; it.inDate=date;
   if(!it.chk || date>it.chk) it.chk=date;
+  if(!it.hist) it.hist=[];
+  it.hist.push({ts:Date.now(), date, type:"입고", delta:n, qty:qtyOf(it)});
   closeModal(); commitItem(it);
 }
 
@@ -675,7 +720,10 @@ function openAudit(id){
 }
 function doAudit(id){
   const it=find(id); const v=Math.max(0,parseInt(document.getElementById("real").value||"0"));
-  it.baseQty=v; it.baseTs=Date.now(); it.logs=[]; it.chk=today(); closeModal(); commitItem(it);
+  it.baseQty=v; it.baseTs=Date.now(); it.logs=[]; it.chk=today();
+  if(!it.hist) it.hist=[];
+  it.hist.push({ts:Date.now(), date:today(), type:"실사", qty:v});
+  closeModal(); commitItem(it);
 }
 
 /* ---- 신규 / 수정 (수량은 신규에서만 입력, 수정에서는 못 바꿈) ---- */
@@ -710,6 +758,7 @@ function openForm(mode, id){
         <div class="field"><label>보관위치</label><input id="f_loc" list="dl-loc" value="${esc(it.loc)}" placeholder="예: 시술실 서랍"></div>
         <div class="field"><label>구매처</label><input id="f_src" list="dl-src" value="${esc(it.src)}" placeholder="예: 약이오"></div>
       </div>
+      <div class="field"><label>가격</label><input id="f_price" value="${esc(it.price||"")}" placeholder="예: 50,000 / 개당 3,000 (메인 목록에는 표시되지 않아요)"></div>
       <div class="field"><label>메모</label><input id="f_memo" value="${esc(it.memo)}" placeholder="비고"></div>
       <div class="field"><label>효과 / 사용방법</label><textarea id="f_effect" rows="3" placeholder="효과 · 사용법 · 주의사항 (메인 목록에는 표시되지 않아요)">${esc(it.effect||"")}</textarea></div>
     </div>
@@ -721,13 +770,14 @@ function readForm(){
   const g=id=>document.getElementById(id).value.trim();
   return {dept:g("f_dept"),cat:g("f_cat"),company:g("f_company"),name:g("f_name"),spec:g("f_spec"),
     unit:g("f_unit")||"개",min:parseInt(g("f_min")||"0"),exp:fromDateInput(document.getElementById("f_exp").value),
-    loc:g("f_loc"),src:g("f_src"),memo:g("f_memo"),effect:g("f_effect")};
+    loc:g("f_loc"),src:g("f_src"),memo:g("f_memo"),effect:g("f_effect"),price:g("f_price")};
 }
 function doNew(){
   const f=readForm(); if(!f.name){ document.getElementById("f_name").focus(); return; }
   const id=Math.max(0,...items.map(i=>i.id))+1;
   const qty=parseInt(document.getElementById("f_qty").value||"0");
   const nu={id,...f,baseQty:qty,baseTs:Date.now(),logs:[],inDate:"",chk:today()};
+  nu.hist=[{ts:Date.now(), date:today(), type:"등록", qty:qty}];
   items.push(nu);
   filterDept=f.dept; query=""; document.getElementById("q").value=""; view="stock";
   closeModal(); commitItem(nu);
