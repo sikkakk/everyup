@@ -160,6 +160,16 @@
   .trend .dash{color:#c4ccd5}
 
   .happy-chk{width:18px; height:18px; accent-color:var(--teal); cursor:pointer;}
+  .cslfilter{display:flex; align-items:center; gap:6px; margin-bottom:14px; flex-wrap:wrap}
+  .cslfilter-lbl{font-size:12.5px; font-weight:700; color:var(--muted); margin-right:2px}
+  .csl{border:1px solid var(--line); background:#fff; color:var(--navy2); font-weight:700; font-size:12.5px;
+    padding:7px 15px; border-radius:999px; cursor:pointer; transition:.12s}
+  .csl:hover{background:#f1f4f7}
+  .csl.active{background:var(--navy); color:#fff; border-color:var(--navy)}
+  .csltag{display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px}
+  .csltag.sil{background:#E7F0FA; color:#2E6DB4}
+  .csltag.bu{background:#F3ECF9; color:#7D3C98}
+  .csltag.none{background:#F0F2F5; color:#AEB7C2}
   .hint{font-size:12.5px; color:var(--muted); padding:14px 4px 0; line-height:1.7}
   .hint b{color:var(--navy2)}
 
@@ -320,6 +330,8 @@
       <h2>새 상담 기록 추가</h2>
       <div class="grid">
         <div class="field"><label>날짜</label><input type="date" id="f_date"></div>
+        <div class="field"><label>상담자</label>
+          <select id="f_counselor"><option value="">-</option><option>실장</option><option>부실장</option></select></div>
         <div class="field"><label>환자 이니셜</label><input type="text" id="f_name" placeholder="예) 홍길동" maxlength="20"></div>
         <div class="field"><label>초/재진</label>
           <select id="f_rj"><option value="">-</option><option>초진</option><option>재진</option></select></div>
@@ -343,12 +355,17 @@
     <div class="recwrap">
       <div class="head">
         <h2>상담 기록</h2>
+        <div class="cslfilter" id="recFilter" style="margin:0 0 0 4px">
+          <button class="csl active" onclick="setCsl('rec','')">전체</button>
+          <button class="csl" onclick="setCsl('rec','실장')">실장</button>
+          <button class="csl" onclick="setCsl('rec','부실장')">부실장</button>
+        </div>
         <span class="cnt" id="recCount"></span>
       </div>
       <div class="tablescroll">
         <table>
           <thead><tr>
-            <th>날짜</th><th>환자</th><th>초/재진</th><th>상담종류</th><th style="text-align:left">시술 내용</th>
+            <th>날짜</th><th>상담자</th><th>환자</th><th>초/재진</th><th>상담종류</th><th style="text-align:left">시술 내용</th>
             <th>금액</th><th>결제</th><th>미결제 사유</th><th style="text-align:left">메모</th><th>해피콜</th><th></th>
           </tr></thead>
           <tbody id="recBody"></tbody>
@@ -359,6 +376,12 @@
 
   <!-- ============ DASHBOARD VIEW ============ -->
   <section id="view-dash" class="view">
+    <div class="cslfilter" id="dashFilter">
+      <span class="cslfilter-lbl">상담자</span>
+      <button class="csl active" onclick="setCsl('dash','')">전체</button>
+      <button class="csl" onclick="setCsl('dash','실장')">실장</button>
+      <button class="csl" onclick="setCsl('dash','부실장')">부실장</button>
+    </div>
     <div class="periods">
       <div class="pcard day">
         <div class="bar">
@@ -419,6 +442,11 @@
       <div class="reptitle">
         <h1 id="rep-title">월간 상담 결제 전환 보고서</h1>
         <p id="rep-sub"></p>
+        <div class="cslfilter" id="repFilter" style="margin-top:10px">
+          <button class="csl active" onclick="setCsl('rep','')">전체</button>
+          <button class="csl" onclick="setCsl('rep','실장')">실장</button>
+          <button class="csl" onclick="setCsl('rep','부실장')">부실장</button>
+        </div>
       </div>
       <div class="repctrl">
         <select id="rep-range" onchange="repOff=0; renderReport()">
@@ -691,22 +719,26 @@ function monthPeriod(){
 }
 
 /* ---------- stats ---------- */
-function statFor(a,b, seg){
-  // seg: {field:'type'|'rj', val:'후상담'} or null for 전체
+// 상담자 필터 상태 (섹션별 독립): '' = 전체
+let dashCounselor='', recCounselor='', repCounselor='';
+function statFor(a,b, seg, counselor){
+  // seg: {field:'type'|'rj', val:'후상담'} or null for 전체 ; counselor: '실장'|'부실장'|falsy(전체)
   let tot=0,o=0,x=0;
   for(const r of records){
     if(!r.date || !inRange(r.date,a,b)) continue;
     if(seg){ if((r[seg.field]||'')!==seg.val) continue; }
+    if(counselor){ if((r.counselor||'')!==counselor) continue; }
     tot++;
     if(r.pay==='O') o++; else if(r.pay==='X') x++;
   }
   return {tot,o,x, rate: tot? o/tot : 0};
 }
 const REASONS=['가격 부담','고민 중','타원 비교','시간 필요','기타'];
-function reasonBreakdown(a,b){
+function reasonBreakdown(a,b,counselor){
   const m={}; REASONS.forEach(r=>m[r]=0); let total=0;
   for(const r of records){
     if(!r.date||!inRange(r.date,a,b)) continue;
+    if(counselor){ if((r.counselor||'')!==counselor) continue; }
     if(r.pay!=='X') continue;
     let rs=r.reason||''; if(!REASONS.includes(rs)) rs='기타';
     m[rs]++; total++;
@@ -719,15 +751,18 @@ let editingId=null;
 function fmtNum(n){ return (n||0).toLocaleString('ko-KR'); }
 function renderRecords(){
   const body=document.getElementById('recBody');
-  const sorted=[...records].sort((p,q)=> (q.date||'').localeCompare(p.date||'') || (q.id>p.id?1:-1));
-  document.getElementById('recCount').textContent='총 '+records.length+'건';
-  if(records.length===0){ body.innerHTML='<tr><td colspan="11" class="empty">아직 기록이 없습니다. 위에서 첫 상담을 추가해 보세요.</td></tr>'; return; }
+  const filtered = recCounselor ? records.filter(r=>(r.counselor||'')===recCounselor) : records;
+  const sorted=[...filtered].sort((p,q)=> (q.date||'').localeCompare(p.date||'') || (q.id>p.id?1:-1));
+  document.getElementById('recCount').textContent='총 '+filtered.length+'건';
+  if(filtered.length===0){ body.innerHTML='<tr><td colspan="12" class="empty">해당 상담자의 기록이 없습니다.</td></tr>'; return; }
   body.innerHTML=sorted.map(r=>{
     const rj = r.rj==='초진'?'<span class="tag cho">초진</span>':r.rj==='재진'?'<span class="tag jae">재진</span>':'<span class="tag none">-</span>';
     const pay = r.pay==='O'?'<span class="pay O">O</span>':r.pay==='X'?'<span class="pay X">X</span>':'<span class="pay none">·</span>';
     const dd = r.date? r.date.slice(5).replace('-','/')+` (${WEEK_KO[pd(r.date).getDay()]})` : '-';
+    const csl = r.counselor==='실장'?'<span class="csltag sil">실장</span>':r.counselor==='부실장'?'<span class="csltag bu">부실장</span>':'<span class="csltag none">-</span>';
     return `<tr>
       <td class="num">${dd}</td>
+      <td>${csl}</td>
       <td><b>${esc(r.name)}</b></td>
       <td>${rj}</td>
       <td>${esc(r.type||'')}</td>
@@ -770,6 +805,7 @@ function saveRecord(){
   if(!name){ toast('환자 이니셜을 입력하세요.',true); document.getElementById('f_name').focus(); return; }
   const rec={
     date, name,
+    counselor:document.getElementById('f_counselor').value,
     rj:document.getElementById('f_rj').value,
     type:document.getElementById('f_type').value,
     proc:document.getElementById('f_proc').value.trim(),
@@ -794,6 +830,7 @@ function editRecord(id){
   editingId=id;
   document.getElementById('f_date').value=r.date;
   document.getElementById('f_name').value=r.name;
+  document.getElementById('f_counselor').value=r.counselor||'';
   document.getElementById('f_rj').value=r.rj||'';
   document.getElementById('f_type').value=r.type||'후상담';
   document.getElementById('f_proc').value=r.proc||'';
@@ -833,7 +870,7 @@ const ROWS=[
 function renderGrid(elId, a, b){
   const el=document.getElementById(elId);
   el.innerHTML=ROWS.map(row=>{
-    const s=statFor(a,b,row.seg);
+    const s=statFor(a,b,row.seg,dashCounselor);
     const pct=(s.rate*100).toFixed(s.rate>0&&s.rate<0.1?0:1);
     const zero = s.tot===0;
     return `<div class="stat ${row.cls}">
@@ -846,7 +883,7 @@ function renderGrid(elId, a, b){
 }
 function renderReasons(a,b,label){
   document.getElementById('reason-period').textContent='· '+label.replace(/ · .*/,'');
-  const {m,total}=reasonBreakdown(a,b);
+  const {m,total}=reasonBreakdown(a,b,dashCounselor);
   document.getElementById('reason-total').textContent='미결제 '+total+'건';
   const body=document.getElementById('reasonBody');
   if(total===0){ body.innerHTML='<div class="reason-empty">이 기간에는 미결제(X) 기록이 없습니다.</div>'; return; }
@@ -950,10 +987,10 @@ function weekBuckets(count){
   return out;
 }
 function trendRow(bk){
-  const all=statFor(bk.a,bk.b,null);
-  const hu=statFor(bk.a,bk.b,{field:'type',val:'후상담'});
-  const cho=statFor(bk.a,bk.b,{field:'rj',val:'초진'});
-  const jae=statFor(bk.a,bk.b,{field:'rj',val:'재진'});
+  const all=statFor(bk.a,bk.b,null,repCounselor);
+  const hu=statFor(bk.a,bk.b,{field:'type',val:'후상담'},repCounselor);
+  const cho=statFor(bk.a,bk.b,{field:'rj',val:'초진'},repCounselor);
+  const jae=statFor(bk.a,bk.b,{field:'rj',val:'재진'},repCounselor);
   return {all,hu,cho,jae};
 }
 const cellPct = s => s.tot? `<b class="num">${(s.rate*100).toFixed(1)}%</b>` : '<span class="dash">–</span>';
@@ -969,7 +1006,7 @@ function renderTrend(){
       <td class="num">${r.all.tot}</td></tr>`;
   }).join('');
   drawChart('chart-month', mb.map(bk=>{
-    const s=statFor(bk.a,bk.b,null);
+    const s=statFor(bk.a,bk.b,null,repCounselor);
     return {label:bk.short, rate:s.rate, tot:s.tot, o:s.o, x:s.x};
   }), {w:900,h:230,color:'#7D3C98'});
 
@@ -983,7 +1020,7 @@ function renderTrend(){
       <td class="num">${r.all.tot}</td></tr>`;
   }).join('');
   drawChart('chart-week', wb.map(bk=>{
-    const s=statFor(bk.a,bk.b,null);
+    const s=statFor(bk.a,bk.b,null,repCounselor);
     return {label:bk.short, rate:s.rate, tot:s.tot, o:s.o, x:s.x};
   }), {w:900,h:230,color:'#2E86C1'});
 }
@@ -1005,6 +1042,21 @@ function nav(kind,dir){
   renderDash();
 }
 function navToday(kind){ off[kind]=0; renderDash(); }
+
+/* ---------- 상담자 필터 ---------- */
+function setCsl(scope, val){
+  if(scope==='dash') dashCounselor=val;
+  else if(scope==='rec') recCounselor=val;
+  else if(scope==='rep') repCounselor=val;
+  const wrap=document.getElementById(scope+'Filter');
+  if(wrap) wrap.querySelectorAll('.csl').forEach(b=>{
+    const bv = b.textContent==='전체'?'':b.textContent;
+    b.classList.toggle('active', bv===val);
+  });
+  if(scope==='dash') renderDash();
+  else if(scope==='rec') renderRecords();
+  else if(scope==='rep') renderReport();
+}
 
 /* ---------- report ---------- */
 let repOff=0;
@@ -1041,8 +1093,8 @@ function renderReport(){
   document.getElementById('rep-lbl').textContent=P.lbl;
   document.getElementById('rep-next').disabled = repOff>=0;
 
-  const cur=statFor(P.a,P.b,null), prev=statFor(P.prev.a,P.prev.b,null);
-  const rows=records.filter(r=>r.date && inRange(r.date,P.a,P.b));
+  const cur=statFor(P.a,P.b,null,repCounselor), prev=statFor(P.prev.a,P.prev.b,null,repCounselor);
+  const rows=records.filter(r=>r.date && inRange(r.date,P.a,P.b) && (!repCounselor || (r.counselor||'')===repCounselor));
   const paidAmt=rows.filter(r=>r.pay==='O').reduce((s,r)=>s+(r.amt||0),0);
   const lostAmt=rows.filter(r=>r.pay==='X').reduce((s,r)=>s+(r.amt||0),0);
   const avg = cur.o? Math.round(paidAmt/cur.o) : 0;
@@ -1070,7 +1122,7 @@ function renderReport(){
   // by type
   const types=['선상담','후상담','단독상담'];
   document.getElementById('rep-bytype').innerHTML = types.map(t=>{
-    const s=statFor(P.a,P.b,{field:'type',val:t});
+    const s=statFor(P.a,P.b,{field:'type',val:t},repCounselor);
     const p=Math.round(s.rate*100);
     return `<div class="segrow"><span class="sn">${t}</span>
       <span class="strack"><span class="sfill" style="width:${s.tot?p:0}%"></span></span>
@@ -1079,7 +1131,7 @@ function renderReport(){
 
   // by 초/재진
   document.getElementById('rep-byrj').innerHTML = [['초진','cho'],['재진','jae']].map(([t,c])=>{
-    const s=statFor(P.a,P.b,{field:'rj',val:t});
+    const s=statFor(P.a,P.b,{field:'rj',val:t},repCounselor);
     const p=Math.round(s.rate*100);
     return `<div class="segrow ${c}"><span class="sn">${t==='초진'?'🆕 초진':'🔁 재진'}</span>
       <span class="strack"><span class="sfill" style="width:${s.tot?p:0}%"></span></span>
@@ -1087,7 +1139,7 @@ function renderReport(){
   }).join('');
 
   // reasons
-  const {m,total}=reasonBreakdown(P.a,P.b);
+  const {m,total}=reasonBreakdown(P.a,P.b,repCounselor);
   document.getElementById('rep-reasons').innerHTML = total===0
     ? '<div class="reason-empty">이 기간에는 미결제(X) 기록이 없습니다.</div>'
     : REASONS.map(r=>{
@@ -1140,9 +1192,9 @@ function exportJSON(){
   toast('백업 파일을 내려받았습니다.');
 }
 function exportCSV(){
-  const head=['날짜','환자이니셜','초재진','상담종류','시술내용','상담금액','결제','미결제사유','메모','해피콜'];
+  const head=['날짜','상담자','환자이니셜','초재진','상담종류','시술내용','상담금액','결제','미결제사유','메모','해피콜'];
   const rows=[...records].sort((p,q)=>(p.date||'').localeCompare(q.date||''))
-    .map(r=>[r.date,r.name,r.rj,r.type,r.proc,r.amt,r.pay,r.reason,r.memo,(r.happy==='O'?'O':'')]
+    .map(r=>[r.date,(r.counselor||''),r.name,r.rj,r.type,r.proc,r.amt,r.pay,r.reason,r.memo,(r.happy==='O'?'O':'')]
       .map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(','));
   const csv='\uFEFF'+[head.join(','),...rows].join('\r\n');
   download(new Blob([csv],{type:'text/csv'}), '상담결제전환_'+fd(todayD())+'.csv');
@@ -1162,7 +1214,7 @@ function importJSON(e){
       if(!confirm(`가져온 ${data.length}건으로 현재 데이터를 모두 교체합니다. 계속할까요?\n(현재 데이터는 먼저 '백업 내보내기'로 보관하세요.)`)) return;
       syncedOK=true;   // 사용자가 명시적으로 가져온 데이터 → 시트 저장 허용
       records=data.map((r,i)=>({id:r.id||'imp'+i+'_'+Date.now(), date:r.date||'', name:r.name||'', rj:r.rj||'',
-        type:r.type||'', proc:r.proc||'', amt:r.amt||0, pay:r.pay||'', reason:r.reason||'', memo:r.memo||'', happy:r.happy||''}));
+        counselor:r.counselor||'', type:r.type||'', proc:r.proc||'', amt:r.amt||0, pay:r.pay||'', reason:r.reason||'', memo:r.memo||'', happy:r.happy||''}));
       saveAll(); renderRecords(); renderDash(); toast('가져오기 완료: '+records.length+'건'+(cloudOn?' · 구글 시트에 반영됨':''));
     }catch(err){ toast('파일을 읽을 수 없습니다. 올바른 백업(.json)인지 확인하세요.',true); }
     e.target.value='';
