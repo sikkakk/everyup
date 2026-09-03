@@ -234,7 +234,7 @@
     <div class="viewtabs" id="viewtabs">
       <button data-v="stock" class="on" onclick="setView('stock')">재고 현황</button>
       <button data-v="history" onclick="setView('history')">입고 내역</button>
-      <button data-v="trash" onclick="setView('trash')">삭제된 항목</button>
+      <button data-v="trash" onclick="setView('trash')">삭제 내역</button>
     </div>
     <div class="topbtns">
       <button class="btn save" id="saveNowBtn" onclick="saveNow()">💾 지금 저장</button>
@@ -462,15 +462,22 @@ function render(){
     <div class="card ${expd?'alert':''}"><div class="lab"><span class="dot d"></span>사용기한 만료</div><div class="num">${expd}<small>건</small></div></div>`;
 
   const seg = [...DEPTS,"전체"];
+  const delItems = items.filter(i=>i.deleted);
+  // 입고 내역: 부서별 입고 기록 수
+  const histByDept={}; let histTotal=0;
+  items.forEach(it=>{ if(it.deleted) return; const n=(it.logs||[]).length; if(n){ histByDept[it.dept]=(histByDept[it.dept]||0)+n; histTotal+=n; } });
   document.getElementById("segs").innerHTML = seg.map(d=>{
-    const c = d==="전체"? active.length : active.filter(i=>i.dept===d).length;
+    let c;
+    if(view==="history")    c = d==="전체" ? histTotal : (histByDept[d]||0);          // 입고 기록 수
+    else if(view==="trash") c = d==="전체" ? delItems.length : delItems.filter(i=>i.dept===d).length;  // 삭제 품목 수
+    else                    c = d==="전체" ? active.length : active.filter(i=>i.dept===d).length;       // 재고 품목 수
     return `<button class="${filterDept===d?'on':''}" onclick="setDept('${d}')">${d}<span class="cnt">${c}</span></button>`;
   }).join("");
 
   const delCnt = items.filter(i=>i.deleted).length;
   document.querySelectorAll(".viewtabs button").forEach(b=>{
     b.classList.toggle("on", b.dataset.v===view);
-    if(b.dataset.v==="trash") b.textContent = delCnt? `삭제된 항목 (${delCnt})` : "삭제된 항목";
+    if(b.dataset.v==="trash") b.textContent = delCnt? `삭제 내역 (${delCnt})` : "삭제 내역";
   });
   document.getElementById("newBtn").style.display = view==="stock" ? "" : "none";
   const xb=document.getElementById("xlsxBtn");
@@ -612,7 +619,7 @@ function renderTrash(){
     return true;
   });
   const tb=document.getElementById("rows"), emp=document.getElementById("empty");
-  if(!list.length){ tb.innerHTML=""; emp.querySelector("b").textContent="삭제된 항목이 없어요"; emp.style.display="block"; return; }
+  if(!list.length){ tb.innerHTML=""; emp.querySelector("b").textContent="삭제 내역이 없어요"; emp.style.display="block"; return; }
   emp.style.display="none";
   tb.innerHTML = list.map(it=>{
     const q=qtyOf(it); const e=expInfo(it.exp);
@@ -838,7 +845,7 @@ function doEdit(id){
   closeModal(); commitItem(it);
 }
 function doDelete(id){
-  const it=find(id); it.deleted=true;   // 영구삭제 아님 → '삭제된 항목' 탭으로 이동
+  const it=find(id); it.deleted=true;   // 영구삭제 아님 → '삭제 내역' 탭으로 이동
   closeModal(); commitItem(it);
 }
 function restoreItem(id){
