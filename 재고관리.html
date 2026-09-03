@@ -215,6 +215,7 @@
   .hrow .hbadge.au{background:#EAF0F6; color:#3B6FB0}
   .hrow .hbadge.nu{background:#F2EEE6; color:#8A6D1E}
   .hrow .hqty{margin-left:auto; font-weight:800; font-size:15px; color:var(--ink); font-variant-numeric:tabular-nums}
+  .lotmore{display:inline-block; margin-left:5px; font-size:10.5px; font-weight:800; color:#8A6D1E; background:#F2EEE6; border-radius:5px; padding:1px 5px; vertical-align:middle; cursor:default}
 </style>
 </head>
 <body>
@@ -349,6 +350,33 @@ function seed(){
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
 function qtyOf(it){ let q=Number(it.baseQty)||0; for(const g of (it.logs||[])){ if(g.ts>it.baseTs) q+=(Number(g.amt)||0); } return q; }
 function stockState(it){ const q=qtyOf(it); if(q<=0) return "out"; if(it.min>0 && q<=it.min) return "low"; return "ok"; }
+function commaNums(s){ return String(s==null?"":s).replace(/\d+/g, d => d.length>3 ? Number(d).toLocaleString("en-US") : d); } // 숫자 4자리↑에만 콤마(글자는 그대로)
+
+/* ===== 사용기한 묶음(로트) — 실사 유지(둘째) 방식 =====
+   it.lots = [{exp, qty}] 입고 순서(먼저 들어온 게 앞). 앞에서부터 소진(FIFO).
+   합계는 항상 qtyOf(it)와 같도록 맞춘다. 화면 표시는 '먼저 쓰는(앞) 묶음'의 기한. */
+function lotList(it){ return Array.isArray(it.lots)? it.lots.filter(l=>(Number(l.qty)||0)>0) : []; }
+function displayExp(it){ const ls=lotList(it); return ls.length ? (ls[0].exp||"") : (it.exp||""); } // 순수 계산(데이터 안 바꿈)
+function consumeFront(lots, d){
+  const out=(lots||[]).map(l=>({exp:l.exp||"", qty:Number(l.qty)||0}));
+  let i=0;
+  while(d>0 && i<out.length){ const take=Math.min(out[i].qty,d); out[i].qty-=take; d-=take; if(out[i].qty<=0) i++; }
+  return out.filter(l=>l.qty>0);
+}
+// 묶음 합계를 현재 총수량에 맞춘다(레거시/드리프트 보정). 이벤트 처리에서만 호출.
+function ensureLots(it){
+  if(!Array.isArray(it.lots)) it.lots=[];
+  it.lots=it.lots.map(l=>({exp:l.exp||"", qty:Number(l.qty)||0})).filter(l=>l.qty>0);
+  const total=qtyOf(it);
+  let sum=it.lots.reduce((a,l)=>a+l.qty,0);
+  if(it.lots.length===0 && total>0){ it.lots=[{exp:it.exp||"", qty:total}]; return it.lots; }
+  if(sum!==total){
+    const diff=total-sum;
+    if(diff>0){ if(it.lots.length) it.lots[it.lots.length-1].qty+=diff; else it.lots=[{exp:it.exp||"", qty:diff}]; }
+    else it.lots=consumeFront(it.lots, -diff);
+  }
+  return it.lots;
+}
 function today(){ const d=new Date(); return `${String(d.getFullYear()).slice(2)}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 function toDateInput(yy){ if(!yy) return ""; const m=yy.split("-"); if(m.length!==3) return ""; return `20${m[0].padStart(2,"0")}-${m[1].padStart(2,"0")}-${m[2].padStart(2,"0")}`; }
 function fromDateInput(v){ if(!v) return ""; const m=v.split("-"); if(m.length!==3) return ""; return `${m[0].slice(2)}-${m[1]}-${m[2]}`; }
@@ -426,7 +454,7 @@ function render(){
   const scope = filterDept==="전체" ? active : active.filter(i=>i.dept===filterDept);
   const lowCnt = scope.filter(i=>stockState(i)!=="ok").length;
   let soon=0, expd=0;
-  scope.forEach(i=>{ const e=expInfo(i.exp); if(e){ if(e.days<0) expd++; else if(e.days<=180) soon++; } });
+  scope.forEach(i=>{ const e=expInfo(displayExp(i)); if(e){ if(e.days<0) expd++; else if(e.days<=180) soon++; } });
   document.getElementById("cards").innerHTML = `
     <div class="card"><div class="lab"><span class="dot p"></span>전체 품목</div><div class="num">${scope.length}<small>개</small></div></div>
     <div class="card ${lowCnt?'alert':''}"><div class="lab"><span class="dot d"></span>재고 부족·품절</div><div class="num">${lowCnt}<small>건</small></div></div>
@@ -485,13 +513,15 @@ function renderStock(){
     const q=qtyOf(it), st=stockState(it);
     const chip = st==="out"?`<span class="chip out">품절</span>`:st==="low"?`<span class="chip low">부족</span>`:`<span class="chip ok">정상</span>`;
     const rowcls = st==="out"?"row-danger":st==="low"?"row-warn":"";
-    const e=expInfo(it.exp);
+    const _ls=lotList(it);
+    const e=expInfo(displayExp(it));
+    const moreLots = _ls.length>1 ? `<span class="lotmore" title="${esc(_ls.map(l=>(l.exp||'기한없음')+' '+l.qty+(it.unit||'개')).join(' / '))}">＋${_ls.length-1}</span>` : "";
     let expHtml=`<span class="muted">-</span>`;
     if(e){
-      if(e.days<0) expHtml=`<span class="exp lv3">${e.label}<span class="dd">만료</span></span>`;
-      else if(e.lv===3) expHtml=`<span class="exp lv3">${e.label}<span class="dd">D-${e.days}</span></span>`;
-      else if(e.lv===6) expHtml=`<span class="exp lv6">${e.label}<span class="dd">D-${e.days}</span></span>`;
-      else expHtml=`<span class="exp">${e.label}</span>`;
+      if(e.days<0) expHtml=`<span class="exp lv3">${e.label}<span class="dd">만료</span></span>${moreLots}`;
+      else if(e.lv===3) expHtml=`<span class="exp lv3">${e.label}<span class="dd">D-${e.days}</span></span>${moreLots}`;
+      else if(e.lv===6) expHtml=`<span class="exp lv6">${e.label}<span class="dd">D-${e.days}</span></span>${moreLots}`;
+      else expHtml=`<span class="exp">${e.label}</span>${moreLots}`;
     }
     return `<tr class="${rowcls}" data-vi="${idx}" ondragover="dragOver(event,${idx})" ondrop="dragDrop(event,${idx})" ondragend="dragEnd()">
       <td class="selcell"><input type="checkbox" ${selected.has(it.id)?"checked":""} onchange="toggleOne(${it.id},this.checked)"><span class="grip" draggable="true" ondragstart="dragStart(event,${idx})" title="드래그로 순서 이동">⠿</span></td>
@@ -609,8 +639,10 @@ function find(id){ return items.find(x=>x.id===id); }
 function openDetail(id){
   const it=find(id); if(!it) return;
   const q=qtyOf(it);
-  const e=expInfo(it.exp);
+  const e=expInfo(displayExp(it));
   const expTxt = e ? (e.days<0?`${e.label} (만료)`:`${e.label} (D-${e.days})`) : "-";
+  const _ls=lotList(it);
+  const lotsTxt = _ls.length>1 ? _ls.map(l=>`· ${l.exp||"기한없음"} — ${l.qty}${it.unit||"개"}`).join("\n") : "";
   const clean1=(v)=>(v===undefined||v===null)?"":String(v).replace(/\s+/g,' ').trim();            // 한 줄용: 공백·줄바꿈을 모두 한 칸으로
   const cleanML=(v)=>(v===undefined||v===null)?"":String(v).replace(/\r\n?/g,'\n').replace(/[ \t]+$/gm,'').replace(/\n{3,}/g,'\n\n').trim(); // 여러 줄용: 줄바꿈 유지(과한 빈 줄만 정리)
   const row=(k,v)=>{ const s=clean1(v); const empty=(s===""); return `<div class="dk">${k}</div><div class="dv${empty?" dvem":""}">${empty?"-":esc(s)}</div>`; };
@@ -623,9 +655,10 @@ function openDetail(id){
         ${row("회사", it.company)}
         ${row("규격", it.spec)}
         ${row("현재수량", q+" "+(it.unit||""))}
-        ${row("가격", it.price)}
+        ${row("가격", commaNums(it.price))}
         ${row("최소재고", it.min>0?it.min:"-")}
         ${row("사용기한", expTxt)}
+        ${lotsTxt?rowML("묶음별 기한", lotsTxt):""}
         ${row("보관위치", it.loc)}
         ${row("구매처", it.src)}
         ${row("입고일", it.inDate)}
@@ -680,6 +713,7 @@ function openIn(id){
       <div class="field"><label>입고 수량 (${esc(it.unit||"개")})</label>
         <div class="stepper"><button type="button" onclick="bump(-1)">−</button><input id="amt" type="number" min="1" value="1" inputmode="numeric"><button type="button" onclick="bump(1)">+</button></div>
       </div>
+      <div class="field"><label>이번 입고분 사용기한</label><input id="in_exp" type="date" value="${toDateInput(displayExp(it))}"><div class="hint">이번에 들어온 제품의 사용기한이에요. 기존 재고와 기한이 다르면 묶음으로 따로 관리돼요.</div></div>
       <div class="field"><label>구매처 (선택)</label><input id="in_src" list="dl-src" value="${esc(it.src||"")}" placeholder="예: 약이오, 영업사원"></div>
       <div class="field"><label>메모 (선택)</label><input id="in_memo" placeholder="예: 데모, 이벤트 물량"></div>
       <div class="preview">현재 <b>${q}</b> ${esc(it.unit||"")} → 입고 후 <b id="pv">${q+1}</b> ${esc(it.unit||"")}</div>
@@ -694,13 +728,18 @@ function doIn(id){
   const it=find(id);
   const n=Math.max(1,parseInt(document.getElementById("amt").value||"1"));
   const date=fromDateInput(document.getElementById("in_date").value)||today();
+  const inExp=fromDateInput(document.getElementById("in_exp").value);
   const src=document.getElementById("in_src").value.trim();
   const memo=document.getElementById("in_memo").value.trim();
-  it.logs.push({ts:Date.now(), amt:n, date, src, memo});
+  ensureLots(it);                          // 기존 재고를 묶음으로 정리(레거시 포함)
+  it.logs.push({ts:Date.now(), amt:n, date, src, memo});   // 총수량 +n
   if(src) it.src=src; it.inDate=date;
   if(!it.chk || date>it.chk) it.chk=date;
+  const li=it.lots.findIndex(l=>(l.exp||"")===(inExp||""));   // 같은 기한이면 합침
+  if(li>=0) it.lots[li].qty+=n; else it.lots.push({exp:inExp||"", qty:n});
+  it.exp=displayExp(it);                    // 저장용 단일 기한도 앞 묶음으로 동기화
   if(!it.hist) it.hist=[];
-  it.hist.push({ts:Date.now(), date, type:"입고", delta:n, qty:qtyOf(it)});
+  it.hist.push({ts:Date.now(), date, type:"입고", delta:n, qty:qtyOf(it), exp:inExp||""});
   closeModal(); commitItem(it);
 }
 
@@ -720,7 +759,14 @@ function openAudit(id){
 }
 function doAudit(id){
   const it=find(id); const v=Math.max(0,parseInt(document.getElementById("real").value||"0"));
+  ensureLots(it);
+  const old=qtyOf(it);
   it.baseQty=v; it.baseTs=Date.now(); it.logs=[]; it.chk=today();
+  const diff=v-old;
+  if(diff<0) it.lots=consumeFront(it.lots, -diff);            // 줄면 먼저 만료(앞)부터 차감
+  else if(diff>0){ if(it.lots.length) it.lots[it.lots.length-1].qty+=diff; else it.lots=[{exp:it.exp||"", qty:diff}]; } // 늘면 최근 묶음에
+  it.lots=it.lots.filter(l=>(Number(l.qty)||0)>0);
+  it.exp=displayExp(it);
   if(!it.hist) it.hist=[];
   it.hist.push({ts:Date.now(), date:today(), type:"실사", qty:v});
   closeModal(); commitItem(it);
@@ -752,13 +798,13 @@ function openForm(mode, id){
       </div>
       <div class="grid2">
         <div class="field"><label>최소재고</label><input id="f_min" type="number" min="0" value="${it.min||0}" inputmode="numeric"></div>
-        <div class="field"><label>사용기한</label><input id="f_exp" type="date" value="${toDateInput(it.exp)}"></div>
+        <div class="field"><label>사용기한${isEdit?" (현재 사용중)":""}</label><input id="f_exp" type="date" value="${toDateInput(isEdit?displayExp(it):it.exp)}"></div>
       </div>
       <div class="grid2">
         <div class="field"><label>보관위치</label><input id="f_loc" list="dl-loc" value="${esc(it.loc)}" placeholder="예: 시술실 서랍"></div>
         <div class="field"><label>구매처</label><input id="f_src" list="dl-src" value="${esc(it.src)}" placeholder="예: 약이오"></div>
       </div>
-      <div class="field"><label>가격</label><input id="f_price" value="${esc(it.price||"")}" placeholder="예: 50,000 / 개당 3,000 (메인 목록에는 표시되지 않아요)"></div>
+      <div class="field"><label>가격</label><input id="f_price" value="${esc(commaNums(it.price||""))}" onblur="this.value=commaNums(this.value)" placeholder="예: 50,000 / 개당 3,000 (메인 목록에는 표시되지 않아요)"></div>
       <div class="field"><label>메모</label><input id="f_memo" value="${esc(it.memo)}" placeholder="비고"></div>
       <div class="field"><label>효과 / 사용방법</label><textarea id="f_effect" rows="3" placeholder="효과 · 사용법 · 주의사항 (메인 목록에는 표시되지 않아요)">${esc(it.effect||"")}</textarea></div>
     </div>
@@ -770,13 +816,14 @@ function readForm(){
   const g=id=>document.getElementById(id).value.trim();
   return {dept:g("f_dept"),cat:g("f_cat"),company:g("f_company"),name:g("f_name"),spec:g("f_spec"),
     unit:g("f_unit")||"개",min:parseInt(g("f_min")||"0"),exp:fromDateInput(document.getElementById("f_exp").value),
-    loc:g("f_loc"),src:g("f_src"),memo:g("f_memo"),effect:g("f_effect"),price:g("f_price")};
+    loc:g("f_loc"),src:g("f_src"),memo:g("f_memo"),effect:g("f_effect"),price:commaNums(g("f_price"))};
 }
 function doNew(){
   const f=readForm(); if(!f.name){ document.getElementById("f_name").focus(); return; }
   const id=Math.max(0,...items.map(i=>i.id))+1;
   const qty=parseInt(document.getElementById("f_qty").value||"0");
   const nu={id,...f,baseQty:qty,baseTs:Date.now(),logs:[],inDate:"",chk:today()};
+  nu.lots = qty>0 ? [{exp:f.exp||"", qty:qty}] : [];   // 최초 묶음
   nu.hist=[{ts:Date.now(), date:today(), type:"등록", qty:qty}];
   items.push(nu);
   filterDept=f.dept; query=""; document.getElementById("q").value=""; view="stock";
@@ -785,6 +832,9 @@ function doNew(){
 function doEdit(id){
   const it=find(id); const f=readForm(); if(!f.name){ document.getElementById("f_name").focus(); return; }
   Object.assign(it, f); // 수량 관련(baseQty/baseTs/logs)은 건드리지 않음
+  ensureLots(it);
+  if(it.lots.length) it.lots[0].exp = f.exp||"";   // '현재 사용중' 묶음의 기한 수정
+  it.exp=displayExp(it);
   closeModal(); commitItem(it);
 }
 function doDelete(id){
@@ -1047,16 +1097,34 @@ function toast(msg){
 /* ---- 전체 백업 (엑셀, 모든 칸 포함) ---- */
 function backupFullXlsx(){
   if(typeof XLSX==="undefined"){ alert("엑셀 기능을 불러오지 못했어요.\n인터넷 연결 상태에서 github.io 주소로 열어 다시 시도해주세요."); return; }
-  const head=["부서","분류","회사","품목","규격","단위","현재수량","기준수량","최소수량","입고일","유통기한","실사일","보관위치","구입처","메모","삭제됨"];
-  const rows=[head];
+  // 품목에 있는 '모든' 항목을 자동으로 훑어서 담는다 (앞으로 새 칸이 생겨도 자동 포함)
+  const labelMap={id:"ID",dept:"부서",cat:"분류",company:"회사",name:"품목",spec:"규격",unit:"단위",
+    baseQty:"기준수량",baseTs:"기준시각",min:"최소수량",inDate:"입고일",exp:"사용기한(대표)",chk:"실사일",
+    loc:"보관위치",src:"구입처",price:"가격",memo:"메모",effect:"효과/사용방법",
+    lots:"사용기한묶음",logs:"입고로그",hist:"수정이력",deleted:"삭제됨"};
+  const preferred=["id","dept","cat","company","name","spec","unit","현재수량","baseQty","min","inDate","exp","chk","loc","src","price","memo","effect","lots","logs","hist","deleted","baseTs"];
+  const allKeys=new Set(); items.forEach(it=>Object.keys(it).forEach(k=>allKeys.add(k)));
+  const cols=[];
+  preferred.forEach(k=>{ if(k==="현재수량"||allKeys.has(k)) cols.push(k); });
+  [...allKeys].forEach(k=>{ if(!cols.includes(k)) cols.push(k); });   // 목록에 없던 새 키도 뒤에 자동 추가
+  const header=cols.map(k=> k==="현재수량"?"현재수량":(labelMap[k]||k));
+  const cell=(it,k)=>{
+    if(k==="현재수량") return qtyOf(it);
+    const v=it[k];
+    if(v===undefined||v===null) return "";
+    if(k==="deleted") return v?"삭제":"";
+    if(Array.isArray(v)||typeof v==="object") return JSON.stringify(v); // 묶음·로그·이력은 통째로 보존
+    return v;
+  };
+  const rows=[header];
   items.slice().sort((a,b)=> (a.dept||"").localeCompare(b.dept||"","ko") || (a.cat||"").localeCompare(b.cat||"","ko") || (a.name||"").localeCompare(b.name||"","ko"))
-    .forEach(it=>rows.push([it.dept||"",it.cat||"",it.company||"",it.name||"",it.spec||"",it.unit||"",qtyOf(it),Number(it.baseQty)||0,Number(it.min)||0,it.inDate||"",it.exp||"",it.chk||"",it.loc||"",it.src||"",it.memo||"",it.deleted?"삭제":""]));
+    .forEach(it=>rows.push(cols.map(k=>cell(it,k))));
   const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"]=[{wch:10},{wch:14},{wch:14},{wch:24},{wch:12},{wch:8},{wch:9},{wch:9},{wch:9},{wch:10},{wch:10},{wch:10},{wch:18},{wch:10},{wch:24},{wch:8}];
+  ws["!cols"]=cols.map(k=>({wch: (k==="name")?24 : (k==="memo"||k==="effect"||k==="lots"||k==="logs"||k==="hist")?28 : 12}));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "전체백업");
   XLSX.writeFile(wb, "에브리업재고_전체백업_"+today()+".xlsx");
-  toast("전체 엑셀 백업을 내려받았어요");
+  toast("전체 엑셀 백업을 내려받았어요 (모든 항목 포함)");
 }
 
 /* ---- 완전 백업 (.json, 하나도 빠짐없이) ---- */
