@@ -477,7 +477,7 @@ function render(){
   const delCnt = items.filter(i=>i.deleted).length;
   document.querySelectorAll(".viewtabs button").forEach(b=>{
     b.classList.toggle("on", b.dataset.v===view);
-    if(b.dataset.v==="trash") b.textContent = delCnt? `삭제 내역 (${delCnt})` : "삭제 내역";
+    if(b.dataset.v==="trash") b.textContent = "삭제 내역";
   });
   document.getElementById("newBtn").style.display = view==="stock" ? "" : "none";
   const xb=document.getElementById("xlsxBtn");
