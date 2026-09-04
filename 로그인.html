@@ -166,6 +166,7 @@
         <button class="btn-fill" id="goAttendance" style="display:none">🕐 직원관리</button>
         <button class="btn-fill" id="goReservation" style="display:none">📊 예약통계</button>
         <button class="btn-fill" id="goConsult" style="display:none">💳 상담전환관리</button>
+        <button class="btn-fill" id="goIncentive" style="display:none">🧴 화장품관리 인센티브</button>
         <br>
         <button class="btn-line" id="logoutBtn">다른 계정으로</button>
       </div>
@@ -184,6 +185,7 @@ const INVENTORY_URL = "https://sikkakk.github.io/everyup/%EC%9E%AC%EA%B3%A0%EA%B
 const ATTENDANCE_URL = "https://sikkakk.github.io/everyup/%EC%A7%81%EC%9B%90%EA%B4%80%EB%A6%AC.html"; // 직원관리.html (송우철 원장님 전용)
 const RESERVATION_URL = "https://sikkakk.github.io/everyup/%EC%98%88%EC%95%BD%ED%86%B5%EA%B3%84.html"; // 예약통계.html (원장·실장·부실장 전용)
 const CONSULT_URL = "https://sikkakk.github.io/everyup/%EC%83%81%EB%8B%B4%EA%B2%B0%EC%A0%9C%EC%A0%84%ED%99%98.html"; // 상담결제전환.html (원장·실장 전용)
+const INCENTIVE_URL = "https://sikkakk.github.io/everyup/%ED%99%94%EC%9E%A5%ED%92%88%EA%B4%80%EB%A6%AC%EC%9D%B8%EC%84%BC%ED%8B%B0%EB%B8%8C.html"; // 화장품관리인센티브.html (원장·실장·피부관리사 전용)
 
 /* ===== JSONP 헬퍼 (읽기 전용, CORS 우회) ===== */
 function api(params){
@@ -364,6 +366,11 @@ function welcome(){
   const isSiljang = (cur.part||"").includes("실장") && !(cur.part||"").includes("부실장");
   const canConsult = isDirector || isSiljang || CONSULT_NAMES.includes(cur.name);
   $("goConsult").style.display = canConsult ? "block" : "none";
+  // 화장품관리 인센티브는 원장·실장·피부관리사만 (부실장·간호 제외)
+  const INCENTIVE_NAMES = ["송우철","박수진","이효정","김유미"];
+  const isSkin = (cur.part||"").includes("피부");
+  const canIncentive = isDirector || isSiljang || isSkin || INCENTIVE_NAMES.includes(cur.name);
+  $("goIncentive").style.display = canIncentive ? "block" : "none";
   show("welcome");
 }
 
@@ -383,6 +390,11 @@ $("goConsult").onclick=()=>{
   // 로그인을 거쳐 들어간다는 신호를 상담전환관리 앱에 전달 (원장·실장)
   try{ sessionStorage.setItem('everyup_consult_ok', String(Date.now())); }catch(e){}
   location.href = CONSULT_URL;
+};
+$("goIncentive").onclick=()=>{
+  // 로그인을 거쳐 들어간다는 신호를 화장품관리 인센티브 앱에 전달 (원장·실장·피부관리사)
+  try{ sessionStorage.setItem('everyup_incentive_ok', String(Date.now())); }catch(e){}
+  location.href = INCENTIVE_URL;
 };
 backBtn.onclick=()=>{ buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
 $("logoutBtn").onclick=()=>{ cur=null; buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };

@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>화장품관리 인센티브 | 에브리업의원</title>
+<style>
+  :root{
+    --navy:#1e3a5f; --navy-d:#152a45; --navy-l:#2b4d78;
+    --teal:#0d9488; --teal-l:#14b8a6; --teal-bg:#e6f5f3;
+    --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --bg:#f4f6f9;
+    --white:#fff; --warn:#d97706; --warn-bg:#fef3c7;
+    --ok:#059669; --bad:#dc2626; --cos:#0d9488; --care:#7c3aed;
+    --shadow:0 1px 3px rgba(16,32,58,.08),0 1px 2px rgba(16,32,58,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Malgun Gothic','맑은 고딕',-apple-system,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 16px 60px}
+
+  /* header */
+  header{background:linear-gradient(135deg,var(--navy),var(--navy-d));color:#fff;border-bottom:3px solid var(--teal)}
+  .hd{max-width:1080px;margin:0 auto;padding:16px;display:flex;align-items:center;gap:14px}
+  .logo-img{height:40px;width:auto;display:block}
+  .logo-txt{display:flex;flex-direction:column;line-height:1.2}
+  .logo-txt b{font-size:17px;letter-spacing:-.3px}
+  .logo-txt span{font-size:12px;color:#b9cbe0}
+  .hd-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .sync{font-size:12px;padding:5px 11px;border-radius:20px;background:rgba(255,255,255,.12);white-space:nowrap}
+  .sync.ok{background:rgba(5,150,105,.25)}
+  .sync.warn{background:rgba(217,119,6,.3)}
+  .sync.busy{background:rgba(255,255,255,.2)}
+  .icon-btn{background:rgba(255,255,255,.12);border:0;color:#fff;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:13px}
+  .icon-btn:hover{background:rgba(255,255,255,.22)}
+
+  /* tabs */
+  .tabs{display:flex;gap:4px;margin:18px 0 16px;border-bottom:2px solid var(--line)}
+  .tab{padding:10px 18px;background:none;border:0;font-size:15px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+  .tab.active{color:var(--navy);border-bottom-color:var(--teal)}
+
+  .card{background:var(--white);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:20px;margin-bottom:18px}
+  .card h2{font-size:15px;color:var(--navy);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .card h2::before{content:"";width:4px;height:16px;background:var(--teal);border-radius:2px}
+
+  /* form */
+  .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .fld{display:flex;flex-direction:column;gap:5px}
+  .fld.wide{grid-column:span 2}
+  label{font-size:12px;color:var(--muted);font-weight:600}
+  input,select{padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:#fff;width:100%}
+  input:focus,select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-bg)}
+  input[readonly]{background:#f8fafc;color:var(--navy);font-weight:700}
+  .seg{display:flex;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{flex:1;padding:9px;background:#fff;border:0;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)}
+  .seg button.on-cos{background:var(--cos);color:#fff}
+  .seg button.on-care{background:var(--care);color:#fff}
+  .form-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+  .btn{padding:10px 20px;border:0;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer}
+  .btn-primary{background:var(--teal);color:#fff}
+  .btn-primary:hover{background:var(--teal-l)}
+  .btn-ghost{background:#eef2f7;color:var(--navy)}
+  .btn-ghost:hover{background:#e2e8f0}
+  .btn-sm{padding:5px 10px;font-size:12px;border-radius:6px}
+
+  /* table */
+  .tbl-tools{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  .tbl-tools input[type=search]{max-width:220px}
+  .filter-pill{padding:6px 12px;border:1px solid var(--line);border-radius:20px;background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted)}
+  .filter-pill.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .tbl-scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{background:var(--navy);color:#fff;font-weight:600;font-size:12px;position:sticky;top:0}
+  th.r,td.r{text-align:right}
+  th.c,td.c{text-align:center}
+  tbody tr:hover{background:#f8fafc}
+  .tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;color:#fff}
+  .tag.cos{background:var(--cos)}
+  .tag.care{background:var(--care)}
+  .num{font-variant-numeric:tabular-nums}
+  .inc{color:var(--teal);font-weight:700}
+  .row-act{display:flex;gap:6px}
+  .link-btn{background:none;border:0;cursor:pointer;font-size:12px;padding:2px 4px;color:var(--muted)}
+  .link-btn:hover{color:var(--navy)}
+  .link-btn.del:hover{color:var(--bad)}
+  .empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+  tfoot td{background:#f1f5f9;font-weight:700;border-top:2px solid var(--navy);color:var(--navy)}
+
+  /* summary */
+  .yr-bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+  .yr-bar select{max-width:120px}
+  .metric-toggle{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .metric-toggle button{padding:7px 14px;background:#fff;border:0;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted)}
+  .metric-toggle button.active{background:var(--navy);color:#fff}
+  .stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:linear-gradient(135deg,#fff,#f8fafc);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .stat .k{font-size:12px;color:var(--muted);margin-bottom:4px}
+  .stat .v{font-size:22px;font-weight:800;color:var(--navy)}
+  .stat .v small{font-size:13px;font-weight:600;color:var(--muted)}
+
+  /* modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(16,32,58,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .modal-bg.show{display:flex}
+  .modal{background:#fff;border-radius:14px;width:100%;max-width:460px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+  .modal h3{color:var(--navy);margin-bottom:16px;font-size:16px}
+  .modal .form-grid{grid-template-columns:1fr 1fr}
+  .chip-list{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+  .chip{display:flex;align-items:center;gap:6px;background:var(--teal-bg);color:var(--navy);padding:5px 10px;border-radius:20px;font-size:13px;font-weight:600}
+  .chip button{background:none;border:0;cursor:pointer;color:var(--muted);font-size:14px;line-height:1}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.6}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--navy);color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:60;transition:transform .25s;opacity:0}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+  @media(max-width:720px){
+    .form-grid{grid-template-columns:1fr 1fr}
+    .fld.wide{grid-column:span 2}
+    .hd-right .lbl{display:none}
+  }
+
+  /* 로그인 게이트 */
+  .auth-gate{position:fixed;inset:0;background:linear-gradient(135deg,var(--navy),var(--navy-d));display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .auth-box{background:#fff;border-radius:16px;padding:34px 28px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+  .auth-box img{height:44px;margin-bottom:16px}
+  .auth-box h1{font-size:18px;color:var(--navy);margin-bottom:6px}
+  .auth-box p{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6}
+  .auth-box input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:8px;font-size:15px;text-align:center;margin-bottom:12px}
+  .auth-box input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-bg)}
+  .auth-box .btn{width:100%}
+  .auth-err{color:var(--bad);font-size:12px;min-height:16px;margin-top:8px}
+  .auth-back{display:inline-block;margin-top:14px;font-size:12px;color:var(--muted);text-decoration:none}
+  .auth-back:hover{color:var(--navy)}
+</style>
+</head>
+<body>
+<div id="authGate" class="auth-gate">
+  <div class="auth-box">
+    <img src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원" onerror="this.style.display='none'">
+    <h1>화장품관리 인센티브</h1>
+    <p>원장·실장·피부관리사 전용입니다.<br>로그인 화면을 통해 들어오거나 비밀번호를 입력하세요.</p>
+    <input type="password" id="authPw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')tryAuth()">
+    <button class="btn btn-primary" onclick="tryAuth()">입장</button>
+    <div class="auth-err" id="authErr"></div>
+    <a class="auth-back" href="로그인.html">← 로그인 화면으로</a>
+  </div>
+</div>
+<header>
+  <div class="hd">
+    <img class="logo-img" src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원" onerror="this.style.display='none'">
+    <div class="logo-txt">
+      <b>에브리업의원</b>
+      <span>화장품·관리 인센티브 관리</span>
+    </div>
+    <div class="hd-right">
+      <span id="syncBadge" class="sync">로컬 저장</span>
+      <button class="icon-btn" onclick="pullCloud(true)" title="클라우드에서 새로고침">↻ <span class="lbl">새로고침</span></button>
+      <button class="icon-btn" onclick="openSettings()" title="설정">⚙ <span class="lbl">설정</span></button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-tab="entry" onclick="switchTab('entry')">입력 · 내역</button>
+    <button class="tab" data-tab="stats" onclick="switchTab('stats')">월별 · 연간 집계</button>
+  </div>
+
+  <!-- ============ ENTRY TAB ============ -->
+  <div id="tab-entry">
+    <div class="card">
+      <h2 id="formTitle">새 내역 입력</h2>
+      <div class="form-grid">
+        <div class="fld">
+          <label>카테고리</label>
+          <div class="seg" id="catSeg">
+            <button type="button" data-cat="화장품" class="on-cos" onclick="setCat('화장품')">화장품</button>
+            <button type="button" data-cat="관리" onclick="setCat('관리')">관리</button>
+          </div>
+        </div>
+        <div class="fld">
+          <label>추천직원</label>
+          <select id="fStaff"></select>
+        </div>
+        <div class="fld">
+          <label>날짜</label>
+          <input type="date" id="fDate">
+        </div>
+        <div class="fld">
+          <label>환자이름</label>
+          <input type="text" id="fPatient" placeholder="환자명" autocomplete="off">
+        </div>
+        <div class="fld wide">
+          <label>품목</label>
+          <select id="fItemSel" onchange="onItemSelect()"></select>
+          <input type="text" id="fItemCustom" placeholder="품목 직접 입력" style="display:none;margin-top:6px" autocomplete="off">
+        </div>
+        <div class="fld">
+          <label>수량</label>
+          <input type="number" id="fQty" value="1" min="1" step="1" oninput="onQtyChange()">
+        </div>
+        <div class="fld">
+          <label>결제금액 (원)</label>
+          <input type="number" id="fAmount" placeholder="0" min="0" step="100" oninput="calcInc()">
+        </div>
+        <div class="fld">
+          <label>인센티브 (결제금액 10%)</label>
+          <input type="number" id="fInc" placeholder="0" min="0" step="1">
+        </div>
+      </div>
+      <div class="form-foot">
+        <button class="btn btn-ghost" id="cancelEdit" style="display:none" onclick="resetForm()">취소</button>
+        <button class="btn btn-primary" id="saveBtn" onclick="saveRecord()">저장</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>입력 내역</h2>
+      <div class="tbl-tools">
+        <span class="filter-pill active" data-f="전체" onclick="setListFilter('전체')">전체</span>
+        <span class="filter-pill" data-f="화장품" onclick="setListFilter('화장품')">화장품</span>
+        <span class="filter-pill" data-f="관리" onclick="setListFilter('관리')">관리</span>
+        <input type="search" id="search" placeholder="환자·품목·직원 검색" oninput="renderList()">
+        <span style="margin-left:auto;color:var(--muted);font-size:12px" id="listCount"></span>
+      </div>
+      <div class="tbl-scroll">
+        <table id="listTable">
+          <thead>
+            <tr>
+              <th>날짜</th><th>카테고리</th><th>추천직원</th><th>환자</th><th>품목</th>
+              <th class="c">수량</th><th class="r">결제금액</th><th class="r">인센티브</th><th class="c">관리</th>
+            </tr>
+          </thead>
+          <tbody id="listBody"></tbody>
+          <tfoot id="listFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STATS TAB ============ -->
+  <div id="tab-stats" style="display:none">
+    <div class="card">
+      <div class="yr-bar">
+        <label style="font-size:13px;color:var(--navy);font-weight:700">연도</label>
+        <select id="yrSel" onchange="renderStats()"></select>
+        <div class="metric-toggle" id="metricToggle">
+          <button data-m="인센티브" class="active" onclick="setMetric('인센티브')">인센티브</button>
+          <button data-m="결제금액" onclick="setMetric('결제금액')">결제금액</button>
+          <button data-m="건수" onclick="setMetric('건수')">건수</button>
+        </div>
+        <span style="margin-left:auto"></span>
+        <span class="filter-pill active" data-sf="전체" onclick="setStatFilter('전체')">전체</span>
+        <span class="filter-pill" data-sf="화장품" onclick="setStatFilter('화장품')">화장품</span>
+        <span class="filter-pill" data-sf="관리" onclick="setStatFilter('관리')">관리</span>
+      </div>
+      <div class="stat-cards" id="statCards"></div>
+    </div>
+
+    <div class="card">
+      <h2 id="monthTitle">월별 직원별 집계</h2>
+      <div class="tbl-scroll">
+        <table id="monthTable">
+          <thead id="monthHead"></thead>
+          <tbody id="monthBody"></tbody>
+          <tfoot id="monthFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal-bg" id="settingsModal">
+  <div class="modal">
+    <h3>설정</h3>
+    <div class="fld" style="margin-bottom:14px">
+      <label>추천직원 명단 (인센티브 대상 · 피부관리사)</label>
+      <div class="chip-list" id="staffChips"></div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="newStaff" placeholder="직원 이름 추가" onkeydown="if(event.key==='Enter')addStaff()">
+        <button class="btn btn-ghost btn-sm" onclick="addStaff()">추가</button>
+      </div>
+    </div>
+    <div class="fld" style="margin-bottom:14px">
+      <label>품목·가격 목록 (품목 선택 시 결제금액 자동 입력)</label>
+      <div id="itemEditor" style="max-height:190px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <select id="niCat" style="max-width:88px"><option value="화장품">화장품</option><option value="관리">관리</option></select>
+        <input type="text" id="niName" placeholder="품목명" style="flex:1;min-width:110px">
+        <input type="number" id="niPrice" placeholder="가격" style="max-width:96px">
+        <button class="btn btn-ghost btn-sm" onclick="addItem()">추가</button>
+      </div>
+      <div class="hint">여기서 고친 품목·가격은 이 기기에만 적용됩니다. 기본 목록으로 되돌리려면 →
+        <button class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="resetItems()">품목 기본값으로 초기화</button></div>
+    </div>
+    <div class="fld" style="margin-bottom:14px">
+      <label>인센티브 비율 (%)</label>
+      <input type="number" id="setRate" min="0" max="100" step="0.1">
+      <div class="hint">저장하면 새로 입력하는 내역의 자동 계산에 반영됩니다. 기존 내역 금액은 바뀌지 않습니다.</div>
+    </div>
+    <div class="fld" style="margin-bottom:14px">
+      <label>클라우드 동기화 주소 (Apps Script /exec URL)</label>
+      <input type="text" id="setUrl" placeholder="https://script.google.com/macros/s/.../exec">
+      <div class="hint">비워두면 이 기기에만 저장됩니다. 원장·상담실장·피부관리사가 같은 데이터를 보려면 주소를 넣어야 합니다.</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <button class="btn btn-ghost btn-sm" onclick="exportJson()">JSON 백업 내보내기</button>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer">JSON 복원<input type="file" accept=".json" style="display:none" onchange="importJson(event)"></label>
+    </div>
+    <div class="form-foot">
+      <button class="btn btn-ghost" onclick="closeSettings()">닫기</button>
+      <button class="btn btn-primary" onclick="saveSettings()">설정 저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= 설정 & 상태 ================= */
+const LS_KEY='everyup_incentive_v1';
+const LS_CFG='everyup_incentive_cfg_v1';
+
+let cfg = loadCfg();
+let records = [];          // {id,category,staff,date,patient,item,qty,amount,incentive}
+let editingId = null;
+let curCat = '화장품';
+let curUnit = 0;   // 현재 선택 품목의 단가(직접입력이면 0)
+let listFilter = '전체';
+let statFilter = '전체';
+let metric = '인센티브';
+let syncedOK = false;      // 클라우드 최초 읽기 성공 전에는 push 금지 (빈 데이터 덮어쓰기 방지)
+
+const DEFAULT_ITEMS=[
+  {cat:'화장품', name:'세보스팟 화장품', price:22000},
+  {cat:'화장품', name:'이쪼 재생크림', price:48000},
+  {cat:'화장품', name:'이쪼 썬크림', price:38000},
+  {cat:'화장품', name:'비타K크림(멍크림)', price:16000},
+  {cat:'화장품', name:'리젠크림', price:80000},
+  {cat:'화장품', name:'이지듀썬크림', price:39000},
+  {cat:'관리', name:'여드름 케어 5회', price:220000},
+  {cat:'관리', name:'블랙필 여드름 케어 5회', price:330000},
+  {cat:'관리', name:'블랙필 프리미엄 여드름 케어 5회', price:495000},
+  {cat:'관리', name:'LDM 물방울 리프팅 5회', price:495000},
+  {cat:'관리', name:'바이탈 케어(화이트닝) 5회', price:165000},
+  {cat:'관리', name:'맞춤형 관리 10회', price:165000},
+  {cat:'관리', name:'바이탈케어(화이트닝) 5회', price:165000},
+  {cat:'관리', name:'여드름 케어(많음) 5회', price:385000},
+  {cat:'관리', name:'아쿠아필링 5회', price:99000},
+  {cat:'관리', name:'영양고주파케어 10회', price:198000},
+  {cat:'관리', name:'패키지) 여드름관리 5회', price:440000},
+  {cat:'관리', name:'패키지) 여드름관리 10회', price:770000},
+  {cat:'관리', name:'패키지) 프리미엄 여드름관리 5회', price:660000},
+  {cat:'관리', name:'패키지) 프리미엄 여드름관리 10회', price:1100000},
+  {cat:'관리', name:'패키지) VIP 여드름관리 (+세보하이드라시트팩) 5회', price:880000},
+  {cat:'관리', name:'패키지) VIP 여드름관리 (+세보하이드라시트팩) 10회', price:1320000}
+];
+function loadCfg(){
+  let c=null;
+  try{ c=JSON.parse(localStorage.getItem(LS_CFG)); }catch(e){}
+  if(!c) c={};
+  return {
+    staff: (Array.isArray(c.staff)&&c.staff.length)? c.staff : ['김유미','이효정'],
+    rate: (c.rate!=null? c.rate : 10),
+    cloudUrl: c.cloudUrl || '',
+    items: (Array.isArray(c.items)&&c.items.length)? c.items : DEFAULT_ITEMS.map(x=>({...x}))
+  };
+}
+function saveCfg(){ localStorage.setItem(LS_CFG, JSON.stringify(cfg)); }
+function saveLocal(){ localStorage.setItem(LS_KEY, JSON.stringify(records)); }
+function loadLocal(){ try{ const r=JSON.parse(localStorage.getItem(LS_KEY)); if(Array.isArray(r)) records=r.map(x=>{ x.category=normCat(x.category); return x; }); }catch(e){} }
+
+/* ================= 유틸 ================= */
+const won = n => (Number(n)||0).toLocaleString('ko-KR');
+const todayStr = () => { const d=new Date(); return d.toISOString().slice(0,10); };
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function normCat(c){ return c==='관리추천'?'관리':(c||'화장품'); }
+
+/* ================= 동기화 상태 표시 ================= */
+function setSync(state){ // 'local' | 'ok' | 'busy' | 'warn'
+  const b=document.getElementById('syncBadge');
+  b.className='sync '+(state==='ok'?'ok':state==='busy'?'busy':state==='warn'?'warn':'');
+  b.textContent = state==='ok'?'☁ 동기화됨' : state==='busy'?'동기화 중…' : state==='warn'?'⚠ 클라우드 오류(로컬 저장)' : '● 로컬 저장';
+}
+
+/* ================= 클라우드 (JSONP 읽기 / no-cors POST 쓰기) ================= */
+function pullCloud(manual){
+  if(!cfg.cloudUrl){ setSync('local'); if(manual) toast('클라우드 주소가 설정되지 않았습니다.'); return; }
+  setSync('busy');
+  const fn='__inc_cb_'+Date.now();
+  const s=document.createElement('script');
+  let done=false;
+  window[fn]=function(data){
+    done=true; delete window[fn]; s.remove();
+    if(Array.isArray(data)){
+      records = data.map(normalizeRecord);
+      syncedOK = true;
+      saveLocal(); renderAll(); setSync('ok');
+      if(manual) toast('클라우드에서 불러왔습니다.');
+    } else { setSync('warn'); }
+  };
+  s.onerror=function(){ if(!done){ delete window[fn]; s.remove(); setSync('warn'); if(manual) toast('클라우드 연결 실패 — 로컬 데이터를 사용합니다.'); } };
+  s.src = cfg.cloudUrl + '?action=read&callback='+fn+'&t='+Date.now();
+  document.body.appendChild(s);
+  setTimeout(()=>{ if(!done){ s.remove(); delete window[fn]; setSync('warn'); } }, 12000);
+}
+
+function pushCloud(action, payload){
+  if(!cfg.cloudUrl) return;                 // 로컬 전용
+  if(!syncedOK){ return; }                  // 최초 읽기 성공 전에는 절대 push 안 함
+  const body = JSON.stringify(Object.assign({action}, payload));
+  fetch(cfg.cloudUrl, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body })
+    .then(()=>{ setSync('ok'); })
+    .catch(()=>{ setSync('warn'); });
+}
+
+function normalizeRecord(r){
+  return {
+    id: r.id || uid(),
+    category: normCat(r.category || r['카테고리']),
+    staff: r.staff || r['추천직원'] || '',
+    date: (r.date || r['날짜'] || '').toString().slice(0,10),
+    patient: r.patient || r['환자이름'] || '',
+    item: r.item || r['품목'] || '',
+    qty: Number(r.qty || r['수량'] || 0),
+    amount: Number(r.amount || r['결제금액'] || 0),
+    incentive: Number(r.incentive || r['인센티브'] || 0)
+  };
+}
+
+/* ================= 폼 ================= */
+function setCat(c){
+  curCat=c;
+  document.querySelectorAll('#catSeg button').forEach(b=>{
+    b.classList.remove('on-cos','on-care');
+    if(b.dataset.cat===c) b.classList.add(c==='화장품'?'on-cos':'on-care');
+  });
+  populateItemSelect(c);
+  const sel=document.getElementById('fItemSel'); if(sel) sel.value='';
+  const custom=document.getElementById('fItemCustom'); if(custom){ custom.style.display='none'; custom.value=''; }
+  curUnit=0;
+  const amt=document.getElementById('fAmount'); if(amt) amt.value='';
+  const inc=document.getElementById('fInc'); if(inc) inc.value='';
+}
+function populateItemSelect(cat){
+  const sel=document.getElementById('fItemSel'); if(!sel) return;
+  const items=cfg.items.filter(it=>it.cat===cat);
+  let html='<option value="">— 품목 선택 —</option>';
+  html+=items.map(it=>`<option value="${esc(it.name)}">${esc(it.name)} (${won(it.price)}원)</option>`).join('');
+  html+='<option value="__custom__">기타 (직접 입력)</option>';
+  sel.innerHTML=html;
+}
+function currentItemName(){
+  const sel=document.getElementById('fItemSel').value;
+  if(sel==='__custom__') return document.getElementById('fItemCustom').value.trim();
+  return sel;
+}
+function onItemSelect(){
+  const sel=document.getElementById('fItemSel').value;
+  const custom=document.getElementById('fItemCustom');
+  if(sel==='__custom__'){
+    custom.style.display=''; custom.focus(); curUnit=0;
+    document.getElementById('fAmount').value=''; calcInc();
+    return;
+  }
+  custom.style.display='none'; custom.value='';
+  const it=cfg.items.find(x=>x.cat===curCat && x.name===sel);
+  curUnit = it ? (Number(it.price)||0) : 0;
+  const qty=Number(document.getElementById('fQty').value)||1;
+  if(curUnit>0) document.getElementById('fAmount').value=curUnit*qty;
+  calcInc();
+}
+function onQtyChange(){
+  const qty=Number(document.getElementById('fQty').value)||1;
+  if(curUnit>0){ document.getElementById('fAmount').value=curUnit*qty; calcInc(); }
+}
+function selectItem(name){   // 수정 시: 금액은 건드리지 않고 드롭다운만 맞춤
+  const sel=document.getElementById('fItemSel');
+  const custom=document.getElementById('fItemCustom');
+  const opt=[...sel.options].find(o=>o.value===name);
+  if(opt && name){
+    sel.value=name; custom.style.display='none'; custom.value='';
+    const it=cfg.items.find(x=>x.cat===curCat && x.name===name);
+    curUnit = it ? (Number(it.price)||0) : 0;
+  } else {
+    sel.value='__custom__'; custom.style.display=''; custom.value=name||''; curUnit=0;
+  }
+}
+function calcInc(){
+  const amt = Number(document.getElementById('fAmount').value)||0;
+  document.getElementById('fInc').value = Math.round(amt * (cfg.rate/100));
+}
+function fillStaffSelect(){
+  const sel=document.getElementById('fStaff');
+  const cur=sel.value;
+  sel.innerHTML = cfg.staff.map(s=>`<option>${s}</option>`).join('');
+  if(cfg.staff.includes(cur)) sel.value=cur;
+}
+function resetForm(){
+  editingId=null;
+  document.getElementById('formTitle').textContent='새 내역 입력';
+  document.getElementById('saveBtn').textContent='저장';
+  document.getElementById('cancelEdit').style.display='none';
+  setCat('화장품');
+  document.getElementById('fDate').value=todayStr();
+  document.getElementById('fPatient').value='';
+  document.getElementById('fQty').value=1;
+  document.getElementById('fAmount').value='';
+  document.getElementById('fInc').value='';
+  fillStaffSelect();
+}
+function saveRecord(){
+  const staff=document.getElementById('fStaff').value;
+  const date=document.getElementById('fDate').value;
+  const patient=document.getElementById('fPatient').value.trim();
+  const item=currentItemName();
+  const qty=Number(document.getElementById('fQty').value)||1;
+  const amount=Number(document.getElementById('fAmount').value)||0;
+  let incentive=Number(document.getElementById('fInc').value);
+  if(isNaN(incentive)) incentive=Math.round(amount*(cfg.rate/100));
+
+  if(!staff){ toast('추천직원을 선택하세요.'); return; }
+  if(!date){ toast('날짜를 입력하세요.'); return; }
+  if(!item){ toast('품목을 입력하세요.'); return; }
+  if(!amount){ toast('결제금액을 입력하세요.'); return; }
+
+  const rec={ id: editingId||uid(), category:curCat, staff, date, patient, item, qty, amount, incentive };
+  if(editingId){
+    const i=records.findIndex(r=>r.id===editingId);
+    if(i>=0) records[i]=rec;
+    toast('수정되었습니다.');
+  } else {
+    records.push(rec);
+    toast('저장되었습니다.');
+  }
+  saveLocal(); pushCloud('upsert',{record:rec});
+  resetForm(); renderAll();
+}
+function editRecord(id){
+  const r=records.find(x=>x.id===id); if(!r) return;
+  editingId=id;
+  document.getElementById('formTitle').textContent='내역 수정';
+  document.getElementById('saveBtn').textContent='수정 저장';
+  document.getElementById('cancelEdit').style.display='inline-block';
+  setCat(r.category);
+  document.getElementById('fStaff').value=r.staff;
+  document.getElementById('fDate').value=r.date;
+  document.getElementById('fPatient').value=r.patient;
+  selectItem(r.item);
+  document.getElementById('fQty').value=r.qty;
+  document.getElementById('fAmount').value=r.amount;
+  document.getElementById('fInc').value=r.incentive;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function delRecord(id){
+  const r=records.find(x=>x.id===id); if(!r) return;
+  if(!confirm(`${r.date} · ${r.patient||''} · ${r.item} 내역을 삭제할까요?`)) return;
+  records=records.filter(x=>x.id!==id);
+  saveLocal(); pushCloud('delete',{id});
+  renderAll(); toast('삭제되었습니다.');
+}
+
+/* ================= 목록 렌더 ================= */
+function setListFilter(f){
+  listFilter=f;
+  document.querySelectorAll('.filter-pill[data-f]').forEach(p=>p.classList.toggle('active',p.dataset.f===f));
+  renderList();
+}
+function renderList(){
+  const q=document.getElementById('search').value.trim().toLowerCase();
+  let rows=records.slice().sort((a,b)=> b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  if(listFilter!=='전체') rows=rows.filter(r=>r.category===listFilter);
+  if(q) rows=rows.filter(r=>(r.patient+r.item+r.staff).toLowerCase().includes(q));
+
+  const body=document.getElementById('listBody');
+  if(rows.length===0){
+    body.innerHTML=`<tr><td colspan="9" class="empty-state">내역이 없습니다. 위에서 첫 내역을 입력해 보세요.</td></tr>`;
+    document.getElementById('listFoot').innerHTML='';
+  } else {
+    body.innerHTML=rows.map(r=>`
+      <tr>
+        <td class="num">${r.date}</td>
+        <td><span class="tag ${r.category==='화장품'?'cos':'care'}">${r.category}</span></td>
+        <td>${r.staff}</td>
+        <td>${esc(r.patient)}</td>
+        <td>${esc(r.item)}</td>
+        <td class="c num">${r.qty}</td>
+        <td class="r num">${won(r.amount)}</td>
+        <td class="r num inc">${won(r.incentive)}</td>
+        <td class="c">
+          <div class="row-act">
+            <button class="link-btn" onclick="editRecord('${r.id}')">수정</button>
+            <button class="link-btn del" onclick="delRecord('${r.id}')">삭제</button>
+          </div>
+        </td>
+      </tr>`).join('');
+    const sA=rows.reduce((s,r)=>s+r.amount,0), sI=rows.reduce((s,r)=>s+r.incentive,0);
+    document.getElementById('listFoot').innerHTML=
+      `<tr><td colspan="6">합계 (${rows.length}건)</td><td class="r num">${won(sA)}</td><td class="r num">${won(sI)}</td><td></td></tr>`;
+  }
+  document.getElementById('listCount').textContent=`총 ${records.length}건`;
+}
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ================= 집계 렌더 ================= */
+function setMetric(m){ metric=m; document.querySelectorAll('#metricToggle button').forEach(b=>b.classList.toggle('active',b.dataset.m===m)); renderStats(); }
+function setStatFilter(f){ statFilter=f; document.querySelectorAll('.filter-pill[data-sf]').forEach(p=>p.classList.toggle('active',p.dataset.sf===f)); renderStats(); }
+
+function fillYearSelect(){
+  const yrs=[...new Set(records.map(r=>r.date.slice(0,4)).filter(Boolean))].sort().reverse();
+  const cy=String(new Date().getFullYear());
+  if(!yrs.includes(cy)) yrs.unshift(cy);
+  const sel=document.getElementById('yrSel'); const cur=sel.value;
+  sel.innerHTML=yrs.map(y=>`<option>${y}</option>`).join('');
+  sel.value = (cur && yrs.includes(cur)) ? cur : (yrs.includes(cy) ? cy : yrs[0]);
+}
+function staffList(){
+  const inData=[...new Set(records.map(r=>r.staff).filter(Boolean))];
+  const merged=[...cfg.staff]; inData.forEach(s=>{ if(!merged.includes(s)) merged.push(s); });
+  return merged;
+}
+function metricVal(r){ return metric==='건수'?1 : metric==='결제금액'?r.amount : r.incentive; }
+
+function renderStats(){
+  const yr=document.getElementById('yrSel').value;
+  let data=records.filter(r=>r.date.slice(0,4)===yr);
+  if(statFilter!=='전체') data=data.filter(r=>r.category===statFilter);
+  const staff=staffList();
+
+  // 상단 요약 카드
+  const tAmt=data.reduce((s,r)=>s+r.amount,0);
+  const tInc=data.reduce((s,r)=>s+r.incentive,0);
+  const tCos=data.filter(r=>r.category==='화장품').reduce((s,r)=>s+r.incentive,0);
+  const tCare=data.filter(r=>r.category==='관리').reduce((s,r)=>s+r.incentive,0);
+  document.getElementById('statCards').innerHTML=`
+    <div class="stat"><div class="k">${yr}년 건수</div><div class="v">${data.length}<small> 건</small></div></div>
+    <div class="stat"><div class="k">${yr}년 결제금액</div><div class="v">${won(tAmt)}<small> 원</small></div></div>
+    <div class="stat"><div class="k">${yr}년 인센티브 합계</div><div class="v" style="color:var(--teal)">${won(tInc)}<small> 원</small></div></div>
+    <div class="stat"><div class="k">화장품 / 관리 인센티브</div><div class="v" style="font-size:18px">${won(tCos)} <small>/</small> ${won(tCare)}</div></div>`;
+
+  // 월별 표 (직원 × 1~12월)
+  const unit = metric==='건수'?'건':'원';
+  document.getElementById('monthTitle').textContent=`월별 직원별 집계 · ${metric} (단위: ${unit})`;
+  const grid={}; staff.forEach(s=>grid[s]=Array(12).fill(0));
+  data.forEach(r=>{ const m=parseInt(r.date.slice(5,7),10)-1; if(grid[r.staff]&&m>=0&&m<12) grid[r.staff][m]+=metricVal(r); });
+  const colTot=Array(12).fill(0);
+  document.getElementById('monthHead').innerHTML=
+    '<tr><th>추천직원</th>'+Array.from({length:12},(_,i)=>`<th class="r">${i+1}월</th>`).join('')+'<th class="r">합계</th></tr>';
+  document.getElementById('monthBody').innerHTML=staff.map(s=>{
+    let rowTot=0;
+    const tds=grid[s].map((v,i)=>{ colTot[i]+=v; rowTot+=v; return `<td class="r num">${v?fmt(v):'-'}</td>`; }).join('');
+    return `<tr><td><b>${s}</b></td>${tds}<td class="r num inc">${rowTot?fmt(rowTot):'-'}</td></tr>`;
+  }).join('');
+  const grand=colTot.reduce((a,b)=>a+b,0);
+  document.getElementById('monthFoot').innerHTML=
+    '<tr><td>합계</td>'+colTot.map(v=>`<td class="r num">${v?fmt(v):'-'}</td>`).join('')+`<td class="r num">${grand?fmt(grand):'-'}</td></tr>`;
+}
+function fmt(v){ return metric==='건수'? v : won(v); }
+
+/* ================= 탭 ================= */
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+  document.getElementById('tab-entry').style.display = t==='entry'?'':'none';
+  document.getElementById('tab-stats').style.display = t==='stats'?'':'none';
+  if(t==='stats'){ fillYearSelect(); renderStats(); }
+}
+
+function renderAll(){ fillStaffSelect(); renderList(); if(document.getElementById('tab-stats').style.display!=='none'){ fillYearSelect(); renderStats(); } }
+
+/* ================= 설정 모달 ================= */
+function openSettings(){
+  document.getElementById('setRate').value=cfg.rate;
+  document.getElementById('setUrl').value=cfg.cloudUrl;
+  renderStaffChips();
+  renderItemEditor();
+  document.getElementById('settingsModal').classList.add('show');
+}
+function closeSettings(){ document.getElementById('settingsModal').classList.remove('show'); }
+function renderStaffChips(){
+  document.getElementById('staffChips').innerHTML=cfg.staff.map((s,i)=>
+    `<span class="chip">${s}<button onclick="removeStaff(${i})" title="삭제">×</button></span>`).join('') || '<span class="hint">등록된 직원이 없습니다.</span>';
+}
+function addStaff(){
+  const inp=document.getElementById('newStaff'); const v=inp.value.trim();
+  if(!v) return; if(cfg.staff.includes(v)){ toast('이미 있는 직원입니다.'); return; }
+  cfg.staff.push(v); inp.value=''; renderStaffChips();
+}
+function removeStaff(i){ cfg.staff.splice(i,1); renderStaffChips(); }
+
+function renderItemEditor(){
+  const el=document.getElementById('itemEditor');
+  if(!cfg.items.length){ el.innerHTML='<span class="hint">품목이 없습니다.</span>'; return; }
+  el.innerHTML=cfg.items.map((it,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f1f5f9">
+     <span class="tag ${it.cat==='화장품'?'cos':'care'}" style="font-size:10px;padding:1px 7px">${it.cat}</span>
+     <span style="flex:1;font-size:12px">${esc(it.name)}</span>
+     <span class="num" style="font-size:12px;color:var(--muted)">${won(it.price)}원</span>
+     <button class="link-btn del" onclick="removeItem(${i})" title="삭제">×</button></div>`).join('');
+}
+function addItem(){
+  const cat=document.getElementById('niCat').value;
+  const name=document.getElementById('niName').value.trim();
+  const price=Number(document.getElementById('niPrice').value)||0;
+  if(!name){ toast('품목명을 입력하세요.'); return; }
+  cfg.items.push({cat,name,price});
+  document.getElementById('niName').value=''; document.getElementById('niPrice').value='';
+  renderItemEditor();
+}
+function removeItem(i){ cfg.items.splice(i,1); renderItemEditor(); }
+function resetItems(){
+  if(!confirm('품목 목록을 기본값으로 되돌릴까요? 추가·수정한 품목은 사라집니다.')) return;
+  cfg.items=DEFAULT_ITEMS.map(x=>({...x})); renderItemEditor();
+}
+function saveSettings(){
+  const rate=Number(document.getElementById('setRate').value);
+  cfg.rate = isNaN(rate)?10:rate;
+  cfg.cloudUrl=document.getElementById('setUrl').value.trim();
+  saveCfg(); closeSettings(); fillStaffSelect(); populateItemSelect(curCat); calcInc(); renderAll();
+  toast('설정이 저장되었습니다.');
+  if(cfg.cloudUrl){ syncedOK=false; pullCloud(true); } else setSync('local');
+}
+
+/* ================= 백업 ================= */
+function exportJson(){
+  const blob=new Blob([JSON.stringify(records,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`화장품관리인센티브_백업_${todayStr()}.json`; a.click(); URL.revokeObjectURL(a.href);
+}
+function importJson(e){
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{
+    const arr=JSON.parse(rd.result);
+    if(!Array.isArray(arr)) throw 0;
+    if(!confirm(`백업 ${arr.length}건을 불러옵니다. 현재 데이터에 병합할까요? (같은 ID는 덮어씀)`)) return;
+    const map={}; records.forEach(r=>map[r.id]=r); arr.map(normalizeRecord).forEach(r=>map[r.id]=r);
+    records=Object.values(map); saveLocal(); renderAll();
+    if(cfg.cloudUrl && syncedOK) records.forEach(r=>pushCloud('upsert',{record:r}));
+    toast('복원되었습니다.');
+  }catch(err){ toast('올바른 백업 파일이 아닙니다.'); } };
+  rd.readAsText(f); e.target.value='';
+}
+
+/* ================= 로그인 게이트 ================= */
+/* 로그인.html이 접속 시 sessionStorage에 이 키를 넣어준다. 직접 주소로 들어오면 비상 비밀번호로 입장. */
+const AUTH_KEY='everyup_incentive_ok';
+const AUTH_PW='insen2026';
+function grantAccess(){ document.getElementById('authGate').style.display='none'; init(); }
+function checkAuth(){
+  if(sessionStorage.getItem(AUTH_KEY)){ grantAccess(); }
+  else { document.getElementById('authGate').style.display='flex'; setTimeout(()=>document.getElementById('authPw').focus(),100); }
+}
+function tryAuth(){
+  const v=document.getElementById('authPw').value.trim();
+  if(v===AUTH_PW){ sessionStorage.setItem(AUTH_KEY,'1'); document.getElementById('authErr').textContent=''; grantAccess(); }
+  else { document.getElementById('authErr').textContent='비밀번호가 올바르지 않습니다.'; }
+}
+
+/* ================= 초기화 ================= */
+function init(){
+  loadLocal();
+  document.getElementById('fDate').value=todayStr();
+  setCat('화장품');
+  fillStaffSelect();
+  renderList();
+  if(cfg.cloudUrl){ pullCloud(false); } else setSync('local');
+}
+checkAuth();
+</script>
+</body>
+</html>
