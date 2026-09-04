@@ -27,7 +27,7 @@
   .nav-item:hover{background:var(--surface2);color:var(--text)}
   .nav-item.active{color:var(--purple);background:var(--purple-light);border-left-color:var(--purple);font-weight:500}
   .nav-item svg{width:16px;height:16px;flex-shrink:0}
-  .sidebar-footer{margin-top:auto;padding:1rem 1.25rem;border-top:0.5px solid var(--border);display:flex;flex-direction:column;gap:6px}
+  .sidebar-footer{padding:1rem 1.25rem;border-bottom:0.5px solid var(--border);display:flex;flex-direction:column;gap:6px}
   .main{flex:1;overflow-y:auto}
   .main-header{padding:11px 1.5rem;border-bottom:0.5px solid var(--border);background:var(--surface);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;gap:12px;flex-wrap:wrap}
   .main-header-title{font-size:14px;font-weight:600;color:var(--text2)}
@@ -148,7 +148,7 @@
 <div id="login-gate">
   <div class="login-card">
     <div class="login-logo">에브리업 <span>직원관리</span></div>
-    <div class="login-sub">위례 에브리업의원</div>
+    <div class="login-sub">에브리업의원</div>
     <div class="login-badge">🔒 송우철 원장 전용</div>
     <input type="password" id="login-pw" placeholder="비밀번호" autocomplete="current-password" inputmode="text">
     <button class="login-btn" id="login-btn">로그인</button>
@@ -161,6 +161,21 @@
   <!-- 사이드바 -->
   <nav class="sidebar">
     <div class="sidebar-logo">직원관리<span> 앱</span></div>
+    <div class="sidebar-footer">
+      <button class="btn btn-export" id="btn-export">
+        ⬇ 데이터 저장 (.json)
+      </button>
+      <label for="import-file" class="btn btn-import" style="cursor:pointer;display:block;text-align:center;box-sizing:border-box">
+        ⬆ 데이터 불러오기
+      </label>
+      <input type="file" id="import-file" accept=".json" style="display:none">
+      <button class="btn" id="btn-reset" style="font-size:12px;color:var(--text2);border-color:var(--border)">
+        🔄 기본 데이터로 초기화
+      </button>
+      <button class="btn" id="btn-logout" style="font-size:12px;color:var(--text2);border-color:var(--border)">
+        🔒 로그아웃
+      </button>
+    </div>
     <div class="nav-item active" data-page="ot">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
       OT 관리
@@ -176,21 +191,6 @@
     <div class="nav-item" data-page="team">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       직원 관리
-    </div>
-    <div class="sidebar-footer">
-      <button class="btn btn-export" id="btn-export">
-        ⬇ 데이터 저장 (.json)
-      </button>
-      <label for="import-file" class="btn btn-import" style="cursor:pointer;display:block;text-align:center;box-sizing:border-box">
-        ⬆ 데이터 불러오기
-      </label>
-      <input type="file" id="import-file" accept=".json" style="display:none">
-      <button class="btn" id="btn-reset" style="font-size:12px;color:var(--text2);border-color:var(--border)">
-        🔄 기본 데이터로 초기화
-      </button>
-      <button class="btn" id="btn-logout" style="font-size:12px;color:var(--text2);border-color:var(--border)">
-        🔒 로그아웃
-      </button>
     </div>
   </nav>
 
@@ -1265,6 +1265,19 @@ function renderReport(){
 
 // ── 자동저장 ──────────────────────────────
 const STORAGE_KEY = 'geuntae_v3'; // 이전 캐시 무시
+
+/* ===== 드라이브 백업 (선택) ===== */
+/* '직원관리 백업 백엔드(.gs)'를 배포한 뒤 그 /exec 주소를 아래 따옴표 안에 넣으면,
+   '데이터 저장(.json)'이 다운로드와 함께 구글드라이브 '직원관리 백업' 폴더에도 저장됩니다.
+   비워두면 지금처럼 다운로드만 합니다. */
+const BACKUP_URL = 'https://script.google.com/macros/s/AKfycbxaVgum4nZ3WpjeRpEfStIRUmWEPjLzpGOfibI_btWbIdCgh65wdQDJmNlL_UVET0ASVg/exec';
+function cloudBackup(name, content){
+  if(!BACKUP_URL) return false;
+  try{
+    fetch(BACKUP_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({name:name, content:content})});
+    return true;
+  }catch(e){ return false; }
+}
 function saveLocal(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
 }
@@ -1286,10 +1299,12 @@ function exportData(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   const today=new Date().toISOString().split('T')[0];
-  a.href=url;a.download=`직원관리_${today}.json`;
+  const fname=`직원관리_${today}.json`;
+  a.href=url;a.download=fname;
   document.body.appendChild(a);a.click();
   document.body.removeChild(a);URL.revokeObjectURL(url);
-  showToast('백업 파일이 저장되었습니다');
+  const savedToDrive=cloudBackup(fname, json);
+  showToast(savedToDrive ? '💾 백업 저장 완료 (다운로드 + 드라이브)' : '백업 파일이 저장되었습니다');
 }
 
 function importData(ev){
