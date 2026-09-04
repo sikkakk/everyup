@@ -1101,6 +1101,15 @@ function toast(msg){
   clearTimeout(toast._t); toast._t=setTimeout(()=>{ t.className=""; }, 2600);
 }
 
+/* ---- 드라이브 백업 폴더로 전송 (다운로드와 별개, 재고 백업 폴더에 저장) ---- */
+function cloudBackup(op){
+  if(!cloudOn()) return false;
+  try{
+    fetch(CLOUD.EXEC_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(op)});
+    return true;
+  }catch(e){ return false; }
+}
+
 /* ---- 전체 백업 (엑셀, 모든 칸 포함) ---- */
 function backupFullXlsx(){
   if(typeof XLSX==="undefined"){ alert("엑셀 기능을 불러오지 못했어요.\n인터넷 연결 상태에서 github.io 주소로 열어 다시 시도해주세요."); return; }
@@ -1130,20 +1139,27 @@ function backupFullXlsx(){
   ws["!cols"]=cols.map(k=>({wch: (k==="name")?24 : (k==="memo"||k==="effect"||k==="lots"||k==="logs"||k==="hist")?28 : 12}));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "전체백업");
-  XLSX.writeFile(wb, "에브리업재고_전체백업_"+today()+".xlsx");
-  toast("전체 엑셀 백업을 내려받았어요 (모든 항목 포함)");
+  const fname="에브리업재고_전체백업_"+today()+".xlsx";
+  XLSX.writeFile(wb, fname);
+  // 드라이브 백업 폴더에도 같은 파일 저장
+  const savedToDrive = cloudBackup({type:"driveXlsx", name:fname, b64:XLSX.write(wb,{bookType:"xlsx",type:"base64"})});
+  toast(savedToDrive ? "전체 엑셀 백업 — 다운로드 + 드라이브 저장 완료" : "전체 엑셀 백업을 내려받았어요 (모든 항목 포함)");
 }
 
 /* ---- 완전 백업 (.json, 하나도 빠짐없이) ---- */
 function backupJson(auto){
   const payload={ app:"everyup-inventory", version:1, exportedAt:new Date().toISOString(), count:items.length, items:items };
-  const blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
+  const str=JSON.stringify(payload);
+  const blob=new Blob([str],{type:"application/json"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");
-  a.href=url; a.download="에브리업재고_"+(auto?"복원전자동백업":"완전백업")+"_"+today()+".json";
+  const fname="에브리업재고_"+(auto?"복원전자동백업":"완전백업")+"_"+today()+".json";
+  a.href=url; a.download=fname;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1500);
-  if(!auto) toast("완전 백업(.json)을 내려받았어요");
+  // 드라이브 백업 폴더에도 같은 파일 저장
+  const savedToDrive = cloudBackup({type:"driveJson", name:fname, content:str});
+  if(!auto) toast(savedToDrive ? "완전 백업(.json) — 다운로드 + 드라이브 저장 완료" : "완전 백업(.json)을 내려받았어요");
 }
 
 /* ---- 복원 잠금 해제 (제목 3번 탭 → 숫자) ---- */
