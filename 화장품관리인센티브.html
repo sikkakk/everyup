@@ -320,16 +320,6 @@
 const LS_KEY='everyup_incentive_v1';
 const LS_CFG='everyup_incentive_cfg_v1';
 
-let cfg = loadCfg();
-let records = [];          // {id,category,staff,date,patient,item,qty,amount,incentive}
-let editingId = null;
-let curCat = '화장품';
-let curUnit = 0;   // 현재 선택 품목의 단가(직접입력이면 0)
-let listFilter = '전체';
-let statFilter = '전체';
-let metric = '인센티브';
-let syncedOK = false;      // 클라우드 최초 읽기 성공 전에는 push 금지 (빈 데이터 덮어쓰기 방지)
-
 const DEFAULT_ITEMS=[
   {cat:'화장품', name:'세보스팟 화장품', price:22000},
   {cat:'화장품', name:'이쪼 재생크림', price:48000},
@@ -354,6 +344,17 @@ const DEFAULT_ITEMS=[
   {cat:'관리', name:'패키지) VIP 여드름관리 (+세보하이드라시트팩) 5회', price:880000},
   {cat:'관리', name:'패키지) VIP 여드름관리 (+세보하이드라시트팩) 10회', price:1320000}
 ];
+
+let cfg = loadCfg();
+let records = [];          // {id,category,staff,date,patient,item,qty,amount,incentive}
+let editingId = null;
+let curCat = '화장품';
+let curUnit = 0;   // 현재 선택 품목의 단가(직접입력이면 0)
+let listFilter = '전체';
+let statFilter = '전체';
+let metric = '인센티브';
+let syncedOK = false;      // 클라우드 최초 읽기 성공 전에는 push 금지 (빈 데이터 덮어쓰기 방지)
+
 function loadCfg(){
   let c=null;
   try{ c=JSON.parse(localStorage.getItem(LS_CFG)); }catch(e){}
