@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>에브리업 셀프 체크리스트</title>
+<style>
+:root{--green:#33625d;--green2:#284f4b;--mint:#e8f0ee;--bg:#f4f2ed;--surface:#fff;--line:#ddd9d0;--text:#252a2e;--sub:#70777d;--red:#b74c4c;--shadow:0 8px 28px rgba(40,50,48,.08)}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;background:var(--bg);color:var(--text)}button,input,select{font:inherit}
+.top{position:sticky;top:0;z-index:20;background:rgba(244,242,237,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.topin{max-width:980px;margin:auto;padding:14px 18px;display:flex;align-items:center;gap:12px}.brand{font-weight:800;color:var(--green);font-size:18px}.who{margin-left:auto;text-align:right}.who b{display:block;font-size:14px}.who span{font-size:11px;color:var(--sub)}
+.btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;cursor:pointer}.btn.primary{background:var(--green);border-color:var(--green);color:#fff}.btn.danger{color:var(--red)}.btn:disabled{opacity:.45;cursor:not-allowed}
+main{max-width:980px;margin:0 auto;padding:24px 18px 60px}.hero{display:flex;gap:16px;align-items:flex-end;margin-bottom:18px}.hero h1{margin:0;font-size:25px}.hero p{margin:5px 0 0;color:var(--sub);font-size:13px}.hero .actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+select{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}.stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}.stat b{font-size:23px;color:var(--green)}.stat span{display:block;color:var(--sub);font-size:11px;margin-top:3px}
+.group{margin:18px 0}.grouphead{display:flex;align-items:center;margin-bottom:8px}.grouphead h2{font-size:16px;margin:0}.grouphead span{margin-left:8px;font-size:11px;color:var(--sub)}
+.list{display:grid;gap:8px}.item{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 14px;display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:start;box-shadow:0 1px 0 rgba(0,0,0,.02)}.item.done{background:#f2f7f5;border-color:#b9d0ca}.check{width:22px;height:22px;margin-top:1px;accent-color:var(--green);cursor:pointer}.itemtext{font-size:14px;line-height:1.5}.meta{font-size:11px;color:var(--sub);margin-top:5px}.del{border:0;background:transparent;color:var(--red);font-size:11px;cursor:pointer;padding:4px}.empty,.loading,.setup{background:#fff;border:1px solid var(--line);border-radius:16px;padding:28px;text-align:center;color:var(--sub)}
+.setup{border-color:#e4c477;background:#fffaf0;color:#6d5720}.setup code{display:block;margin:10px auto 0;max-width:620px;white-space:normal;font-size:11px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.32);z-index:40;display:none;align-items:center;justify-content:center;padding:18px}.overlay.show{display:flex}.modal{width:100%;max-width:520px;background:#fff;border-radius:18px;padding:20px;box-shadow:var(--shadow)}.modal h3{margin:0 0 16px}.field{margin:11px 0}.field label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px}.field input,.field select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px}.modalactions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#26312f;color:#fff;padding:10px 16px;border-radius:10px;font-size:12px;opacity:0;pointer-events:none;transition:.2s;z-index:60}.toast.show{opacity:1}
+@media(max-width:650px){.hero{align-items:stretch;flex-direction:column}.hero .actions{margin-left:0}.hero .actions select{flex:1;min-width:0}.summary{grid-template-columns:repeat(3,1fr)}.item{grid-template-columns:28px 1fr}.item .del{grid-column:2;justify-self:end}.topin{padding:12px}.who{display:none}main{padding:18px 12px 50px}.stat{padding:11px}.stat b{font-size:19px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="topin"><div class="brand">에브리업 체크리스트</div><button class="btn" id="backBtn">← 메뉴</button><div class="who"><b id="loginName"></b><span id="loginRole"></span></div><button class="btn" id="logoutBtn">로그아웃</button></div></header>
+<main>
+  <section class="hero"><div><h1 id="pageTitle">셀프 체크리스트</h1><p id="pageSub">내 업무를 확인하고 완료한 항목을 체크하세요.</p></div><div class="actions" id="adminActions" hidden><select id="staffSelect"></select><button class="btn primary" id="addBtn">+ 항목 추가</button></div></section>
+  <section class="summary" id="summary" hidden><div class="stat"><b id="doneCount">0</b><span>완료</span></div><div class="stat"><b id="totalCount">0</b><span>전체</span></div><div class="stat"><b id="rate">0%</b><span>완료율</span></div></section>
+  <div class="loading" id="status">체크리스트를 불러오는 중입니다…</div>
+  <div id="groups"></div>
+</main>
+<div class="overlay" id="modal"><div class="modal"><h3>체크리스트 항목 추가</h3><div class="field"><label>직무</label><select id="newRole"><option>코디네이터</option><option>총괄상담실장</option><option>간호조무사</option><option>피부관리사</option><option>원장</option></select></div><div class="field"><label>주기</label><select id="newCycle"><option>매일</option><option>오전</option><option>관리중</option><option>오후</option><option>매주</option><option>매월</option><option>분기</option><option>필요시</option></select></div><div class="field"><label>체크 항목</label><input id="newText" maxlength="300" placeholder="확인할 업무를 입력하세요"></div><div class="modalactions"><button class="btn" id="cancelBtn">취소</button><button class="btn primary" id="saveBtn">추가</button></div></div></div>
+<div class="toast" id="toast"></div>
+<script>
+// 새 Apps Script 웹앱을 배포한 뒤 이 주소만 교체합니다.
+const CHECKLIST_API = "__CHECKLIST_API_URL__";
+const LOGIN_URL = "https://sikkakk.github.io/everyup/%EB%A1%9C%EA%B7%B8%EC%9D%B8.html";
+const SESSION_KEY = "everyup_checklist_user";
+let session=null, token="", model={items:[],records:{},isAdmin:false,staff:[],viewUser:""}, busy=false;
+const $=id=>document.getElementById(id);
+
+function toast(msg){const el=$("toast");el.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2200)}
+function jsonp(params){return new Promise((resolve,reject)=>{const cb="cl_"+Math.random().toString(36).slice(2);const s=document.createElement("script");const timer=setTimeout(()=>{cleanup();reject(new Error("timeout"))},15000);function cleanup(){clearTimeout(timer);delete window[cb];s.remove()}window[cb]=d=>{cleanup();resolve(d)};s.onerror=()=>{cleanup();reject(new Error("network"))};s.src=CHECKLIST_API+"?callback="+cb+"&"+Object.entries(params).map(([k,v])=>encodeURIComponent(k)+"="+encodeURIComponent(v??"")).join("&");document.body.appendChild(s)})}
+async function post(body){await fetch(CHECKLIST_API,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)})}
+function readSession(){try{const s=JSON.parse(sessionStorage.getItem(SESSION_KEY)||"null");if(!s||!s.name||!s.pw||Date.now()-s.at>8*60*60*1000)return null;return s}catch(e){return null}}
+function signOut(){try{sessionStorage.removeItem(SESSION_KEY)}catch(e){}location.replace(LOGIN_URL)}
+async function start(){session=readSession();if(!session){signOut();return}$("loginName").textContent=session.name;$("loginRole").textContent=session.part||"";if(CHECKLIST_API.includes("__CHECKLIST")){showSetup();return}try{const r=await jsonp({action:"auth",name:session.name,pw:session.pw});if(!r.ok)throw new Error(r.msg||"인증 실패");token=r.token;sessionStorage.setItem(SESSION_KEY,JSON.stringify({name:session.name,part:session.part,at:session.at}));await load()}catch(e){$("status").textContent="로그인 확인에 실패했습니다. 메뉴로 돌아가 다시 로그인해주세요."}}
+function showSetup(){$("status").className="setup";$("status").innerHTML="체크리스트 백엔드 연결 전입니다.<code>체크리스트_백엔드.gs를 Apps Script로 배포한 뒤 웹앱 주소를 연결하세요.</code>"}
+async function load(target){const r=await jsonp({action:"load",token,targetUser:target||model.viewUser||""});if(!r.ok){if(r.code==="AUTH")signOut();throw new Error(r.msg||"불러오기 실패")}model=r;render()}
+function render(){const isOwn=!model.isAdmin||model.viewUser===session.name;$("status").style.display="none";$("summary").hidden=false;$("adminActions").hidden=!model.isAdmin;$("pageTitle").textContent=model.viewUser+" 체크리스트";$("pageSub").textContent=isOwn?"완료한 항목을 체크하면 날짜·시간과 이름이 기록됩니다.":"조회 중입니다. 직원 본인만 체크 상태를 수정할 수 있습니다.";if(model.isAdmin){const sel=$("staffSelect");sel.innerHTML=model.staff.map(x=>`<option value="${esc(x.name)}" ${x.name===model.viewUser?"selected":""}>${esc(x.name)} · ${esc(x.part)}</option>`).join("")}const items=model.items||[],records=model.records||{};const done=items.filter(x=>records[x.itemId]?.checked).length;$("doneCount").textContent=done;$("totalCount").textContent=items.length;$("rate").textContent=items.length?Math.round(done/items.length*100)+"%":"0%";const order=["매일","오전","관리중","오후","매주","매월","분기","필요시"];const grouped={};items.forEach(x=>(grouped[x.cycle]??=[]).push(x));$("groups").innerHTML=order.filter(c=>grouped[c]?.length).map(c=>`<section class="group"><div class="grouphead"><h2>${cycleTitle(c)}</h2><span>${grouped[c].length}개</span></div><div class="list">${grouped[c].map(x=>itemHtml(x,records[x.itemId],isOwn)).join("")}</div></section>`).join("")||'<div class="empty">등록된 체크리스트가 없습니다.</div>';document.querySelectorAll(".check").forEach(el=>el.addEventListener("change",()=>toggle(el.dataset.id,el.checked)));document.querySelectorAll(".del").forEach(el=>el.addEventListener("click",()=>removeItem(el.dataset.id)))}
+function cycleTitle(c){return({"매일":"📅 매일","오전":"🌅 오전","관리중":"🧴 관리 중","오후":"🌆 오후 마감","매주":"📋 매주","매월":"📊 매월","분기":"🔍 분기","필요시":"🔧 필요 시"})[c]||c}
+function itemHtml(x,r,isOwn){const done=!!r?.checked;const meta=done?`${formatDate(r.actionAt)} · ${esc(r.actionBy)}`:"아직 완료하지 않았습니다.";return `<article class="item ${done?"done":""}"><input class="check" type="checkbox" data-id="${x.itemId}" ${done?"checked":""} ${!isOwn||busy?"disabled":""}><div><div class="itemtext">${esc(x.text)}</div><div class="meta">${meta}</div></div>${model.isAdmin?`<button class="del" data-id="${x.itemId}">삭제</button>`:""}</article>`}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[m])}
+function formatDate(v){if(!v)return"";const d=new Date(v);return d.toLocaleString("ko-KR",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}
+async function toggle(itemId,checked){if(busy)return;busy=true;try{await post({action:"toggle",token,itemId,checked});toast("저장했습니다.");await new Promise(r=>setTimeout(r,600));await load(model.viewUser)}catch(e){toast("저장하지 못했습니다.");await load(model.viewUser)}finally{busy=false}}
+async function removeItem(itemId){if(!confirm("이 항목을 삭제할까요? 기존 완료 기록은 보존됩니다."))return;await post({action:"deleteItem",token,itemId});toast("삭제했습니다.");await new Promise(r=>setTimeout(r,600));await load(model.viewUser)}
+async function addItem(){const role=$("newRole").value,cycle=$("newCycle").value,text=$("newText").value.trim();if(!text){toast("체크 항목을 입력해주세요.");return}await post({action:"addItem",token,role,cycle,text});$("modal").classList.remove("show");$("newText").value="";toast("항목을 추가했습니다.");await new Promise(r=>setTimeout(r,600));await load(model.viewUser)}
+$("staffSelect").addEventListener("change",e=>{model.viewUser=e.target.value;load(model.viewUser).catch(()=>toast("불러오지 못했습니다."))});$("addBtn").onclick=()=>$("modal").classList.add("show");$("cancelBtn").onclick=()=>$("modal").classList.remove("show");$("saveBtn").onclick=addItem;$("backBtn").onclick=()=>location.href=LOGIN_URL;$("logoutBtn").onclick=signOut;start();
+</script>
+</body>
+</html>
+
