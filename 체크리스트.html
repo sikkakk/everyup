@@ -31,7 +31,7 @@ select{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9
 <div class="toast" id="toast"></div>
 <script>
 // 새 Apps Script 웹앱을 배포한 뒤 이 주소만 교체합니다.
-const CHECKLIST_API = "__CHECKLIST_API_URL__";
+const CHECKLIST_API = "https://script.google.com/macros/s/AKfycbwvRyZmi2VQfqgrceymF6BmkFSDicVYOno3oxtX9_t5X-RxRNhHOh8V8HxJGIHKf6HT/exec";
 const LOGIN_URL = "https://sikkakk.github.io/everyup/%EB%A1%9C%EA%B7%B8%EC%9D%B8.html";
 const SESSION_KEY = "everyup_checklist_user";
 let session=null, token="", model={items:[],records:{},isAdmin:false,staff:[],viewUser:""}, busy=false;
@@ -57,4 +57,3 @@ $("staffSelect").addEventListener("change",e=>{model.viewUser=e.target.value;loa
 </script>
 </body>
 </html>
-
