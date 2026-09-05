@@ -28,7 +28,7 @@
     display:flex;align-items:center;justify-content:center;
     padding:24px 18px;min-height:100dvh;
   }
-  .app{width:100%;max-width:400px}
+  .app{width:100%;max-width:760px}
 
   /* ── 브랜드 헤더 ── */
   .brand{text-align:center;margin-bottom:22px}
@@ -104,10 +104,11 @@
   .welcome .w-part{font-size:13px;color:var(--muted);margin-top:4px}
   .welcome .w-msg{font-size:15px;margin-top:14px;color:var(--ink)}
   .welcome .w-note{font-size:12.5px;color:var(--muted);margin-top:20px;line-height:1.6}
+  .welcome-menu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}
   .btn-fill{
-    display:block;width:100%;margin-top:20px;background:var(--accent);border:none;
+    display:flex;width:100%;min-height:58px;margin:0;background:var(--accent);border:none;
     color:#fff;border-radius:14px;padding:16px;font-size:16px;font-weight:600;
-    cursor:pointer;font-family:inherit;letter-spacing:-.01em;
+    cursor:pointer;font-family:inherit;letter-spacing:-.01em;align-items:center;justify-content:center;
   }
   .btn-fill:active{opacity:.9;transform:scale(.99)}
   .btn-line{
@@ -118,6 +119,11 @@
   .btn-line:active{background:var(--accent-soft)}
 
   .foot{text-align:center;font-size:11px;color:var(--muted);margin-top:18px;letter-spacing:.02em}
+
+  @media(max-width:520px){
+    .welcome-menu{gap:10px}
+    .btn-fill{font-size:14px;padding:13px 8px;min-height:54px}
+  }
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -162,13 +168,14 @@
         <div class="w-name" id="wName"></div>
         <div class="w-part" id="wPart"></div>
         <div class="w-msg">환영합니다. 오늘도 좋은 하루 되세요.</div>
-        <button class="btn-fill" id="goChecklist">✅ 셀프 체크리스트</button>
-        <button class="btn-fill" id="goInventory">📦 재고 현황</button>
-        <button class="btn-fill" id="goAttendance" style="display:none">🕐 직원관리</button>
-        <button class="btn-fill" id="goReservation" style="display:none">📊 예약통계</button>
-        <button class="btn-fill" id="goConsult" style="display:none">💳 상담전환관리</button>
-        <button class="btn-fill" id="goIncentive" style="display:none">🧴 화장품관리 인센티브</button>
-        <br>
+        <div class="welcome-menu">
+          <button class="btn-fill" id="goChecklist">✅ 셀프 체크리스트</button>
+          <button class="btn-fill" id="goInventory">📦 재고 현황</button>
+          <button class="btn-fill" id="goAttendance" style="display:none">🕐 직원관리</button>
+          <button class="btn-fill" id="goReservation" style="display:none">📊 예약통계</button>
+          <button class="btn-fill" id="goConsult" style="display:none">💳 상담전환관리</button>
+          <button class="btn-fill" id="goIncentive" style="display:none">🧴 화장품관리 인센티브</button>
+        </div>
         <button class="btn-line" id="logoutBtn">다른 계정으로</button>
       </div>
     </div>
