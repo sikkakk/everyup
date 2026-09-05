@@ -146,7 +146,7 @@ main{max-width:1120px;margin:0 auto;padding:18px 20px}
 .sheet{position:absolute;right:0;top:0;bottom:0;width:min(580px,100%);background:var(--surface);box-shadow:-8px 0 40px rgba(20,22,27,.16);overflow-y:auto;animation:slide .28s cubic-bezier(.2,.7,.2,1)}
 @keyframes fade{from{opacity:0}}
 @keyframes slide{from{transform:translateX(24px);opacity:.5}}
-.sheet-head{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);padding:18px 140px 14px 22px;z-index:2}
+.sheet-head{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);padding:18px 176px 14px 22px;z-index:2}
 .sheet-head .card-top{margin-bottom:8px}
 .sheet-head h2{font-size:23px;font-weight:800;letter-spacing:-.02em}
 .sheet-head .tag{font-size:14px;color:var(--muted);margin-top:4px}
@@ -266,9 +266,36 @@ footer{max-width:1120px;margin:0 auto;padding:0 20px;text-align:center}
   .card{padding:12px}.card h3{font-size:15px}
   .sheet{width:100%}
   .sheet-body,.edit-body{padding-left:18px;padding-right:18px}
-  .sheet-head{padding:18px 120px 14px 18px}
+  .sheet-head{padding:18px 154px 14px 18px}
   .edit-actions{margin:0 -18px;padding:14px 18px}
 }
+.rx-flag{display:inline-block;vertical-align:middle;margin-left:9px;font-size:12.5px;font-weight:800;color:#fff;background:#E23B3B;border-radius:7px;padding:3px 10px;letter-spacing:.02em;transform:translateY(-2px)}
+
+/* 인쇄 */
+.print-only{display:none}
+@media print{
+  body *{visibility:hidden}
+  #printArea, #printArea *{visibility:visible}
+  #printArea{display:block;position:absolute;left:0;top:0;width:100%}
+  @page{margin:14mm}
+}
+#printArea{font-family:inherit;color:#000;line-height:1.5}
+#printArea .p-brand{font-size:10pt;color:#666;margin:0 0 2mm}
+#printArea h1{font-size:22pt;margin:0 0 2mm}
+#printArea .p-rx{color:#C0202A;font-weight:800;font-size:13pt}
+#printArea .p-sub{font-size:11pt;color:#444;margin:0 0 1mm}
+#printArea .p-meta{font-size:10.5pt;color:#222;margin:2mm 0 3mm}
+#printArea h2{font-size:12pt;border-bottom:1px solid #999;padding-bottom:1mm;margin:5mm 0 2mm}
+#printArea ul,#printArea ol{margin:0;padding-left:7mm;font-size:11pt}
+#printArea .p-eff{font-size:11pt}
+#printArea .p-chk{list-style:none;padding-left:0}
+#printArea .p-chk li{margin:1.4mm 0}
+#printArea .p-chk li::before{content:"\2610  ";font-size:12pt}
+#printArea .p-mix{white-space:pre-wrap;font-size:11pt;border:1px solid #bbb;padding:2mm 3mm;border-radius:2mm}
+#printArea table{border-collapse:collapse;width:100%;font-size:10.5pt;margin-top:1mm}
+#printArea th,#printArea td{border:1px solid #aaa;padding:1.5mm 2mm;text-align:left;vertical-align:top}
+#printArea .dose-t{font-weight:700;margin-bottom:1mm}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -299,7 +326,6 @@ footer{max-width:1120px;margin:0 auto;padding:0 20px;text-align:center}
       <button class="tbtn c-save" id="saveBtn" title="지금 클라우드에 저장"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>저장</button>
       <button class="tbtn c-excel" id="xlsxBtn" title="엑셀로 내보내기">엑셀</button>
       <button class="tbtn c-json" id="jsonBtn" title="JSON 백업 내보내기">JSON</button>
-      <button class="tbtn c-trash" id="trashBtn" title="삭제함 · 백업"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>삭제<span class="tcount" id="trashN">0</span></button>
       <button class="tbtn c-set" id="setBtn" title="분야·분류·장소 관리"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>설정</button>
       <button class="addbtn" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>새 항목</button>
     </div>
@@ -311,6 +337,7 @@ footer{max-width:1120px;margin:0 auto;padding:0 20px;text-align:center}
 
 <div class="modal" id="modal" role="dialog" aria-modal="true"><div class="scrim" data-close></div><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast"></div>
+<div id="printArea" class="print-only"></div>
 <input type="file" id="jsonFile" accept="application/json,.json" style="display:none">
 <input type="file" id="xlsxFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">
 
@@ -1083,12 +1110,12 @@ function match(x){
   }
   return true;
 }
-function metaChips(x){
+function metaChips(x,skipRx){
   let h="";
   if(x.anes) h+='<span class="meta"><b class="mlabel">마취</b>'+esc(x.anes)+'</span>';
   if(x.time) h+='<span class="meta">⏱ '+esc(x.time)+'</span>';
   if(x.exp) h+='<span class="meta">📅 '+esc(x.exp)+'</span>';
-  if(x.rx) h+='<span class="meta rx">약처방</span>';
+  if(x.rx && !skipRx) h+='<span class="meta rx">약처방</span>';
   if(x.active===false) h+='<span class="meta off">미시행</span>';
   return h;
 }
@@ -1140,22 +1167,48 @@ function openDetail(id){
 
   sheet.innerHTML=
     '<div class="sheet-head"><div class="head-actions">'
+    +'<button class="icon-btn" data-print aria-label="인쇄" title="인쇄"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg></button>'
     +'<button class="icon-btn edit-btn" data-edit="'+esc(x.id)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>편집</button>'
     +'<button class="icon-btn" data-close aria-label="닫기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'
     +'<div class="card-top"><span class="badge badge-'+esc(x.domain)+'">'+esc(x.domain)+'</span>'+(catLine?'<span class="card-cat">'+esc(catLine)+'</span>':'')+'</div>'
-    +'<h2>'+esc(x.name)+'</h2>'+(x.tag?'<p class="tag">'+esc(x.tag)+'</p>':'')
-    +'<div class="sheet-metas">'+metaChips(x)+'</div></div>'
+    +'<h2>'+esc(x.name)+(x.rx?' <span class="rx-flag">약처방</span>':'')+'</h2>'+(x.tag?'<p class="tag">'+esc(x.tag)+'</p>':'')
+    +'<div class="sheet-metas">'+metaChips(x,true)+'</div></div>'
     +'<div class="sheet-body">'+(body||'<div class="sec"><p style="color:var(--muted)">등록된 상세 내용이 없습니다. 우측 상단 편집을 눌러 채워보세요.</p></div>')+'</div>';
 
   sheet.querySelectorAll(".pitem").forEach(el=>el.onclick=()=>{ const now=!el.classList.contains("done"); el.classList.toggle("done",now); setCheck(x.id,el.dataset.i,now); });
   const rb=sheet.querySelector("[data-reset]"); if(rb) rb.onclick=()=>{ clearChecks(x.id); sheet.querySelectorAll(".pitem").forEach(e=>e.classList.remove("done")); };
   sheet.querySelector("[data-edit]").onclick=()=>openEdit(x.id);
+  sheet.querySelector("[data-print]").onclick=()=>printItem(x);
   openModal(); sheet.scrollTop=0;
 }
 
-/* ============================================================
-   편집 (전체 필드 · 한 칸 입력)
-   ============================================================ */
+/* ---------- 인쇄 ---------- */
+function printItem(x){
+  const A=$("#printArea"); if(!A) return;
+  const catLine=[x.cat,x.room].filter(Boolean).join(" · ");
+  const ulp=arr=>'<ul>'+arr.map(i=>'<li>'+esc(i)+'</li>').join("")+'</ul>';
+  const secp=(t,inner)=>'<h2>'+esc(t)+'</h2>'+inner;
+  let html='<div class="p-brand">에브리업의원 · 시술준비 매뉴얼</div>';
+  html+='<h1>'+esc(x.name)+(x.rx?' <span class="p-rx">약처방</span>':'')+'</h1>';
+  const sub=[x.domain,catLine].filter(Boolean).join(" · ");
+  if(sub) html+='<div class="p-sub">'+esc(sub)+'</div>';
+  if(x.tag) html+='<div class="p-sub">'+esc(x.tag)+'</div>';
+  const m=[]; if(x.anes)m.push("마취: "+x.anes); if(x.time)m.push("시술시간: "+x.time); if(x.exp)m.push("사용기한: "+x.exp);
+  if(x.active===false)m.push("현재 미시행");
+  if(m.length) html+='<div class="p-meta">'+esc(m.join("     |     "))+'</div>';
+  if(x.effects&&x.effects.length) html+=secp("효과 · 적응증",'<div class="p-eff">'+x.effects.map(esc).join(",  ")+'</div>');
+  if(x.modes&&x.modes.length) html+=secp("모드",ulp(x.modes));
+  if(x.prep&&x.prep.length) html+=secp("준비물",'<ul class="p-chk">'+x.prep.map(i=>'<li>'+esc(i)+'</li>').join("")+'</ul>');
+  if(x.setting&&x.setting.length) html+=secp("시술 준비 · 세팅",ulp(x.setting));
+  if(x.mix&&x.mix.trim()) html+=secp("Mix · 수화",'<div class="p-mix">'+esc(x.mix)+'</div>');
+  if(x.dose) html+=secp("용량 · 기준",doseHtml(x.dose));
+  if(x.steps&&x.steps.length) html+=secp("시술 순서",'<ol>'+x.steps.map(i=>'<li>'+esc(i)+'</li>').join("")+'</ol>');
+  if(x.charting&&x.charting.length) html+=secp("차팅",ulp(x.charting));
+  if(x.after&&x.after.length) html+=secp("시술 후 · 안내",ulp(x.after));
+  if(x.notes&&x.notes.length) html+=secp("특이사항",ulp(x.notes));
+  A.innerHTML=html;
+  setTimeout(()=>window.print(),60);
+}
 const ARR_FIELDS=[["effects","효과 · 적응증"],["prep","준비물"],["setting","시술 준비 · 세팅"],["steps","시술 순서"],["charting","차팅"],["after","시술 후 · 안내"],["notes","특이사항"],["modes","모드"]];
 function selectField(label,key,options,cur,blankLabel){
   let opts=""; if(blankLabel!=null) opts+='<option value=""'+(cur?"":" selected")+'>'+esc(blankLabel)+'</option>';
@@ -1457,7 +1510,6 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeModal(); });
 $("#q").addEventListener("input",e=>{ state.q=e.target.value.trim(); renderGrid(); });
 $("#addBtn").onclick=openNew;
 $("#setBtn").onclick=openSettings;
-$("#trashBtn").onclick=openTrash;
 $("#saveBtn").onclick=()=>{ if(!CLOUD_URL){ toast("배포 URL 미설정 — 저장할 수 없어요"); return; } if(!syncedOK){ toast("동기화 준비 중이에요. 잠시 후 다시"); pullCloud(); return; } pushCloud(true); toast("저장했어요"); };
 $("#xlsxBtn").onclick=exportExcel;
 $("#jsonBtn").onclick=exportJson;
