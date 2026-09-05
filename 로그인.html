@@ -173,6 +173,7 @@
         <div class="welcome-menu">
           <button class="btn-fill" id="goChecklist">✅ 셀프 체크리스트</button>
           <button class="btn-fill" id="goInventory">📦 재고 현황</button>
+          <button class="btn-fill" id="goManual">📋 시술준비 매뉴얼</button>
           <button class="btn-fill" id="goAttendance" style="display:none">🕐 직원관리</button>
           <button class="btn-fill" id="goReservation" style="display:none">📊 예약통계</button>
           <button class="btn-fill" id="goConsult" style="display:none">💳 상담전환관리</button>
@@ -192,6 +193,7 @@ const API = "https://script.google.com/macros/s/AKfycbwUBiyI9x4OfeexcM1nVbdIyOPe
 
 /* ===== 로그인 후 이동할 앱 주소 ===== */
 const INVENTORY_URL = "https://sikkakk.github.io/everyup/%EC%9E%AC%EA%B3%A0%EA%B4%80%EB%A6%AC.html";
+const MANUAL_URL = "https://sikkakk.github.io/everyup/%EC%8B%9C%EC%88%A0%EC%A4%80%EB%B9%84%EB%A7%A4%EB%89%B4%EC%96%BC.html"; // 시술준비매뉴얼.html (구성원 모두)
 const CHECKLIST_URL = "https://sikkakk.github.io/everyup/%EC%B2%B4%ED%81%AC%EB%A6%AC%EC%8A%A4%ED%8A%B8.html";
 const ATTENDANCE_URL = "https://sikkakk.github.io/everyup/%EC%A7%81%EC%9B%90%EA%B4%80%EB%A6%AC.html"; // 직원관리.html (송우철 원장님 전용)
 const RESERVATION_URL = "https://sikkakk.github.io/everyup/%EC%98%88%EC%95%BD%ED%86%B5%EA%B3%84.html"; // 예약통계.html (원장·실장·부실장 전용)
@@ -394,6 +396,11 @@ $("goInventory").onclick=()=>{ location.href = INVENTORY_URL; };
 $("goChecklist").onclick=()=>{
   try{ sessionStorage.setItem('everyup_checklist_user',JSON.stringify({name:cur.name,part:cur.part||'',pw:sessionPw,at:Date.now()})); }catch(e){}
   location.href = CHECKLIST_URL;
+};
+$("goManual").onclick=()=>{
+  // 시술준비 매뉴얼: 구성원 모두 접근 · 계정별 마지막 탭 기억을 위해 사용자 정보 전달
+  try{ sessionStorage.setItem('everyup_manual_user',JSON.stringify({name:cur.name,part:cur.part||'',at:Date.now()})); }catch(e){}
+  location.href = MANUAL_URL;
 };
 $("goAttendance").onclick=()=>{
   // 로그인(원장님)을 거쳐 들어간다는 신호를 직원관리 앱에 전달 (같은 사이트 세션 저장소)

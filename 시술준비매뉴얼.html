@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시술준비 매뉴얼</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#F4F5F7; --surface:#FFFFFF; --ink:#14161B; --muted:#697180; --faint:#98A0AD;
+  --line:#E6E8EC; --line2:#EEF0F3;
+  --eq:#0E8074; --eq-tint:#E3F1EF; --eq-ink:#0A5E55;      /* 장비 */
+  --inj:#5A4FC7; --inj-tint:#ECEAFB; --inj-ink:#443AA0;   /* 주사제 */
+  --iv:#2563C9;  --iv-tint:#E4ECFB;  --iv-ink:#1D4FA6;    /* 수액제 */
+  --nz:#B26A00;  --nz-tint:#FAEFD9;  --nz-ink:#8A5200;    /* 간호준비 */
+  --sk:#C2477A;  --sk-tint:#FBE7F0;  --sk-ink:#9B3360;    /* 피부관리 */
+  /* 카테고리 색 (장비→피부관리) */
+  --r1:#E23B3B; --r1t:#FCEBEB; --r1i:#A32D2D;  /* 장비 빨강 */
+  --r2:#E8792A; --r2t:#FBEEE1; --r2i:#9E4E12;  /* 주사제 주황 */
+  --r3:#D14D8B; --r3t:#FBE9F1; --r3i:#9B3364;  /* 실리프팅 로즈 */
+  --r4:#EAB308; --r4t:#FBF3D6; --r4i:#8A6608;  /* 수액 노랑 */
+  --r5:#2E9E4F; --r5t:#E7F4EC; --r5i:#1E7A44;  /* 간호준비 초록 */
+  --r6:#2E72D2; --r6t:#E4EEFB; --r6i:#1D4FA6;  /* 피부관리 파랑 */
+  --rgray:#6B7280; --rgrayt:#F0F1F3; --rgrayi:#4B515C; /* 삭제항목 회색 */
+  --shadow:0 1px 2px rgba(20,22,27,.04), 0 8px 24px rgba(20,22,27,.06);
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:"Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased;padding-bottom:56px}
+.mono{font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+
+/* Topbar */
+.topbar{position:sticky;top:0;z-index:30;background:rgba(244,245,247,.85);backdrop-filter:saturate(1.8) blur(12px);border-bottom:1px solid var(--line)}
+.topbar-inner{max-width:1120px;margin:0 auto;padding:14px 20px 12px}
+.brandbar{display:flex;align-items:center;gap:11px}
+.logo{height:34px;width:auto;display:block}
+.divider{width:1px;height:24px;background:var(--line);flex:0 0 auto}
+.brandbar h1{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.brand-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.today{font-size:12px;font-weight:600;color:var(--faint);white-space:nowrap}
+.sync-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;transition:.15s}
+.sync-pill .dot{width:7px;height:7px;border-radius:50%;background:#C6CBD3}
+.sync-pill[data-s="ok"]{color:var(--eq-ink);border-color:var(--eq-tint);background:var(--eq-tint)}
+.sync-pill[data-s="ok"] .dot{background:var(--eq)}
+.sync-pill[data-s="syncing"]{color:var(--inj-ink)}
+.sync-pill[data-s="syncing"] .dot{background:var(--inj);animation:pulse 1s infinite}
+.sync-pill[data-s="error"]{color:#B4472F;background:#FBE7E1;border-color:#F3D3CA}
+.sync-pill[data-s="error"] .dot{background:#C0492E}
+.sync-pill[data-s="off"]{color:var(--nz-ink);background:var(--nz-tint);border-color:#F0DCB8}
+.sync-pill[data-s="off"] .dot{background:var(--nz)}
+@keyframes pulse{50%{opacity:.35}}
+.search{position:relative;margin-top:12px}
+.search input{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 14px 12px 42px;font-size:15px;font-family:inherit;color:var(--ink);transition:border-color .15s, box-shadow .15s}
+.search input:focus{outline:none;border-color:var(--eq);box-shadow:0 0 0 3px var(--eq-tint)}
+.search input::placeholder{color:var(--faint)}
+.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--faint)}
+.tabs{display:flex;gap:6px;margin-top:12px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:7px 14px;font-size:13.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;transition:.15s;font-family:inherit}
+.tab .n{font-size:12px;color:inherit;opacity:.62;font-weight:700}
+.tab:hover{filter:brightness(.97)}
+/* 기본(resting) 색 */
+.tab[data-d="장비"]{background:var(--r1t);border-color:var(--r1t);color:var(--r1i)}
+.tab[data-d="주사제"]{background:var(--r2t);border-color:var(--r2t);color:var(--r2i)}
+.tab[data-d="실리프팅"]{background:var(--r3t);border-color:var(--r3t);color:var(--r3i)}
+.tab[data-d="수액"]{background:var(--r4t);border-color:var(--r4t);color:var(--r4i)}
+.tab[data-d="간호준비"]{background:var(--r5t);border-color:var(--r5t);color:var(--r5i)}
+.tab[data-d="피부관리"]{background:var(--r6t);border-color:var(--r6t);color:var(--r6i)}
+.tab[data-d="전체"]{background:#EAEBEE;border-color:#EAEBEE;color:#3A3D44}
+.tab[data-d="삭제항목"]{background:var(--rgrayt);border-color:var(--rgrayt);color:var(--rgrayi)}
+/* 선택(filled) 색 */
+.tab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.tab[data-d="장비"][aria-selected="true"]{background:var(--r1);border-color:var(--r1);color:#fff}
+.tab[data-d="주사제"][aria-selected="true"]{background:var(--r2);border-color:var(--r2);color:#fff}
+.tab[data-d="실리프팅"][aria-selected="true"]{background:var(--r3);border-color:var(--r3);color:#fff}
+.tab[data-d="수액"][aria-selected="true"]{background:var(--r4);border-color:var(--r4);color:#5A4300}
+.tab[data-d="간호준비"][aria-selected="true"]{background:var(--r5);border-color:var(--r5);color:#fff}
+.tab[data-d="피부관리"][aria-selected="true"]{background:var(--r6);border-color:var(--r6);color:#fff}
+.tab[data-d="전체"][aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.tab[data-d="삭제항목"][aria-selected="true"]{background:var(--rgray);border-color:var(--rgray);color:#fff}
+
+/* Toolbar */
+main{max-width:1120px;margin:0 auto;padding:18px 20px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.count{font-size:13px;color:var(--muted)}
+.count b{color:var(--ink);font-weight:700}
+.toolbar-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.tbtn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:9px;padding:8px 11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap}
+.tbtn:hover{border-color:#D3D7DE;color:var(--ink)}
+.tbtn svg{width:15px;height:15px}
+.tbtn .tcount{background:rgba(255,255,255,.6);color:inherit;border-radius:6px;padding:0 6px;font-size:11px;margin-left:1px}
+.tbtn.c-save{background:#12A05C;border-color:#12A05C;color:#fff}
+.tbtn.c-save:hover{filter:brightness(1.07);color:#fff}
+.tbtn.c-excel{background:#E7F4EC;border-color:#C3E4D0;color:#1E7A44}
+.tbtn.c-excel:hover{border-color:#1E7A44;color:#155C33}
+.tbtn.c-json{background:var(--inj-tint);border-color:#D8D3F5;color:var(--inj-ink)}
+.tbtn.c-json:hover{border-color:var(--inj);color:var(--inj-ink)}
+.tbtn.c-trash{background:#FBEEEA;border-color:#F3D3CA;color:#B4472F}
+.tbtn.c-trash:hover{border-color:#B4472F;color:#8F3623}
+.tbtn.c-set{background:#EEF1F6;border-color:#DAE0EA;color:#3D5573}
+.tbtn.c-set:hover{border-color:#3D5573;color:#2C405A}
+.tbtn.warn:hover{border-color:#F3D3CA;color:#B4472F;background:#FBE7E1}
+.addbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--eq);background:var(--eq);color:#fff;border-radius:9px;padding:8px 13px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap}
+.addbtn:hover{filter:brightness(1.06)}
+.addbtn svg{width:15px;height:15px}
+
+/* Grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(216px,1fr));gap:11px}
+.card{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;cursor:pointer;font-family:inherit;color:inherit;transition:transform .12s, box-shadow .12s, border-color .12s;display:flex;flex-direction:column;gap:7px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--line)}
+.card[data-d="장비"]::before{background:var(--r1)}
+.card[data-d="주사제"]::before{background:var(--r2)}
+.card[data-d="실리프팅"]::before{background:var(--r3)}
+.card[data-d="수액"]::before{background:var(--r4)}
+.card[data-d="간호준비"]::before{background:var(--r5)}
+.card[data-d="피부관리"]::before{background:var(--r6)}
+.card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:#DADEE4}
+.card:focus-visible{outline:2px solid var(--eq);outline-offset:2px}
+.card.off{opacity:.58}
+.card-top{display:flex;align-items:center;gap:7px}
+.badge{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--line2);color:var(--muted)}
+.badge-장비{background:var(--r1t);color:var(--r1i)}
+.badge-주사제{background:var(--r2t);color:var(--r2i)}
+.badge-실리프팅{background:var(--r3t);color:var(--r3i)}
+.badge-수액{background:var(--r4t);color:var(--r4i)}
+.badge-간호준비{background:var(--r5t);color:var(--r5i)}
+.badge-피부관리{background:var(--r6t);color:var(--r6i)}
+.card-cat{font-size:11.5px;color:var(--faint);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card h3{font-size:16.5px;font-weight:800;letter-spacing:-.01em;line-height:1.25}
+.card .tag{font-size:12.5px;color:var(--muted);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-metas{display:flex;flex-wrap:wrap;gap:5px;margin-top:1px}
+.meta{font-size:11px;font-weight:600;color:var(--muted);background:var(--line2);border-radius:5px;padding:2px 7px;display:inline-flex;align-items:center;gap:3px}
+.meta.rx{color:var(--inj-ink);background:var(--inj-tint)}
+.meta .mlabel{font-weight:800;color:var(--faint);margin-right:3px}
+.meta.off{color:#B4472F;background:#FBE7E1}
+.empty{text-align:center;padding:70px 20px;color:var(--muted);grid-column:1/-1}
+.empty h3{font-size:17px;color:var(--ink);margin-bottom:6px}
+
+/* Modal / sheet */
+.modal{position:fixed;inset:0;z-index:50;display:none}
+.modal.open{display:block}
+.scrim{position:absolute;inset:0;background:rgba(20,22,27,.42);backdrop-filter:blur(2px);animation:fade .2s}
+.sheet{position:absolute;right:0;top:0;bottom:0;width:min(580px,100%);background:var(--surface);box-shadow:-8px 0 40px rgba(20,22,27,.16);overflow-y:auto;animation:slide .28s cubic-bezier(.2,.7,.2,1)}
+@keyframes fade{from{opacity:0}}
+@keyframes slide{from{transform:translateX(24px);opacity:.5}}
+.sheet-head{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);padding:18px 140px 14px 22px;z-index:2}
+.sheet-head .card-top{margin-bottom:8px}
+.sheet-head h2{font-size:23px;font-weight:800;letter-spacing:-.02em}
+.sheet-head .tag{font-size:14px;color:var(--muted);margin-top:4px}
+.sheet-metas{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.head-actions{position:absolute;top:14px;right:14px;display:flex;gap:8px;z-index:6}
+.icon-btn{width:34px;height:34px;border:none;background:var(--line2);border-radius:9px;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:.15s}
+.icon-btn:hover{background:#E2E5EA;color:var(--ink)}
+.edit-btn{width:auto;padding:0 14px;gap:6px;font-size:13.5px;font-weight:700;background:var(--ink);color:#fff}
+.edit-btn:hover{background:#000;color:#fff}
+.edit-btn svg{width:15px;height:15px}
+.sheet-body{padding:8px 22px 44px}
+.sec{padding:9px 0;border-bottom:1px solid var(--line2)}
+.sec:last-child{border-bottom:none}
+.sec-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:7px}
+.sec-h::before{content:"";width:6px;height:6px;border-radius:2px;background:var(--eq)}
+.sheet[data-d="장비"] .sec-h::before{background:var(--r1)}
+.sheet[data-d="주사제"] .sec-h::before{background:var(--r2)}
+.sheet[data-d="실리프팅"] .sec-h::before{background:var(--r3)}
+.sheet[data-d="수액"] .sec-h::before{background:var(--r4)}
+.sheet[data-d="간호준비"] .sec-h::before{background:var(--r5)}
+.sheet[data-d="피부관리"] .sec-h::before{background:var(--r6)}
+.eff{display:flex;flex-wrap:wrap;gap:6px}
+.eff span{font-size:13.5px;font-weight:600;color:var(--ink);background:var(--line2);border-radius:999px;padding:4px 11px}
+.plist{display:flex;flex-direction:column;gap:1px}
+.pitem{display:flex;gap:11px;align-items:flex-start;padding:5px 10px;border-radius:9px;cursor:pointer;transition:background .12s}
+.pitem:hover{background:var(--line2)}
+.pbox{flex:0 0 20px;width:20px;height:20px;border:2px solid #CBD0D8;border-radius:6px;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:.12s}
+.pbox svg{width:12px;height:12px;stroke:#fff;stroke-width:3;opacity:0}
+.pitem.done .pbox{background:var(--eq);border-color:var(--eq)}
+.pitem.done .pbox svg{opacity:1}
+.pitem.done .ptext{color:var(--faint);text-decoration:line-through}
+.ptext{font-size:14px;line-height:1.45}
+.prep-reset{margin-top:6px;font-size:12.5px;font-weight:600;color:var(--muted);background:none;border:none;cursor:pointer;font-family:inherit;padding:3px 0;text-decoration:underline;text-underline-offset:3px}
+.prep-reset:hover{color:var(--ink)}
+.steps{counter-reset:s;display:flex;flex-direction:column}
+.step{display:flex;gap:12px;padding:6px 0;border-bottom:1px dashed var(--line2)}
+.step:last-child{border-bottom:none}
+.step .num{counter-increment:s;flex:0 0 24px;height:24px;border-radius:7px;background:var(--eq-tint);color:var(--eq-ink);font-size:12.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.sheet[data-d="장비"] .step .num{background:var(--r1t);color:var(--r1i)}
+.sheet[data-d="주사제"] .step .num{background:var(--r2t);color:var(--r2i)}
+.sheet[data-d="실리프팅"] .step .num{background:var(--r3t);color:var(--r3i)}
+.sheet[data-d="수액"] .step .num{background:var(--r4t);color:var(--r4i)}
+.sheet[data-d="간호준비"] .step .num{background:var(--r5t);color:var(--r5i)}
+.sheet[data-d="피부관리"] .step .num{background:var(--r6t);color:var(--r6i)}
+.step .num::before{content:counter(s)}
+.step .txt{font-size:14px;line-height:1.45;padding-top:2px}
+.mixbox{white-space:pre-wrap;background:linear-gradient(180deg,#FBFCFD,#F6F8FA);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.55;color:var(--ink)}
+.dose-t{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px}
+table.dose{width:100%;border-collapse:collapse;font-size:13px}
+table.dose th{text-align:left;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);font-weight:700;padding:7px 10px;border-bottom:1.5px solid var(--line)}
+table.dose td{padding:9px 10px;border-bottom:1px solid var(--line2);vertical-align:top;line-height:1.45}
+table.dose td:first-child{font-weight:700;white-space:nowrap}
+table.dose tr:last-child td{border-bottom:none}
+.ul{list-style:none;display:flex;flex-direction:column;gap:4px}
+.ul li{font-size:14px;line-height:1.45;padding-left:16px;position:relative;color:var(--ink)}
+.ul li::before{content:"";position:absolute;left:0;top:8px;width:5px;height:5px;border-radius:50%;background:#C6CBD3}
+.ul.note li{color:var(--muted);font-size:13.5px}
+.ul.after li::before{background:var(--nz)}
+.modes{display:flex;flex-direction:column;gap:5px}
+.mode{display:flex;gap:10px;align-items:center;font-size:14px;background:var(--line2);border-radius:9px;padding:6px 12px}
+
+/* Edit form */
+.edit-body{padding:18px 22px 120px}
+.ef{margin-bottom:16px}
+.ef-label{display:block;font-size:12px;font-weight:800;letter-spacing:.05em;color:var(--faint);text-transform:uppercase;margin-bottom:7px}
+.ef input[type=text],.ef textarea,.ef select{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:14px;font-family:inherit;color:var(--ink);background:var(--surface);transition:border-color .15s,box-shadow .15s}
+.ef input:focus,.ef textarea:focus,.ef select:focus{outline:none;border-color:var(--eq);box-shadow:0 0 0 3px var(--eq-tint)}
+.ef textarea{resize:vertical;min-height:56px;line-height:1.5}
+.ef-row{display:flex;gap:10px;flex-wrap:wrap}
+.ef-row .ef{flex:1;min-width:120px}
+.ef-hint{font-size:11.5px;color:var(--faint);margin-top:5px}
+.chk{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;cursor:pointer;padding:8px 0}
+.chk input{width:18px;height:18px;accent-color:var(--eq)}
+.subcard{border:1px solid var(--line);border-radius:12px;padding:14px;background:#FAFBFC}
+.dgrid{display:flex;flex-direction:column;gap:6px}
+.dgrid .drow{display:flex;gap:6px}
+.dgrid .drow input{flex:1;padding:8px 9px;font-size:13px;border:1px solid var(--line);border-radius:7px;font-family:inherit}
+.dgrid .drow.head input{font-weight:700;background:var(--line2)}
+.line-del{flex:0 0 34px;width:34px;height:36px;border:1px solid var(--line);background:var(--surface);border-radius:8px;color:var(--faint);cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center}
+.line-del:hover{background:#FBE7E1;border-color:#F3D3CA;color:#B4472F}
+.mini-btns{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.mini-btn{border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:7px;padding:6px 10px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
+.mini-btn:hover{border-color:var(--eq);color:var(--eq-ink)}
+.edit-actions{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:14px 22px;display:flex;gap:10px;align-items:center;z-index:3;margin:0 -22px}
+.btn{border:none;border-radius:10px;padding:12px 18px;font-size:14.5px;font-weight:800;cursor:pointer;font-family:inherit;transition:.15s}
+.btn-save{background:var(--eq);color:#fff;flex:1}
+.btn-save:hover{filter:brightness(1.06)}
+.btn-cancel{background:var(--line2);color:var(--muted)}
+.btn-cancel:hover{background:#E2E5EA;color:var(--ink)}
+.btn-del{background:#FBECEA;color:#B4472F;border:1px solid #F1CFC7;margin-right:auto;padding:12px 16px;border-radius:10px}
+.btn-del:hover{background:#F6DBD5;border-color:#E3B3A8}
+
+/* Trash / backup view */
+.mgr-sec{padding:18px 0;border-bottom:1px solid var(--line2)}
+.mgr-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px dashed var(--line2)}
+.mgr-row:last-child{border-bottom:none}
+.mgr-row .info{flex:1;min-width:0}
+.mgr-row .nm{font-size:14.5px;font-weight:700}
+.mgr-row .sub{font-size:12px;color:var(--faint);margin-top:2px}
+.mgr-row .acts{display:flex;gap:6px}
+.sbtn{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:8px;padding:7px 11px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap}
+.sbtn:hover{border-color:#D3D7DE;color:var(--ink)}
+.sbtn.warn{color:#B4472F}
+.sbtn.warn:hover{background:#FBE7E1;border-color:#F3D3CA}
+.mgr-empty{color:var(--faint);font-size:13.5px;padding:8px 0}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 20px;border-radius:12px;font-size:14px;font-weight:700;opacity:0;pointer-events:none;transition:.25s;z-index:100;box-shadow:var(--shadow)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+footer{max-width:1120px;margin:0 auto;padding:0 20px;text-align:center}
+.foot{border-top:1px solid var(--line);margin-top:24px;padding:20px 0;color:var(--faint);font-size:12.5px;line-height:1.6}
+
+@media (max-width:640px){
+  .brandbar h1{font-size:18px}
+  main{padding:14px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px}
+  .card{padding:12px}.card h3{font-size:15px}
+  .sheet{width:100%}
+  .sheet-body,.edit-body{padding-left:18px;padding-right:18px}
+  .sheet-head{padding:18px 120px 14px 18px}
+  .edit-actions{margin:0 -18px;padding:14px 18px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brandbar">
+      <img class="logo" src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원">
+      <span class="divider"></span>
+      <h1>시술준비 매뉴얼</h1>
+      <div class="brand-right">
+        <span class="today" id="today"></span>
+        <button class="sync-pill" id="syncPill" data-s="off" title="동기화 상태"><span class="dot"></span><span id="syncText">오프라인</span></button>
+      </div>
+    </div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="q" type="search" placeholder="시술·약제·효과 검색 (예: 리투오, 톤업, 마취)" autocomplete="off">
+    </div>
+    <div class="tabs" id="tabs" role="tablist"></div>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="count" id="count"></div>
+    <div class="toolbar-actions">
+      <button class="tbtn c-save" id="saveBtn" title="지금 클라우드에 저장"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>저장</button>
+      <button class="tbtn c-excel" id="xlsxBtn" title="엑셀로 내보내기">엑셀</button>
+      <button class="tbtn c-json" id="jsonBtn" title="JSON 백업 내보내기">JSON</button>
+      <button class="tbtn c-trash" id="trashBtn" title="삭제함 · 백업"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>삭제<span class="tcount" id="trashN">0</span></button>
+      <button class="tbtn c-set" id="setBtn" title="분야·분류·장소 관리"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>설정</button>
+      <button class="addbtn" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>새 항목</button>
+    </div>
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer><div class="foot" id="foot"></div></footer>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true"><div class="scrim" data-close></div><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+<input type="file" id="jsonFile" accept="application/json,.json" style="display:none">
+<input type="file" id="xlsxFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">
+
+<script>
+// 에브리업의원 시술 준비 통합 데이터
+// domain: 장비 | 주사제 | 조제
+// 필드: id,name,domain,cat,room,tag,anes,time,rx,effects,prep,setting,recipe,mix,steps,dose,charting,after,notes,active
+let DATA = [
+/* ==================== 장비 ==================== */
+{
+  id:"bbl", name:"BBL", domain:"장비", cat:"레이저", room:"레이져실",
+  tag:"광채 톤업 리프팅 · 색소 · 타이트닝", anes:"기본 없음 (막시는 마취크림)", time:"", rx:false,
+  effects:["톤업 (forever young)","주근깨·잡티·개별 색소·홍조","여드름","탄력·타이트닝 (skintyte)","제모"],
+  prep:["초음파 겔","스파츌라","BBL 본체 및 팁 (3종)","보호안경 — 원장님·간호사·고객","흰색 수건"],
+  modes:["1모드 — 전체 톤업 (forever young)","2모드 — 개별 색소·홍조·여드름","3모드 — 타이트닝 (skintyte)"],
+  steps:[
+    "고객을 레이저실로 안내",
+    "터번 착용 — 겔 사용량 많으므로 귀까지 충분히 덮어 단단히 고정",
+    "헤어라인 보호 — 눈썹·헤어라인 등 털 노출 부위 의료용 테이프 (짧게 여러 번)",
+    "겔 도포 — 얼굴 전체 균일하게, 마르지 않도록 충분히",
+    "보호안경 준비 (원장님·간호사·고객)",
+    "모든 준비 완료 후 원장님 호출",
+    "원장님이 고객 보호안경 착용시킨 후 시술 시작",
+    "시술 보조 — 겔 추가·팁 교체 (1모드 적당량 오른쪽>왼쪽>이마코 / 2모드 얇게 / 3모드 약간 두껍게, 흘러내리면 올리기)",
+    "시술 종료 — 보호안경 제거 후 겔 깨끗이 닦기",
+    "마무리 — 상태 확인, 후처치 및 주의사항 안내"
+  ],
+  charting:["핸드피스·금속커버 깨끗이 닦아두기","매일 필터를 알코올로 닦기"],
+  notes:[
+    "3단계(타이트닝) — 목걸이·귀걸이 등 금속 액세서리 모두 제거 후 진행 (젤). 시술 전 반드시 안내",
+    "막시(Maxi) — 반드시 마취크림 도포 후 진행. 겔 바르지 않음, 막시 팁만 준비. 터번·테이핑 안 해도 됨"
+  ], active:true
+},
+{
+  id:"toning", name:"토닝 (레블라이트)", domain:"장비", cat:"레이저", room:"레이져실",
+  tag:"색소 토닝 · 기미·주근깨·잡티", anes:"필요시만 (532·CO2 병행/통증 민감자)", time:"평균 8~10분 · 약 4000샷", rx:false,
+  effects:["기미·주근깨·잡티","검버섯·오타모반","흑자","전체 토닝"],
+  setting:["아침에 한 번 켜고 3분 후 왼쪽으로 돌려 대기 상태, 퇴근 시 끄기","마취는 필요한 경우만"],
+  prep:["발스위치","(필요시) 마취크림"],
+  steps:[
+    "장비 예열 — 스위치 오른쪽으로 약 2분, 발스위치 준비",
+    "환자 레이저실로 모시기",
+    "눈썹·눈 가리기 → 조명 켜기",
+    "원장님 호출 (시술 시작 시 타이머 켜기)",
+    "시술 후 이동 → 장비 정리",
+    "토닝 샷수 등 원장님 설명 차트 기재"
+  ],
+  dose:{title:"레이저 종류별 사용", head:["파장","용도"], rows:[
+    ["6.0","얕은 주근깨·잡티·흑자·전체 토닝"],
+    ["7.0","단발성"],
+    ["8.0","깊은 주근깨·기미·잡티·전체 토닝"],
+    ["532","주근깨·흑자·잡티 (센 에너지)"]
+  ]},
+  charting:["1단계 6.0-3.0 (샷수 기재), 2단계 8.0-3.2 (샷수 기재)","원장님 시술 순서: 6.0 → 8.0, 왼쪽 > 이마 > 오른쪽"],
+  after:["썬크림·보습 강조","532 흑자 큰 것은 듀오덤 (원장님 지시), 작은 것은 리도멕스 처방 안내"],
+  notes:["시술 순서: 자가세안 > 스크러버 > (마취) > 토닝 > 재생레이저 > 모델링 > 마무리","시술 중 옆에 없어도 됨 (CCTV로 끝날 때쯤 입실, 또는 벨)"],
+  active:true
+},
+{
+  id:"co2", name:"CO2", domain:"장비", cat:"레이저", room:"레이져실",
+  tag:"점 · 비립종 제거", anes:"크림마취 20분", time:"", rx:false,
+  effects:["점·비립종","한관종·피지샘증식증","흑자 제거"],
+  prep:["CO2 (발스위치)","석션기","반달 트레이 (보릭, 마이크로 포셉)"],
+  steps:[
+    "장비 켜기, 조명 켜기, 석션기 준비",
+    "환자 준비 → 얼굴 보릭 소독",
+    "원장님 호출 → 시술",
+    "CO2 진행 시 석션기 가동, 보릭 수시 교환",
+    "듀오덤 붙이기",
+    "환자 이동 및 뒷정리"
+  ],
+  charting:["점·비립종 갯수 및 원장님 설명 차트 기재"],
+  after:["관리: 팩(15분) → LED 레드 → 마무리","듀오덤 최소 1주일 이상 교체하지 말고 붙이기 (강조)","떨어지면 바로 붙이기"],
+  notes:["보릭은 물이 거의 없게 짜서 준비","듀오덤은 시술 후 바로 또는 이동 후 부착 가능"],
+  active:true
+},
+{
+  id:"sunny", name:"써니", domain:"장비", cat:"고주파", room:"쁘띠실",
+  tag:"고주파 리프팅 (써마지 계열)", anes:"없음", time:"기본 600샷 15분 / 1000샷 25분", rx:false,
+  effects:["고주파 리프팅","잔주름·모공","탄력·미백"],
+  setting:["써니 전용 고주파 오일","시작 전 팁 잔여 샷수 확인 — 얼마 안 남았으면 미리 준비","냉각 가스 이상 없는지 확인"],
+  prep:["써니 전용 고주파 오일","발스위치","패치"],
+  steps:[
+    "장비 켜기, 발스위치 준비",
+    "환자 모시기 → 반지·귀걸이·핸드폰 등 금속 모두 제거 (따로 보관)",
+    "패치 부착 (목쪽 등)",
+    "원장님 호출 → 얼굴·턱라인·관자부위·두피 오일 도포",
+    "원장님 시술",
+    "오일 닦기 → 환자 이동 및 뒷정리"
+  ],
+  charting:["써니팁 / 리프팅모드 / 토닝모드 에너지 레벨·샷수 차팅","시술 전 600샷 아닌 경우 원장님께 샷수 알려드리기","목까지 하는 경우 따로 기록"],
+  after:["약간 붉어짐","시술 후 크라이오 등 차가운 관리 불가"],
+  notes:["효과: 3~4주 후부터 \"화장이 잘 먹어요\" 라고 많이 느끼심","원장 순서(600s): 오른쪽 써니팁100 > 퀘이샤 리프팅100 > 퀘이샤 토닝100 > 왼쪽 동일","원장 순서(1000s): 각 150샷씩 > 이마코 100샷"],
+  active:true
+},
+{
+  id:"inmode", name:"인모드", domain:"장비", cat:"고주파", room:"쁘띠실",
+  tag:"고주파 탄력 리프팅", anes:"", time:"", rx:false,
+  effects:["고주파 탄력 리프팅"],
+  steps:["mini > body 순으로 진행"],
+  charting:["샷수 및 포마 K 차팅"],
+  notes:["fx팁 매뉴얼대로 맞춰놓기"],
+  active:true
+},
+{
+  id:"potenza", name:"포텐자", domain:"장비", cat:"고주파", room:"쁘띠실",
+  tag:"미세바늘 고주파", anes:"마취 필요", time:"풀페이스 300~400샷 · 15~20분", rx:false,
+  effects:["모공","여드름","기미","잔주름"],
+  prep:["N25 (모공팁) — 모공·탄력, 가장 많이 사용","I25 (여드름팁) — 여드름","원니들팁 — 여드름 (가끔)","CP25 (펌핑팁) — 우리는 사용 안 함","패치 (목쪽 등)"],
+  steps:[
+    "장비 켜고 모드(LPOR/ACN) 맞추고 발스위치 준비",
+    "자가세안 → 마취 20분 → 이동",
+    "반지·귀걸이·핸드폰 등 금속 모두 제거",
+    "패치 부착 (목쪽 등) → 보릭으로 얼굴 소독",
+    "팁 확인 및 장착 → 원장님 호출",
+    "원장님 시술 → 환자 이동 및 뒷정리"
+  ],
+  charting:["팁 종류, 샷수 기록"],
+  after:["다음날부터 화장·세안 가능","재생크림 있으면 듬뿍 바르기"],
+  notes:["보통 포텐자 후 바로 레스노베(3ml) 또는 세렉소(3ml) 도포하는 경우가 대부분"],
+  active:true
+},
+{
+  id:"liftera", name:"리프테라", domain:"장비", cat:"초음파", room:"쁘띠실",
+  tag:"초음파(HIFU) 탄력", anes:"없음", time:"약 15분", rx:false,
+  effects:["근막층·피부층 콜라겐 합성 증가","탄력"],
+  prep:["초음파 젤"],
+  steps:[
+    "장비 켜기, 세팅",
+    "환자 모시기 → 얼굴·턱밑 젤 도포",
+    "원장님 호출 → 시술",
+    "젤 닦기 → 환자 이동 및 뒷정리"
+  ],
+  charting:["팁 종류, 샷수 차팅"],
+  active:true
+},
+{
+  id:"neoface", name:"네오페이스", domain:"장비", cat:"고주파", room:"쁘띠실",
+  tag:"EMS 근육 리프팅 + 고주파", anes:"없음", time:"15분", rx:false,
+  effects:["3가지 파장 근육 리프팅","피부 탄력 강화"],
+  prep:["네오페이스용 크림"],
+  steps:[
+    "장비 켜기 → 세팅",
+    "환자 모시기 (악세서리 제거 안 함) → 터번 착용",
+    "크림 바르기 (턱밑·양쪽 얼굴, 이마는 나중에)",
+    "원장님 호출 → 시술 (얼굴 → 이마)",
+    "크림 닦기"
+  ],
+  charting:["중간중간 원장님이 알려주면 에너지값 기록"],
+  notes:["시술 중 옆에 없어도 됨","시술시간 15분, 아닌 경우 원장님이 직접 세팅"],
+  active:true
+},
+{
+  id:"finewave", name:"파인웨이브", domain:"장비", cat:"기타", room:"쁘띠실",
+  tag:"지방감소 리프팅 (극초단파)", anes:"없음", time:"", rx:false,
+  effects:["지방감소 리프팅 (마이크로웨이브)"],
+  prep:["파인웨이브용 오일"],
+  steps:[
+    "장비 위치 맞추고 켜기",
+    "환자 모시기 (악세서리 제거 안 함) 및 준비 → 원장님 호출",
+    "오일 얇게 바르기 (턱밑·양쪽 얼굴, 이마는 안 함)",
+    "원장님 시술 (양쪽) → 오일 닦고 마무리"
+  ],
+  notes:["시술 중 옆에 없어도 됨"],
+  active:true
+},
+{
+  id:"silthread", name:"실리프팅", domain:"장비", cat:"리프팅시술", room:"시술실",
+  tag:"실 리프팅 · 처짐 · 얼굴라인", anes:"국소마취 (투메슨트)", time:"", rx:true,
+  effects:["처짐·얼굴라인 리프팅"],
+  prep:[
+    "별도 카트 — 네임펜, 디자인펜, 국소마취 mix 5cc 2개, 멸균장갑 2개 (6.5·6 사이즈)",
+    "실리프팅 세트 (소독포 위) — 트레이, 컷 시져, 커브 모스키토, 에디슨 포셉, 18G 니들(펑처), 실",
+    "2*2 거즈, 4*4 거즈, 코튼볼(대·소) 2개, 공포, 일회용 수술모자(원장·간호), 토시",
+    "베타딘(코튼볼 적셔두기), 테이프, 보릭, 덱사+겐타 IM, 리비탈렉스(PDRN) 0.3cc",
+    "실은 원장님이 준비 중에 미리 준비해 줌"
+  ],
+  recipe:{title:"실팅용 국소마취 Mix (투메슨트, total 71ml)", parts:[
+    {n:"NS 100ml 백 (60 제거)", q:"40"},{n:"2% 리도카인", q:"20"},{n:"탄산수소나트륨", q:"10"},{n:"에피네프린", q:"1"}
+  ], total:"71 ml", note:"당일만 사용, 남은 것·에피네프린·탄산수소나트륨 당일 폐기 · 실팅은 5cc 시린지에 소분(29G/50mm), 펑쳐용은 1ml 시린지 33G/4mm"},
+  steps:[
+    "환자 시술실 모시기 (앉은 상태) → 원장님 콜",
+    "디자인(원장) → 마취(원장) → 머리 테이핑",
+    "제파논으로 얼굴 전체 소독 (디자인 안 지워지도록)",
+    "베타딘 테이핑 위 소독 → 알코올로 시술부위 주변 소독 → 원장님 콜",
+    "펑쳐 부위 베타딘 소독(원장) → 18G 니들 전달(펑쳐) → 실 뚜껑 살짝 열어드리기",
+    "실 주입 후 캐뉼라 트레이에 받기, 출혈 시 거즈로 지혈",
+    "오른쪽 시술 후 왼쪽 → 마지막에 리비탈렉스 주사",
+    "보릭으로 얼굴 닦기 → 덱사·겐타 IM → 재생레이저(20분)",
+    "후관리 → 원장님 콜, 환자 얼굴 최종 체크",
+    "펑처 부분 듀오덤 → 사진 촬영 후 종료"
+  ],
+  dose:{title:"실 개수", head:["시술","실"], rows:[
+    ["미니 팔자","리버스 10 — 6줄"],
+    ["미니 마리오넷","리버스 10 — 6줄"],
+    ["기본 팔자","리버스 10 6줄, 리버스 7 10줄"],
+    ["기본 마리오넷","리버스 10 12줄, 모노 20줄"],
+    ["팔자 + 마리오넷","리버스 10 18줄, 리버스 7 10줄, 모노 20줄"],
+    ["팔자+마리오넷+이중턱","위 + 올리고 3줄"]
+  ]},
+  charting:["시술 전후 모두 메타뷰 + 캐논 사진 촬영","약처방 있음"],
+  notes:[
+    "STEP1 준비물 — 실 종류·기구 누락 확인, 투메(마취) 준비. 마취제는 멸균포에 놓으면 안 됨",
+    "STEP2 멸균포 — 바깥면만 잡고 펼침, 안쪽 멸균면 접촉 금지",
+    "STEP3 기구 배치 — 멸균 롱포셉으로만 배치, 자주 쓰는 기구 앞쪽 (포셉은 거의 사용 안 함)",
+    "STEP4 소독액 — 큰 솜=제파논 / 작은 솜=포비돈",
+    "STEP5 실 준비 — 필요한 실 개봉 후 멸균포에 올리기 (바닥 낙하·오염 주의)",
+    "STEP6 원장님 준비 — 멸균장갑 6.5 준비, 시술 직전 개봉",
+    "STEP7 최종 세팅 — 수술모자 착용 → 잔머리 테이핑 → 디자인 → 마취 → 멸균장갑 착용 후 소독(모스키토+큰솜 전체, 작은솜 펑처부위+헤어라인+구레나룻) → 팔토시 → 얼굴포 → 4×4 거즈 2장",
+    "얼굴 소독 후 고객님께 얼굴 위로 손 올리지 않도록 안내 (오염 시 재소독)"
+  ], active:true
+},
+{
+  id:"hycox", name:"하이쿡스", domain:"장비", cat:"주입기", room:"시술실",
+  tag:"약물 주입기 (스킨부스터·스킨보톡스)", anes:"크림마취 20~30분", time:"풀페이스 10~25분", rx:false,
+  effects:["스킨부스터·스킨보톡스 주입 (통증 감소 작은 니들)"],
+  setting:[
+    "팁: 31G(리투오·리쥬란) / 34G(스킨보톡스) — 원장님께 확인",
+    "3ml 시린지에 2.5 채워 사용 (리투오·스킨보톡스), 리쥬란은 주사기 그대로",
+    "세팅 저장 1번: 리투오·리쥬란 / 2번: 스킨보톡스",
+    "1샷당 0.03ml 넘지 않게 세팅 (샷수는 중요치 않음)"
+  ],
+  steps:[
+    "장비 켜기, 세팅, 팁·약물 장착",
+    "자가세안 → 마취 20~30분 → 이동",
+    "보릭으로 얼굴 소독 → 원장님 콜",
+    "원장님 시술 → 마무리 및 후관리"
+  ],
+  after:["바늘 자국 1~2일 정도 갈 수 있다고 안내"],
+  notes:["출혈 시 닦기(거즈), 새는 약물 흐르지 않도록 닦기"],
+  active:true
+},
+{
+  id:"support", name:"시술실 지원장비", domain:"장비", cat:"기타", room:"시술실",
+  tag:"초음파 · 산소포화도 · 산소통", anes:"", time:"", rx:false,
+  effects:["초음파 — 시술 전 피하조직·근막층 확인","산소포화도 — 수면마취 시 손가락 모니터링","산소통"],
+  active:true
+},
+
+/* ==================== 주사제 ==================== */
+{
+  id:"rituo", name:"리투오", domain:"주사제", cat:"스킨부스터", room:"",
+  tag:"엘라비에 리투오 · 재생·탄력 스킨부스터", anes:"국소마취 (투메)", time:"", rx:true,
+  effects:["재생·주름·탄력","속건조·잔주름","모공·색소 개선"],
+  prep:[
+    "10ml 루어락 시린지 2개, 1ml 일반 시린지 12개",
+    "25G/40mm 캐뉼라 2개, 23G 펑처니들, 30G/4mm (오리지날일 때)",
+    "마취용 투메 1ml 2개 (33G/4mm)"
+  ],
+  dose:{title:"타입별 mix", head:["타입","리투오","보톡스/투메","히알","투메"], rows:[
+    ["시그니처","10","2","힐로","6"],
+    ["프리미엄","10","2","웰스","5.3"],
+    ["에센셜","10","2","하이주","6"],
+    ["오리지널","6","3","—","3"]
+  ]},
+  steps:[
+    "환자 모시기 → 보릭으로 얼굴 전체 소독 → 원장님 콜",
+    "디자인 → 마취 (1ml 튜메 2개, 33G/4mm)",
+    "캐뉼라 시술 → 중간중간 출혈 시 닦기 → 시술 마무리"
+  ],
+  mix:[
+    "[오리지날] 리투오에 커넥터 연결, 5ml에 튜메 6ml 채워 반만 밀어넣기 → 30회 이상 흔들고 나머지 왕복 혼합",
+    "[베이직·프리미엄·시그니처] 리투오(가루)에 보톡스 1ml + 튜메 2ml → 30회 흔들기 → 기포 제거 → 하이주 2ml(또는 힐로·웰스) 혼합 → 10ml 루어락 이동 → 투메 추가로 10ml 맞춤 → 왕복 혼합 → 1ml 10개 소분",
+    "요약: 리투오 + 튜메 2 + 하이주 2 + 튜메 6 = 10ml"
+  ],
+  after:["전체: 자가세안 > 디자인 > 시술 > LDM > 재생레이저 > 모델링 > 멍크림 > 약처방 > 마무리"],
+  notes:["시린지 교체 시 끝에 공기 없도록 식염수로 채워 교체","공기 들어가지 않도록 매우 주의"],
+  active:true
+},
+{
+  id:"gowoori", name:"고우리", domain:"주사제", cat:"스킨부스터", room:"",
+  tag:"액상 PCL 리프팅 부스터", anes:"국소마취 (투메)", time:"", rx:true,
+  effects:["리프팅·재생","주름·탄력·속건조","잔주름·모공·색소 개선"],
+  recipe:{title:"수화", parts:[{n:"고우리 (1ml)",q:"1"},{n:"투메",q:"4"},{n:"하이주",q:"1"}], total:"6 ml",
+    note:"10ml 시린지 2개, 1ml 2개, 25G/50mm 캐뉼라 1개, 펑쳐 니들(23G) · 1ml 시린지 5개로 소분(또는 2개 돌아가며)"},
+  prep:["10ml 시린지 2개, 1ml 시린지 2개","25G/50mm 캐뉼라 1개, 펑쳐 니들"],
+  steps:[
+    "환자 모시기 → 보릭으로 얼굴 전체 소독 → 원장님 콜",
+    "디자인 → 마취 (1ml 튜메 2개)",
+    "캐뉼라 시술 → 중간중간 출혈 시 닦기 → 시술 마무리"
+  ],
+  after:["전체: 자가세안 > 디자인 > 시술 > 재생레이저 + 시트팩 15분 > 마무리"],
+  notes:["스컬트라·쥬베룩과 비슷한 원리의 상위 버전","약처방 있음 (리투오 처방)"],
+  active:true
+},
+{
+  id:"juveskin", name:"쥬베룩 (스킨)", domain:"주사제", cat:"스킨부스터", room:"",
+  tag:"콜라겐 부스터 · 모공 특기", anes:"크림마취 20분", time:"", rx:true,
+  effects:["여드름·주름·탄력","속건조·잔주름·모공 (특기)","리프팅·탈모·홍조","색소·기미·흑자 개선"],
+  recipe:{title:"수화", parts:[{n:"쥬베룩 1A (5ml)",q:"5"},{n:"멸균증류수",q:"6"},{n:"리도",q:"2"}], total:"8 ml",
+    note:"방법1: 기계 5분(MIN) > 실온 24시간 > 시술 전 5분 / 방법2: 당일 40분 > 시술 전 5분 · 냉장 1개월 · 시린지 뺄 때 사선으로"},
+  prep:["수화된 쥬베룩 주사제(1ml, 1ml당 1개)","33G/4mm 니들, 보릭"],
+  steps:[
+    "환자 모시기 → 보릭으로 얼굴 전체 소독 → 원장님 콜",
+    "쥬베룩 & 보릭 드리기 → 출혈 시 닦기 → 니들 교체하며 드리기",
+    "시술 후 환자 얼굴 닦기 → 환자 이동 및 뒷정리"
+  ],
+  after:["일주일간 마사지·사우나 금지, 불편 시 아이스팩","자가세안 > 마취크림20분 > 시술 > 재생레이저+시트팩15분 > 마무리"],
+  notes:["손주사(풀페이스 5ml, 1ml 5개) 또는 하이쿡스(31G, M1, 3ml에 2.5ml 2개)"],
+  active:true
+},
+{
+  id:"juvevol", name:"쥬베룩 (볼륨)", domain:"주사제", cat:"스킨부스터", room:"",
+  tag:"콜라겐 부스터 · 볼륨", anes:"국소마취 (투메)", time:"", rx:true,
+  effects:["여드름·주름·탄력","속건조·잔주름·모공","리프팅·탈모·홍조","색소·기미·흑자 개선"],
+  recipe:{title:"수화 (볼륨)", parts:[{n:"쥬베룩 1A",q:"1A"},{n:"멸균증류수",q:"12"}], total:"—",
+    note:"한 번에 수화 안 됨 — 6ml 먼저 수화 후 6ml 추가 · 방법1 쉐이커 5분 > 실온 24h > 시술 전 5분 / 방법2 당일 40분 > 5분 · 냉장 1개월"},
+  prep:["쥬베룩 볼륨, 23G/50mm 캐뉼라, 23G 펑쳐 니들","환자별 용량 1ml 시린지 소분, 캐뉼라 2개 끼워두기"],
+  steps:[
+    "쁘띠실 환자 눕히기 → 보릭으로 얼굴 소독 → 원장님 콜",
+    "디자인 → 투메 마취 → 원장님 시술",
+    "펑처 부분 듀오덤 → 1~2일 붙이도록 안내 및 대기실 안내"
+  ],
+  after:["일주일간 마사지·사우나 금지, 불편 시 아이스팩"],
+  notes:["[스컬트라] 멸균수 6 + 리도 2 (전날 수화), 다음날 사용 전 하이주 2 = 10"],
+  active:true
+},
+{
+  id:"rejuran", name:"리쥬란", domain:"주사제", cat:"스킨부스터", room:"",
+  tag:"보습 스킨부스터 NO.1 (PN)", anes:"크림마취 20분", time:"", rx:false,
+  effects:["수분감·보습 (스킨부스터 중 NO.1)","민감성·예민 피부 개선, 치유능력 활성화","여드름 흉터·모공 (살짝)"],
+  dose:{title:"리쥬란 용량", head:["종류","용량"], rows:[
+    ["힐러","1box 2ml 1시린지"],["HB+","1box 1ml 1시린지 (냉장고)"],["아이","1box 1ml 1시린지"]
+  ]},
+  prep:["리쥬란 종류·용량 확인","보릭, 아이스팩"],
+  steps:[
+    "환자 모시기 → 보릭으로 얼굴 전체 소독 → 원장님 콜",
+    "리쥬란 드리기 → 원장님 시술",
+    "출혈 시 보릭으로 닦아주기 → 마무리"
+  ],
+  notes:["손주사 또는 하이쿡스(31G, M1) — 리쥬란 주사기 그대로 사용","HA + 국소마취제(리도카인) 배합으로 통증 감소"],
+  active:true
+},
+{
+  id:"booster", name:"세렉소 · 레스노베", domain:"주사제", cat:"스킨부스터", room:"",
+  tag:"엑소좀 · 키토산 도포 부스터", anes:"", time:"", rx:false,
+  effects:["피부 영양 공급, 장벽 강화","잔주름·탄력·보습","트러블 완화·모공 축소"],
+  dose:{title:"종류", head:["제품","용량 / 방법 / 기한"], rows:[
+    ["세렉소 (엑소좀)","1v(3ml) · MTS 또는 도포 · 당일"],
+    ["레스노베 (키토산)","1v(3ml) · 도포 · 1주"]
+  ]},
+  notes:["포텐자 또는 MTS 후 도포","도포 시 시린지에서 니들 제거 후 도포"],
+  active:true
+},
+{
+  id:"skinbtx", name:"스킨보톡스", domain:"주사제", cat:"보톡스", room:"",
+  tag:"잔주름·모공·탄력", anes:"크림마취 20분", time:"10~15분", rx:false,
+  effects:["잔주름·모공·탄력","빠른 효과"],
+  recipe:{title:"수화", parts:[{n:"보톡스 1앰플",q:"1"},{n:"N/S",q:"10"}], total:"1ml 당 10U",
+    note:"손주사: 1ml 인슐린 5개 소분 / 하이쿡스: 3ml에 2.5ml 2개 (34G, M2)"},
+  prep:["보톡스 1앰플, N/S 10ml(mix용)","1ml 인슐린 시린지 5개"],
+  steps:[
+    "마취 → 시술실 환자 이동 → 보릭으로 얼굴 전체 소독",
+    "원장님 콜 → 원장님 시술",
+    "출혈 닦아주기 → 마무리"
+  ],
+  after:["자가세안 > 마취크림20분 > 시술 > 이동"],
+  active:true
+},
+{
+  id:"botox", name:"보톡스 용량표", domain:"주사제", cat:"보톡스", room:"",
+  tag:"수화 및 부위별 용량 기준", anes:"", time:"", rx:false,
+  recipe:{title:"수화 (100U 1바이알)", parts:[{n:"일반: NS",q:"3.3"},{n:"스킨: NS",q:"10.0"}], total:"일반 0.1ml=3U / 스킨 0.1ml=1U", note:""},
+  dose:{title:"부위별 용량", head:["부위","주사기","채움 / 용량"], rows:[
+    ["사각턱·관자근·침샘","1ml (+30G 13mm)","0.8 채움 / 2개 (한쪽 24U)"],
+    ["이마·눈가·목세로주름","0.5ml","0.4 채움 (총 12U)"],
+    ["미간·콧잔등","0.5ml","0.3 채움 (총 9U)"],
+    ["자갈턱·잇몸웃음","0.3ml","0.2 채움 (총 6U)"],
+    ["입꼬리·입가·눈밑·콧방울","0.3ml","0.1 채움 (총 3U)"],
+    ["종아리·승모근·겨드랑","1ml (+30G 13mm)","1.0 다 채움 (총 30U) / 3개 (한쪽 45U)"],
+    ["스킨보톡스","1ml 인슐린","다 채움 (총 10U) / 5개 (풀페이스)"]
+  ]},
+  notes:["1주일 예비: 0.1ml(0.3인슐린) 1개, 0.2ml 2개, 0.3ml(0.5인슐린) 5개, 0.4ml 3개, 0.6ml(1.0+30G13mm) 6개"],
+  active:true
+},
+{
+  id:"filler", name:"필러", domain:"주사제", cat:"필러", room:"",
+  tag:"볼륨 · 윤곽", anes:"덴탈 마취", time:"", rx:true,
+  effects:["볼륨·윤곽 개선"],
+  prep:["필러, 22G 펑쳐니들, 23G/50mm 캐뉼라","덴탈주사(덴탈리도·덴탈니들)","주사제를 캐뉼라에 끼워두기 + 덴탈주사 끼워두기"],
+  dose:{title:"제품별 용량", head:["제품","박스"], rows:[
+    ["아띠에르","1ml 2시린지"],["뉴라미스","1ml 1시린지"],["벨로테로","1ml 1시린지"]
+  ]},
+  steps:[
+    "쁘띠실 환자 눕히기 → 보릭으로 얼굴 소독 → 원장님 콜",
+    "디자인 → 덴탈 마취 → 원장님 시술",
+    "펑처 부분 듀오덤 → 1~2일 붙이도록 안내 및 대기실 안내"
+  ],
+  after:["과격한 운동·경락 마사지 금지, 1주간 금주","필러 시술 후 2주는 리프팅레이저 금지"],
+  notes:["약처방 있음 (1ml 이상은 약처방, GM+Dexa IM)"],
+  active:true
+},
+{
+  id:"violet", name:"브이올렛 · 펜카이라", domain:"주사제", cat:"지방분해", room:"",
+  tag:"이중턱·심부볼 지방분해 (DCA)", anes:"펑쳐 마취 (부위별)", time:"", rx:false,
+  effects:["이중턱·심부볼·바디 지방 줄이기 (데옥시콜산 담즙산)","효과 4주 후 · 지속 4~5년 · 한 달 1회 총 3회"],
+  prep:["브이올렛/펜카이라, 리도카인 또는 투메","시린지 10/5/1ml (부위별 개수 확인)","30G/8mm 니들 또는 23G/50mm 캐뉼라, 23G 펑쳐 니들"],
+  dose:{title:"용량 및 mix (1바이알 = 2ml)", head:["부위","mix"], rows:[
+    ["이중턱","2ml + 리도카인 0.2 = 2.2ml (1ml 2개), 니들 30G/4mm"],
+    ["얼굴(심부볼)","2ml + 투메 8 = 10ml (5ml 2개), 캐뉼라 23G/50mm"],
+    ["바디","심부볼과 같이 (전체 용량 원장님 지시)"]
+  ]},
+  steps:[
+    "보릭으로 턱밑·턱라인 소독 → 아이싱 → 원장님 콜",
+    "디자인 → 펑쳐부위 마취 → 펑쳐",
+    "mix한 브이올렛 1ml 하나씩 드리기 → 원장님 시술 → 출혈 시 닦기",
+    "시술 후 시술부위 가볍게 마사지 → 환자 이동 및 뒷정리 (필요시 크라이오)"
+  ],
+  after:[
+    "부종 2~3주 (3~4일차 가장 많이 부음), 경화 2~3주, 통증 7일 (초기 1~2일 심함, 심하면 타이레놀)",
+    "일주일간 마사지·아이스팩 꾸준히 관리, 사우나·과격한 운동 금지",
+    "심한 통증·붓기·멍은 병원 연락 · 가벼운 자가마사지 강조 · 2일 후 해피콜"
+  ],
+  notes:["한 달 이상 위 증상 있을 경우, 가라앉은 후 추가 시술 진행"],
+  active:true
+},
+{
+  id:"triam", name:"트리암 (TA)", domain:"주사제", cat:"염증", room:"",
+  tag:"염증 완화 주사", anes:"", time:"원장님 시술 5분 이내", rx:false,
+  effects:["염증 완화"],
+  recipe:{title:"희석", parts:[{n:"트리암 1앰플",q:"1"},{n:"N/S",q:"10"}], total:"—",
+    note:"0.3 인슐린시린지에 약 0.2 채움 (한부위당 약 0.05 사용) · 남은 트리암 당일 폐기"},
+  prep:["트리암 1앰플, 10ml 시린지, N/S","0.3ml 인슐린시린지, 보릭"],
+  steps:[
+    "환자 이동 및 시술부위 소독",
+    "원장님 호출 및 시술",
+    "뒷정리 및 안내"
+  ],
+  active:true
+},
+{
+  id:"hyal", name:"히알라제 (리포라제)", domain:"주사제", cat:"필러", room:"",
+  tag:"필러 녹이는 주사", anes:"크림마취 20분 + 스킨테스트", time:"원장님 시술 5분 이내", rx:false,
+  effects:["필러 녹임"],
+  recipe:{title:"수화", parts:[{n:"리포라제 1바이알",q:"1"},{n:"N/S",q:"3"}], total:"500 IU/ml",
+    note:"0.5ml 인슐린에 0.3 채움 (0.1ml=50IU) · 스킨테스트: 수화 0.1ml + NS 0.9ml · 남은 것 당일 폐기"},
+  prep:["히알라제(리포라제), N/S","시술방법: 원장님 주사"],
+  steps:[
+    "자가세안 → 마취크림 20분 및 스킨테스트",
+    "스킨테스트: 아래팔 안쪽에 1cm 부풀도록 포뜨듯이 주사, 10~15분 후 알러지 반응 체크",
+    "원장님 시술 → 뒷정리"
+  ],
+  after:["시술 후 2시간까지 가장 많이 줄고 2일까지 서서히 감소, 마사지 안내"],
+  notes:["[필러 염증 발생 시] 세파·아미킨(항생제) IV 100ml, 약처방 5일 · 농포 조심스럽게 제거 · 히알라제 NS 1cc 섞어 주사 · 마사지 · 바세린거즈 드레싱"],
+  active:true
+},
+{
+  id:"iv", name:"수액센터", domain:"주사제", cat:"수액", room:"",
+  tag:"영양 · 수액 주사", anes:"", time:"", rx:false,
+  dose:{title:"수액 메뉴", head:["수액","조성 / 효과"], rows:[
+    ["비타민주사","100ml NS + 삐콤헥사 1A + 아스코브르산 1A · 피로회복·항산화"],
+    ["신데렐라주사","100ml NS + 신델라주 1A (티옥트산) · 피로회복"],
+    ["마늘주사","100ml NS + 푸르설타민 1A · 신경통·근육통·말초신경통"],
+    ["백옥주사","100ml NS + 바이온 1V (글루타치온) · 미백·피로회복 (바이온 5ml NS로 녹인 후 혼합)"],
+    ["태반주사","라이넥주 2ml · 간기능 개선 (배꼽옆 피하 주사)"],
+    ["멀티블루","100ml NS + 멀티블루 1V · 영양공급"],
+    ["테라푸솔","직접 라인 연결 · 영양공급"]
+  ]},
+  active:true
+},
+{
+  id:"fatdissolve", name:"지방분해주사 (윤곽)", domain:"주사제", cat:"지방분해", room:"",
+  tag:"당분간 안 함", anes:"", time:"", rx:false,
+  effects:["턱밑 지방 개선 (아미노필린) · 효과 3일 후 · 지속 6개월 · 주 1회 총 5회"],
+  recipe:{title:"용량 및 준비", parts:[{n:"아미노필린",q:"0.06"},{n:"N/S",q:"6"}], total:"1% 6ml",
+    note:"1ml 시린지 6개 소분, 이 중 2개만 27G/38mm 롱니들 장착 · 27G 롱니들 2개로 나머지 번갈아 끼움"},
+  notes:["현재 당분간 시행 안 함"],
+  active:false
+},
+{
+  id:"silhouette", name:"실루엣 (윤곽)", domain:"주사제", cat:"지방분해", room:"",
+  tag:"이제 안 함", anes:"", time:"", rx:false,
+  effects:["턱밑 지방 개선 (데옥시콜산) · 효과 3일 후 · 지속 6개월 · 주 1회 총 5회"],
+  recipe:{title:"용량 및 mix (1앰플 10ml)", parts:[{n:"실루엣 1앰플",q:"10"},{n:"리도카인",q:"2"}], total:"12 ml",
+    note:"1ml 시린지 6개, 25G/50mm 캐뉼라 2개"},
+  notes:["현재 시행 안 함"],
+  active:false
+},
+
+/* ==================== 조제 / 믹스 ==================== */
+{
+  id:"tumescent", name:"투메슨트 (얼굴용 국소마취)", domain:"조제", cat:"마취", room:"",
+  tag:"국소마취 · total 71ml", anes:"", time:"", rx:false, exp:"당일",
+  recipe:{title:"Mix (다 같이 섞음)", parts:[
+    {n:"NS 100ml 백 (60 제거)",q:"40"},{n:"리도카인 20ml",q:"20"},{n:"중탄산나트륨",q:"10"},{n:"에피네프린",q:"1"}
+  ], total:"71 ml", note:"일반 마취 시 주사기 뒤에 \":마\" 표시 (풀페이스 1ml 2개, 33G/4mm)"},
+  steps:[
+    "리투오·고우리 얼굴 시술 — 2ml 준비 (1ml 인슐린 2개)",
+    "목 등 다른 부위는 원장님께 확인",
+    "실리프팅 — 5ml 시린지에 하나씩 소분 (29G/50mm)",
+    "펑쳐용 — 1ml 시린지에 다 채우고 33G/4mm 니들로 교체"
+  ],
+  notes:["사용기한: 당일 (당일 사용 후 폐기)"],
+  active:true
+},
+{
+  id:"sedation", name:"수면마취 (프로포폴)", domain:"조제", cat:"마취", room:"",
+  tag:"수면마취 준비 및 모니터링", anes:"", time:"", rx:false, exp:"당일",
+  prep:["프로포폴 1앰플(20ml), 10ml 시린지 2개","수액라인, N/S 100ml 또는 500ml, 24G 카테터 1개"],
+  steps:[
+    "라인 잡기",
+    "프로포폴을 시린지에 옮김 (라인 잡은 후 포폴 따기)",
+    "맥박·산소측정기 연결",
+    "원장님 지시에 따라 포폴 투여",
+    "틈틈이 산소농도 모니터링 (90 아래로 내려가면 알려드리기)",
+    "시술 상황에 따라 2~3명이 환자 잡아주기 (머리·다리·팔)"
+  ],
+  notes:["남은 것 원장님께 보고","사용기한: 당일"],
+  active:true
+},
+{
+  id:"zephanon", name:"제파논", domain:"조제", cat:"소독", room:"",
+  tag:"실팅 얼굴 소독액", anes:"", time:"", rx:false, exp:"2주",
+  recipe:{title:"Mix", parts:[{n:"멸균증류수",q:"1L"},{n:"염화벤잘코늄",q:"10ml"}], total:"—", note:""},
+  steps:[
+    "멸균증류수와 염화벤잘코늄을 mix",
+    "멸균된 코튼볼 또는 거즈에 붓기",
+    "실팅 시 얼굴 소독용으로 적셔 사용"
+  ],
+  notes:["사용기한: 2주"],
+  active:true
+},
+{
+  id:"mummy", name:"머미", domain:"조제", cat:"소독", room:"",
+  tag:"소독 거즈", anes:"", time:"", rx:false, exp:"한 달",
+  recipe:{title:"Mix", parts:[{n:"생리식염수",q:"1L"},{n:"덱사",q:"5앰플"}], total:"—", note:"뚜껑 있는 머미통, 2*2 거즈"},
+  steps:[
+    "mix한 약품을 머미통에 2*2 거즈 넣고 붓기",
+    "살짝 짠 후 머미통에 가득 채우기",
+    "냉장 보관하며 소분하여 사용"
+  ],
+  notes:["사용기한: 한 달"],
+  active:true
+},
+{
+  id:"boric", name:"보릭", domain:"조제", cat:"소독", room:"",
+  tag:"멸균 소독 거즈", anes:"", time:"", rx:false, exp:"한 달",
+  recipe:{title:"Mix", parts:[{n:"멸균증류수",q:"1L"},{n:"붕산",q:"20g"}], total:"—", note:"뚜껑 있는 보릭통, 2*2 거즈"},
+  steps:[
+    "붕산이 안 녹으면 뜨거운 물에 담가 녹이기",
+    "보릭통에 2*2 거즈 넣고 약품 붓기 (한 겹씩 분리)",
+    "2주 후 날짜 인디게이터에 적어 붙이기",
+    "뚜껑 연 상태로 멸균소독기에 돌리기",
+    "멸균 완료 후 뚜껑 닫아 식힌 뒤 냉장 보관·소분"
+  ],
+  notes:["사용기한: 한 달"],
+  active:true
+},
+
+/* ==================== 피부관리 (관리센터) ==================== */
+{ id:"skpkg_acne", name:"여드름관리", domain:"피부관리", cat:"패키지", tag:"여드름 관리 패키지", effects:["여드름","피지","모공","피부결","보습"],
+  dose:{title:"회차 · 구성", head:["구분","가격","구성"], rows:[
+    ["5회","40M","여드름관리 4회 / MTS+엑소좀+LDM+엑소좀팩 1회"],
+    ["10회","70M","여드름관리 7회 / MTS+엑소좀+LDM+엑소좀팩 3회"]
+  ]}, notes:["부가세 별도"], active:true },
+{ id:"skpkg_acne_prem", name:"프리미엄 여드름관리", domain:"피부관리", cat:"패키지", tag:"블랙필 기반 프리미엄 패키지", effects:["여드름","피지","모공","피부결","보습"],
+  dose:{title:"회차 · 구성", head:["구분","가격","구성"], rows:[
+    ["5회","60M","블랙필 여드름관리 3회 / MTS+엑소좀+LDM+엑소좀팩 2회"],
+    ["10회","100M","블랙필 여드름관리 5회 / MTS+엑소좀+LDM+엑소좀팩 5회"]
+  ]}, notes:["부가세 별도"], active:true },
+{ id:"skpkg_acne_vip", name:"VIP 여드름관리", domain:"피부관리", cat:"패키지", tag:"세보하이드라시트팩 포함 VIP 패키지", effects:["여드름","피지","모공","피부결","보습"],
+  dose:{title:"회차 · 구성", head:["구분","가격","구성"], rows:[
+    ["5회","80M","블랙필 여드름관리 2회 / MTS+엑소좀+LDM+엑소좀팩 3회"],
+    ["10회","120M","블랙필 여드름관리 4회 / MTS+엑소좀+LDM+엑소좀팩 6회"]
+  ]}, notes:["세보하이드라시트팩 포함","부가세 별도"], active:true },
+{ id:"sk_acne_ess", name:"여드름케어 (에센셜)", domain:"피부관리", cat:"일반관리", tag:"1회 5M(10M) · 5회 20M(35M)", effects:["여드름","피지"],
+  steps:["자가세안","EX (압출)","모델링","블루라이트"], notes:["부가세 별도"], active:true },
+{ id:"sk_blackpeel", name:"블랙필 여드름 케어", domain:"피부관리", cat:"일반관리", tag:"1회 7M · 5회 30M", effects:["여드름","피지","붉은자국"],
+  steps:["자가세안","EX (압출)","블랙필 (3~5분)","중화","크라이오 (5분)","재생레이저","모델링"],
+  notes:["추가: 세보시트마스크 1회 2M (세보하이드라시트팩)","부가세 별도"], active:true },
+{ id:"sk_aqua13", name:"아쿠아필링 1,3제", domain:"피부관리", cat:"일반관리", tag:"1회 2M · 5회 9만", effects:["여드름","모공","피부결"],
+  steps:["자가세안","아쿠아필 1제","EX (압출)","아쿠아필 3제","재생레이저","모델링"], notes:["부가세 별도"], active:true },
+{ id:"sk_aqua123", name:"아쿠아필링 1,2,3제", domain:"피부관리", cat:"일반관리", tag:"1회 3M · 5회 13만", effects:["여드름","모공","피부결"],
+  steps:["자가세안","아쿠아필 1+2제","EX (압출)","아쿠아필 3제","재생레이저","모델링"], notes:["부가세 별도"], active:true },
+{ id:"sk_ldm", name:"LDM 물방울 리프팅", domain:"피부관리", cat:"일반관리", tag:"1회 10M · 5회 45M", effects:["리프팅","보습"],
+  steps:["자가세안","스크러버","LDM 리프팅 (12분)","모델링","재생레이저"], notes:["부가세 별도"], active:true },
+{ id:"sk_custom", name:"맞춤형관리", domain:"피부관리", cat:"일반관리", tag:"1회 1.5M · 10회 15M", effects:["미백","보습","영양"],
+  steps:["자가세안","스크러버","초음파관리 5분","모델링","재생레이저"],
+  notes:["추가: 압출 또는 TA — 3M / 5M (TA 1~2개 / 1~5개)","부가세 별도"], active:true },
+{ id:"sk_rfcare", name:"영양고주파케어", domain:"피부관리", cat:"일반관리", tag:"1회 2M · 10회 18M", effects:["영양","보습"],
+  steps:["자가세안","스크러버","매직팟 고주파 10분","재생레이저","모델링"], notes:["부가세 별도"], active:true }
+];
+/* ============================================================
+   공통 저장 설정 (모든 앱 공통 · 재고관리 방식)
+   ↓↓↓ Apps Script 배포 URL (.../exec) ↓↓↓
+   ============================================================ */
+const CLOUD_URL = "https://script.google.com/macros/s/AKfycbxdZFpjf0i-ftSELTA97qUGenx8gQ1fMniommY-aQAYaq9CLeRZXxal_cVciJZbXElqmQ/exec";              // 예: "https://script.google.com/macros/s/AKfycb.../exec"
+const APP_NAME  = "시술준비 매뉴얼"; // 앱 이름 (앱마다 이 값만 바꾸면 됨)
+
+/* ---------- 상태 ---------- */
+const CATEGORIES = ["장비","주사제","실리프팅","수액","간호준비","피부관리"]; // 실제 분야
+const DOMAINS = [...CATEGORIES,"전체","삭제항목"];                              // 탭 표시(전체·삭제항목은 특수 탭)
+let CONFIG = {
+  domains:[...CATEGORIES],
+  cats:["레이저","고주파","초음파","리프팅시술","주입기","스킨부스터","보톡스","필러","지방분해","염증","수액","마취","소독","기타"],
+  rooms:["레이져실","쁘띠실","시술실"]
+};
+let TRASH = [];                 // 삭제함 (영구삭제 전 보관)
+let BACKUPS = [];               // 주간 자동저장 스냅샷 (최근 4개)
+let META = { lastAuto:0, lastTab:{} };
+let state = { domain:"전체", q:"" };
+let syncedOK=false, pushTimer=null;
+/* 로그인에서 넘겨준 사용자 (계정별 마지막 탭 기억용) */
+let CURRENT_USER = "";
+try{ const _u=JSON.parse(sessionStorage.getItem("everyup_manual_user")||"null"); if(_u&&_u.name) CURRENT_USER=String(_u.name); }catch(e){}
+function tabKey(){ return "everyup_manual_tab"+(CURRENT_USER?"_"+CURRENT_USER:""); }
+function loadLastTab(){ let d=null; try{ d=localStorage.getItem(tabKey()); }catch(e){} return (d&&DOMAINS.indexOf(d)>=0)?d:null; }
+function saveLastTab(d){
+  try{ localStorage.setItem(tabKey(), d); }catch(e){}
+  if(CURRENT_USER){ if(!META.lastTab) META.lastTab={}; if(META.lastTab[CURRENT_USER]!==d){ META.lastTab[CURRENT_USER]=d; pushCloud(); } }
+}
+function applyAccountTab(){
+  if(CURRENT_USER && META.lastTab && META.lastTab[CURRENT_USER] && DOMAINS.indexOf(META.lastTab[CURRENT_USER])>=0){
+    state.domain = META.lastTab[CURRENT_USER];
+  }
+}
+const $ = s => document.querySelector(s);
+const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid = () => "t"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const WEEK = 7*24*60*60*1000;
+
+/* ---------- 데이터 정규화 + 카테고리 이관 ---------- */
+function toMixText(x){
+  let lines=[];
+  if(x.recipe){
+    const r=x.recipe;
+    if(r.title) lines.push("["+r.title+"]");
+    if(r.parts&&r.parts.length){ const f=r.parts.map(p=>p.n+(p.q?" "+p.q:"")).join(" ＋ "); lines.push(f+(r.total&&r.total!=="—"?" ＝ "+r.total:"")); }
+    else if(r.total&&r.total!=="—"){ lines.push("＝ "+r.total); }
+    if(r.note) lines.push(r.note);
+  }
+  if(Array.isArray(x.mix)) lines=lines.concat(x.mix.filter(Boolean));
+  else if(typeof x.mix==="string" && x.mix.trim()) lines.push(x.mix.trim());
+  return lines.join("\n");
+}
+const ARR_KEYS=["effects","modes","prep","setting","steps","charting","after","notes"];
+function migrateDomain(x){
+  // 카테고리 이관: 실리프팅 분리 / 수액제→수액 / 조제→간호준비
+  if(x.id==="silthread" || x.name==="실리프팅") return "실리프팅";
+  if(x.domain==="수액제" || x.cat==="수액" || x.name==="수액센터") return "수액";
+  if(x.domain==="조제") return "간호준비";
+  if(CATEGORIES.indexOf(x.domain)>=0) return x.domain;
+  return x.domain||"장비";
+}
+function normalize(items){
+  return (items||[]).map(x=>{
+    const o=Object.assign({},x);
+    o.domain=migrateDomain(o);
+    o.mix=toMixText(o); delete o.recipe;
+    ARR_KEYS.forEach(k=>{ if(!Array.isArray(o[k])) o[k]=(o[k]?[o[k]]:[]); });
+    if(!o.id) o.id=uid();
+    return o;
+  });
+}
+function collectConfigFrom(items){
+  const cats=new Set(CONFIG.cats), rooms=new Set(CONFIG.rooms), doms=new Set(CONFIG.domains);
+  items.forEach(x=>{ if(x.cat)cats.add(x.cat); if(x.room)rooms.add(x.room); if(x.domain)doms.add(x.domain); });
+  CONFIG.cats=[...cats]; CONFIG.rooms=[...rooms]; CONFIG.domains=[...doms];
+}
+DATA = normalize(DATA);
+collectConfigFrom(DATA);
+
+/* ---------- 준비물 체크 (기기별) ---------- */
+const CKEY=id=>"everyup_prep_"+id;
+function getChecks(id){ try{ return JSON.parse(localStorage.getItem(CKEY(id))||"{}"); }catch(e){ return {}; } }
+function setCheck(id,i,v){ const c=getChecks(id); if(v)c[i]=1; else delete c[i]; localStorage.setItem(CKEY(id),JSON.stringify(c)); }
+function clearChecks(id){ localStorage.removeItem(CKEY(id)); }
+
+/* ---------- 토스트 ---------- */
+let toastT=null;
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1800); }
+
+/* ---------- 동기화 UI ---------- */
+function setSync(s){ const p=$("#syncPill"),t=$("#syncText"); p.dataset.s=s; t.textContent={ok:"저장됨",syncing:"저장 중…",error:"연결 오류",off:"오프라인"}[s]||s; }
+$("#syncPill") && ($("#syncPill").onclick=()=>{ if(!CLOUD_URL){ toast("배포 URL이 아직 설정되지 않았어요"); return; } pullCloud(true); });
+
+/* ---------- 클라우드 읽기 (JSONP) ---------- */
+function pullCloud(manual){
+  if(!CLOUD_URL){ setSync("off"); return; }
+  setSync("syncing");
+  const cb="__ecb"+Date.now(); const s=document.createElement("script"); let done=false;
+  window[cb]=function(res){
+    done=true;
+    try{
+      if(res && res.ok){
+        if(res.data && res.data.length>2){
+          const parsed=JSON.parse(res.data);
+          if(Array.isArray(parsed)){ DATA=normalize(parsed); }
+          else if(parsed && parsed.items){
+            DATA=normalize(parsed.items);
+            if(parsed.config) CONFIG=Object.assign(CONFIG,parsed.config);
+            if(Array.isArray(parsed.trash)) TRASH=parsed.trash;
+            if(Array.isArray(parsed.backups)) BACKUPS=parsed.backups;
+            if(parsed.meta) META=Object.assign(META,parsed.meta);
+          }
+          collectConfigFrom(DATA);
+          applyAccountTab();
+          syncedOK=true; setSync("ok"); if(manual) toast("최신 내용을 불러왔어요");
+          weeklyAutoSave();
+        } else { syncedOK=true; pushCloud(true); setSync("ok"); }
+      } else setSync("error");
+    }catch(err){ setSync("error"); }
+    render(); cleanup();
+  };
+  function cleanup(){ try{delete window[cb];}catch(e){} if(s.parentNode)s.parentNode.removeChild(s); }
+  s.onerror=function(){ if(done)return; setSync("error"); cleanup(); };
+  s.src=CLOUD_URL+(CLOUD_URL.indexOf("?")<0?"?":"&")+"callback="+cb+"&t="+Date.now();
+  document.body.appendChild(s);
+  setTimeout(()=>{ if(!done){ setSync("error"); cleanup(); } },12000);
+}
+
+/* ---------- 클라우드 쓰기 (no-cors POST) ---------- */
+function payload(){ return JSON.stringify({items:DATA,trash:TRASH,backups:BACKUPS,config:CONFIG,meta:META}); }
+function pushCloud(immediate){
+  if(!CLOUD_URL) return;
+  if(!syncedOK) return;
+  if(!Array.isArray(DATA)) return;
+  clearTimeout(pushTimer);
+  const run=function(){
+    setSync("syncing");
+    fetch(CLOUD_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({type:"save",data:payload()})})
+      .then(()=>setSync("ok")).catch(()=>setSync("error"));
+  };
+  if(immediate) run(); else pushTimer=setTimeout(run,700);
+}
+function saveData(msg){ render(); pushCloud(); if(msg) toast(msg); }
+
+/* ---------- 드라이브 백업 폴더로 전송 (재고관리 방식) ---------- */
+function cloudBackup(op){
+  if(!CLOUD_URL) return false;
+  try{ fetch(CLOUD_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(op)}); return true; }
+  catch(e){ return false; }
+}
+
+/* ---------- 주간 자동저장 (앱 내 스냅샷 + 드라이브 백업 폴더) ---------- */
+function weeklyAutoSave(){
+  if(!syncedOK) return;
+  const now=Date.now();
+  if(now-(META.lastAuto||0) < WEEK) return;
+  // 1) 앱 안 스냅샷 (한 번에 복원용, 최근 4개)
+  BACKUPS.unshift({ ts:now, items:JSON.parse(JSON.stringify(DATA)), config:JSON.parse(JSON.stringify(CONFIG)) });
+  BACKUPS=BACKUPS.slice(0,4);
+  META.lastAuto=now;
+  // 2) 드라이브 백업 폴더에 주간 JSON 파일 저장
+  cloudBackup({ type:"driveJson", name:APP_NAME+"_주간백업_"+ymd()+".json", content:payload() });
+  pushCloud(true);
+}
+
+/* ---------- 탭 ---------- */
+function renderTabs(){
+  const t=$("#tabs"); t.innerHTML="";
+  DOMAINS.forEach(d=>{
+    const isTrashTab = d==="삭제항목";
+    const n = isTrashTab ? TRASH.length : (d==="전체"?DATA.length:DATA.filter(x=>x.domain===d).length);
+    const b=document.createElement("button");
+    b.className="tab"; b.setAttribute("role","tab"); b.dataset.d=d;
+    b.setAttribute("aria-selected", (!isTrashTab && state.domain===d));
+    b.innerHTML=esc(d)+' <span class="n">'+n+'</span>';
+    b.onclick = isTrashTab ? (()=>openTrash())
+      : (()=>{ state.domain=d; saveLastTab(d); renderTabs(); renderGrid(); });
+    t.appendChild(b);
+  });
+}
+/* ---------- 필터 ---------- */
+function match(x){
+  if(state.domain!=="전체"&&x.domain!==state.domain) return false;
+  if(state.q){
+    const hay=[x.name,x.tag,x.cat,x.room,x.anes,(x.effects||[]).join(" "),(x.prep||[]).join(" "),x.mix,(x.notes||[]).join(" ")].join(" ").toLowerCase();
+    if(!hay.includes(state.q.toLowerCase())) return false;
+  }
+  return true;
+}
+function metaChips(x){
+  let h="";
+  if(x.anes) h+='<span class="meta"><b class="mlabel">마취</b>'+esc(x.anes)+'</span>';
+  if(x.time) h+='<span class="meta">⏱ '+esc(x.time)+'</span>';
+  if(x.exp) h+='<span class="meta">📅 '+esc(x.exp)+'</span>';
+  if(x.rx) h+='<span class="meta rx">약처방</span>';
+  if(x.active===false) h+='<span class="meta off">미시행</span>';
+  return h;
+}
+function renderGrid(){
+  const list=DATA.filter(match), g=$("#grid");
+  $("#count").innerHTML="총 <b>"+list.length+"</b>개 항목";
+  if(!list.length){ g.innerHTML='<div class="empty"><h3>항목이 없어요</h3><p>오른쪽 위 "새 항목"으로 추가하거나 다른 탭을 눌러보세요.</p></div>'; return; }
+  g.innerHTML=list.map(x=>{
+    const catLine=[x.cat,x.room].filter(Boolean).join(" · ");
+    return '<button class="card'+(x.active===false?' off':'')+'" data-d="'+esc(x.domain)+'" data-id="'+esc(x.id)+'">'
+      +'<div class="card-top"><span class="badge badge-'+esc(x.domain)+'">'+esc(x.domain)+'</span>'
+      +(catLine?'<span class="card-cat">'+esc(catLine)+'</span>':'')+'</div>'
+      +'<h3>'+esc(x.name)+'</h3>'+(x.tag?'<p class="tag">'+esc(x.tag)+'</p>':'')
+      +'<div class="card-metas">'+metaChips(x)+'</div></button>';
+  }).join("");
+  g.querySelectorAll(".card").forEach(c=>c.onclick=()=>openDetail(c.dataset.id));
+}
+function render(){ renderTabs(); renderGrid(); renderFoot(); const tn=$("#trashN"); if(tn)tn.textContent=TRASH.length; }
+
+/* ---------- 상세 (보기) ---------- */
+function sec(t,inner){ return '<div class="sec"><div class="sec-h">'+esc(t)+'</div>'+inner+'</div>'; }
+function ul(items,cls){ return '<ul class="ul '+(cls||"")+'">'+items.map(i=>'<li>'+esc(i)+'</li>').join("")+'</ul>'; }
+function stepsHtml(items){ return '<div class="steps">'+items.map(i=>'<div class="step"><div class="num"></div><div class="txt">'+esc(i)+'</div></div>').join("")+'</div>'; }
+function doseHtml(d){
+  const head=d.head?'<tr>'+d.head.map(h=>'<th>'+esc(h)+'</th>').join("")+'</tr>':'';
+  const rows=(d.rows||[]).map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join("")+'</tr>').join("");
+  return '<div>'+(d.title?'<div class="dose-t">'+esc(d.title)+'</div>':'')+'<table class="dose">'+head+rows+'</table></div>';
+}
+function prepHtml(x){
+  const c=getChecks(x.id);
+  const items=x.prep.map((p,i)=>'<div class="pitem'+(c[i]?' done':'')+'" data-i="'+i+'"><span class="pbox"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 7"/></svg></span><span class="ptext">'+esc(p)+'</span></div>').join("");
+  return '<div class="plist">'+items+'</div><button class="prep-reset" data-reset="'+x.id+'">체크 초기화</button>';
+}
+function openDetail(id){
+  const x=DATA.find(d=>d.id===id); if(!x) return;
+  const sheet=$("#sheet"); sheet.dataset.d=x.domain;
+  const catLine=[x.cat,x.room].filter(Boolean).join(" · ");
+  let body="";
+  if(x.effects&&x.effects.length) body+=sec("효과 · 적응증",'<div class="eff">'+x.effects.map(e=>'<span>'+esc(e)+'</span>').join("")+'</div>');
+  if(x.modes&&x.modes.length) body+=sec("모드",'<div class="modes">'+x.modes.map(m=>'<div class="mode">'+esc(m)+'</div>').join("")+'</div>');
+  if(x.prep&&x.prep.length) body+=sec("준비물 체크리스트",prepHtml(x));
+  if(x.setting&&x.setting.length) body+=sec("시술 준비 · 세팅",ul(x.setting));
+  if(x.mix&&x.mix.trim()) body+=sec("Mix · 수화",'<div class="mixbox">'+esc(x.mix)+'</div>');
+  if(x.dose) body+=sec("용량 · 기준",doseHtml(x.dose));
+  if(x.steps&&x.steps.length) body+=sec("시술 순서",stepsHtml(x.steps));
+  if(x.charting&&x.charting.length) body+=sec("차팅",ul(x.charting));
+  if(x.after&&x.after.length) body+=sec("시술 후 · 안내",ul(x.after,"after"));
+  if(x.notes&&x.notes.length) body+=sec("특이사항",ul(x.notes,"note"));
+
+  sheet.innerHTML=
+    '<div class="sheet-head"><div class="head-actions">'
+    +'<button class="icon-btn edit-btn" data-edit="'+esc(x.id)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>편집</button>'
+    +'<button class="icon-btn" data-close aria-label="닫기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'
+    +'<div class="card-top"><span class="badge badge-'+esc(x.domain)+'">'+esc(x.domain)+'</span>'+(catLine?'<span class="card-cat">'+esc(catLine)+'</span>':'')+'</div>'
+    +'<h2>'+esc(x.name)+'</h2>'+(x.tag?'<p class="tag">'+esc(x.tag)+'</p>':'')
+    +'<div class="sheet-metas">'+metaChips(x)+'</div></div>'
+    +'<div class="sheet-body">'+(body||'<div class="sec"><p style="color:var(--muted)">등록된 상세 내용이 없습니다. 우측 상단 편집을 눌러 채워보세요.</p></div>')+'</div>';
+
+  sheet.querySelectorAll(".pitem").forEach(el=>el.onclick=()=>{ const now=!el.classList.contains("done"); el.classList.toggle("done",now); setCheck(x.id,el.dataset.i,now); });
+  const rb=sheet.querySelector("[data-reset]"); if(rb) rb.onclick=()=>{ clearChecks(x.id); sheet.querySelectorAll(".pitem").forEach(e=>e.classList.remove("done")); };
+  sheet.querySelector("[data-edit]").onclick=()=>openEdit(x.id);
+  openModal(); sheet.scrollTop=0;
+}
+
+/* ============================================================
+   편집 (전체 필드 · 한 칸 입력)
+   ============================================================ */
+const ARR_FIELDS=[["effects","효과 · 적응증"],["prep","준비물"],["setting","시술 준비 · 세팅"],["steps","시술 순서"],["charting","차팅"],["after","시술 후 · 안내"],["notes","특이사항"],["modes","모드"]];
+function selectField(label,key,options,cur,blankLabel){
+  let opts=""; if(blankLabel!=null) opts+='<option value=""'+(cur?"":" selected")+'>'+esc(blankLabel)+'</option>';
+  const list=options.slice(); if(cur && list.indexOf(cur)<0) list.unshift(cur);
+  list.forEach(o=>{ opts+='<option'+(cur===o?" selected":"")+'>'+esc(o)+'</option>'; });
+  return '<div class="ef"><label class="ef-label">'+esc(label)+'</label><select data-f="'+key+'">'+opts+'</select></div>';
+}
+function textField(label,val,key,hint){ return '<div class="ef"><label class="ef-label">'+esc(label)+'</label><input type="text" data-f="'+key+'" value="'+esc(val||"")+'">'+(hint?'<div class="ef-hint">'+esc(hint)+'</div>':'')+'</div>'; }
+function areaField(label,key,arr,hint){ return '<div class="ef"><label class="ef-label">'+esc(label)+'</label><textarea data-a="'+key+'" rows="3">'+esc((arr||[]).join("\n"))+'</textarea>'+(hint?'<div class="ef-hint">'+esc(hint)+'</div>':'')+'</div>'; }
+
+let editingNew=false;
+function blankItem(){ return {id:uid(),name:"",domain:CONFIG.domains[0]||"장비",cat:"",room:"",tag:"",anes:"",time:"",exp:"",rx:false,active:true,effects:[],prep:[],setting:[],steps:[],charting:[],after:[],notes:[],modes:[],mix:"",dose:null}; }
+function openEdit(id){ const x=DATA.find(d=>d.id===id); if(!x) return; editingNew=false; renderEdit(x,false); }
+function openNew(){ const x=blankItem(); editingNew=true; renderEdit(x,true); }
+
+function renderEdit(x,isNew){
+  const sheet=$("#sheet"); sheet.dataset.d=x.domain;
+  const arrHtml=ARR_FIELDS.map(([k,label])=>areaField(label,k,x[k],"한 줄에 하나씩 입력하세요")).join("");
+  sheet.innerHTML=
+    '<div class="sheet-head"><div class="head-actions"><button class="icon-btn" data-cancel aria-label="닫기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'
+    +'<div class="eyebrow" style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">'+(isNew?"새 항목 추가":"항목 편집")+'</div><h2 style="margin-top:4px">'+(isNew?"새 시술 / 약제":esc(x.name||"(이름 없음)"))+'</h2></div>'
+    +'<div class="edit-body" id="editBody">'
+      +'<div class="ef-row">'
+        +'<div class="ef" style="flex:2"><label class="ef-label">이름 *</label><input type="text" data-f="name" value="'+esc(x.name||"")+'"></div>'
+        +selectField("분야","domain",CONFIG.domains,x.domain,null)
+      +'</div>'
+      +'<div class="ef-row">'
+        +selectField("분류","cat",CONFIG.cats,x.cat,"(선택 안 함)")
+        +selectField("장소","room",CONFIG.rooms,x.room,"(없음)")
+      +'</div>'
+      +'<div class="ef-row">'
+        +textField("마취",x.anes,"anes","크림마취 20분 등")
+        +textField("시술시간",x.time,"time","약 15분")
+        +textField("사용기한",x.exp,"exp","당일 / 2주")
+      +'</div>'
+      +textField("한 줄 설명 (태그)",x.tag,"tag")
+      +'<div class="ef-row">'
+        +'<label class="chk"><input type="checkbox" data-f="rx"'+(x.rx?" checked":"")+'> 약처방</label>'
+        +'<label class="chk"><input type="checkbox" data-f="active"'+(x.active!==false?" checked":"")+'> 현재 시행 중</label>'
+      +'</div>'
+      +'<div class="ef"><label class="ef-label">Mix · 수화</label><textarea data-f="mix" rows="4" placeholder="예: 투메 4 ＋ 하이주 1 ＝ 6ml">'+esc(x.mix||"")+'</textarea></div>'
+      +doseEditor(x.dose)
+      +arrHtml
+    +'</div>'
+    +'<div class="edit-actions">'
+      +(isNew?"":'<button class="btn btn-del" type="button" id="delBtn">삭제</button>')
+      +'<button class="btn btn-cancel" type="button" data-cancel>취소</button>'
+      +'<button class="btn btn-save" type="button" id="saveBtn2">저장</button>'
+    +'</div>';
+  bindEdit(sheet,x,isNew);
+  openModal(); sheet.scrollTop=0;
+}
+function doseEditor(d){
+  if(!d) return '<div class="ef"><label class="ef-label">용량 · 기준 (표)</label><div class="subcard" data-dose="none"><p style="color:var(--muted);font-size:13px;margin-bottom:10px">표 없음</p><button class="mini-btn dose-new" type="button">+ 표 만들기</button></div></div>';
+  const head=(d.head||[]).map(h=>'<input type="text" value="'+esc(h)+'">').join("");
+  const rows=(d.rows||[]).map(r=>doseRowHtml(r,(d.head||[]).length)).join("");
+  return '<div class="ef"><label class="ef-label">용량 · 기준 (표)</label><div class="subcard" data-dose="on">'
+    +'<div class="ef"><label class="ef-label">표 제목</label><input type="text" data-dt="title" value="'+esc(d.title||"")+'"></div>'
+    +'<label class="ef-label">헤더</label><div class="dgrid"><div class="drow head" data-head>'+head+'</div></div>'
+    +'<label class="ef-label" style="margin-top:10px">행</label><div class="dgrid" data-rows>'+rows+'</div>'
+    +'<div class="mini-btns"><button class="mini-btn dose-addrow" type="button">+ 행</button><button class="mini-btn dose-addcol" type="button">+ 열</button><button class="mini-btn dose-delcol" type="button">− 열</button><button class="mini-btn dose-del" type="button" style="color:#B4472F">표 삭제</button></div>'
+    +'</div></div>';
+}
+function doseRowHtml(r,cols){ let cells=""; for(let i=0;i<cols;i++){ cells+='<input type="text" value="'+esc((r&&r[i])||"")+'">'; } return '<div class="drow"><div class="dgrid" style="flex:1"><div class="drow" style="gap:6px">'+cells+'</div></div><button class="line-del dose-delrow" type="button">×</button></div>'; }
+
+function bindEdit(sheet,x,isNew){
+  const domSel=sheet.querySelector('[data-f="domain"]'); if(domSel) domSel.onchange=()=>{ sheet.dataset.d=domSel.value; };
+  sheet.querySelectorAll("textarea[data-a],textarea[data-f]").forEach(ta=>{ autoGrow(ta); ta.oninput=()=>autoGrow(ta); });
+  bindDose(sheet);
+  sheet.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>{ if(isNew){ closeModal(); } else { openDetail(x.id); } });
+  sheet.querySelector("#saveBtn2").onclick=()=>commitEdit(sheet,x,isNew);
+  const del=sheet.querySelector("#delBtn");
+  if(del) del.onclick=()=>{ if(confirm('"'+(x.name||"이 항목")+'" 을 삭제함으로 보낼까요? 삭제함에서 복원할 수 있습니다.')){ trashItem(x.id); closeModal(); saveData("삭제함으로 옮겼어요"); } };
+}
+function autoGrow(ta){ ta.style.height="auto"; ta.style.height=(ta.scrollHeight+2)+"px"; }
+function bindDose(sheet){
+  const wrap=sheet.querySelector("[data-dose]"); if(!wrap) return;
+  const nb=wrap.querySelector(".dose-new"); if(nb){ nb.onclick=()=>doseDefault(sheet); return; }
+  const rowsBox=wrap.querySelector("[data-rows]"), headBox=wrap.querySelector("[data-head]");
+  const cols=()=>headBox.querySelectorAll("input").length;
+  const rebind=()=>wrap.querySelectorAll(".dose-delrow").forEach(b=>b.onclick=()=>b.closest(".drow").remove());
+  rebind();
+  wrap.querySelector(".dose-addrow").onclick=()=>{ rowsBox.insertAdjacentHTML("beforeend",doseRowHtml([],cols())); rebind(); };
+  wrap.querySelector(".dose-addcol").onclick=()=>{ headBox.insertAdjacentHTML("beforeend",'<input type="text" value="">'); rowsBox.querySelectorAll(".drow > .dgrid > .drow").forEach(r=>r.insertAdjacentHTML("beforeend",'<input type="text" value="">')); };
+  wrap.querySelector(".dose-delcol").onclick=()=>{ const hi=headBox.querySelectorAll("input"); if(hi.length<=1)return; hi[hi.length-1].remove(); rowsBox.querySelectorAll(".drow > .dgrid > .drow").forEach(r=>{ const ci=r.querySelectorAll("input"); if(ci.length)ci[ci.length-1].remove(); }); };
+  wrap.querySelector(".dose-del").onclick=()=>{ wrap.dataset.dose="none"; wrap.innerHTML='<p style="color:var(--muted);font-size:13px;margin-bottom:10px">표 없음</p><button class="mini-btn dose-new" type="button">+ 표 만들기</button>'; bindDose(sheet); };
+}
+function doseDefault(sheet){
+  const wrap=sheet.querySelector("[data-dose]"); wrap.dataset.dose="on";
+  wrap.innerHTML='<div class="ef"><label class="ef-label">표 제목</label><input type="text" data-dt="title" value=""></div>'
+    +'<label class="ef-label">헤더</label><div class="dgrid"><div class="drow head" data-head><input type="text" value="항목"><input type="text" value="내용"></div></div>'
+    +'<label class="ef-label" style="margin-top:10px">행</label><div class="dgrid" data-rows>'+doseRowHtml([],2)+'</div>'
+    +'<div class="mini-btns"><button class="mini-btn dose-addrow" type="button">+ 행</button><button class="mini-btn dose-addcol" type="button">+ 열</button><button class="mini-btn dose-delcol" type="button">− 열</button><button class="mini-btn dose-del" type="button" style="color:#B4472F">표 삭제</button></div>';
+  bindDose(sheet);
+}
+function splitLines(v){ return (v||"").split("\n").map(s=>s.trim()).filter(Boolean); }
+function commitEdit(sheet,x,isNew){
+  const body=sheet.querySelector("#editBody");
+  const gv=f=>{ const el=body.querySelector('[data-f="'+f+'"]'); return el?(el.type==="checkbox"?el.checked:el.value.trim()):""; };
+  const name=gv("name"); if(!name){ toast("이름을 입력해주세요"); const n=body.querySelector('[data-f="name"]'); if(n)n.focus(); return; }
+  const obj={ id:x.id, name:name, domain:gv("domain")||CONFIG.domains[0], cat:gv("cat"), room:gv("room"), tag:gv("tag"), anes:gv("anes"), time:gv("time"), exp:gv("exp"), rx:gv("rx"), active:gv("active"), mix:gv("mix") };
+  ARR_FIELDS.forEach(([k])=>{ const ta=body.querySelector('[data-a="'+k+'"]'); obj[k]=ta?splitLines(ta.value):[]; });
+  const dw=body.querySelector("[data-dose]");
+  if(dw && dw.dataset.dose==="on"){
+    const head=[...dw.querySelector("[data-head]").querySelectorAll("input")].map(i=>i.value.trim());
+    const rows=[...dw.querySelector("[data-rows]").querySelectorAll(":scope > .drow")].map(r=>[...r.querySelectorAll(".dgrid .drow input")].map(i=>i.value.trim()));
+    const cleanRows=rows.filter(r=>r.some(c=>c));
+    obj.dose=(head.some(h=>h)||cleanRows.length)?{title:dw.querySelector('[data-dt="title"]').value.trim(),head:head,rows:cleanRows}:null;
+  } else obj.dose=null;
+  if(obj.cat && CONFIG.cats.indexOf(obj.cat)<0) CONFIG.cats.push(obj.cat);
+  if(obj.room && CONFIG.rooms.indexOf(obj.room)<0) CONFIG.rooms.push(obj.room);
+  if(obj.domain && CONFIG.domains.indexOf(obj.domain)<0) CONFIG.domains.push(obj.domain);
+  if(isNew){ DATA.push(obj); } else { const i=DATA.findIndex(d=>d.id===x.id); if(i>=0)DATA[i]=obj; }
+  editingNew=false; saveData(isNew?"추가됐어요":"저장됐어요"); openDetail(obj.id);
+}
+
+/* ============================================================
+   삭제함(휴지통) + 주간 백업
+   ============================================================ */
+function trashItem(id){ const i=DATA.findIndex(d=>d.id===id); if(i<0)return; const it=DATA.splice(i,1)[0]; it._deletedAt=Date.now(); TRASH.unshift(it); }
+function fmtDate(ts){ const d=new Date(ts); return (d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function openTrash(){
+  const sheet=$("#sheet"); sheet.dataset.d="";
+  const trashRows = TRASH.length ? TRASH.map(it=>
+    '<div class="mgr-row"><div class="info"><div class="nm">'+esc(it.name||"(이름 없음)")+'</div><div class="sub">'+esc(it.domain||"")+(it._deletedAt?' · '+fmtDate(it._deletedAt)+' 삭제':"")+'</div></div>'
+    +'<div class="acts"><button class="sbtn" data-restore="'+esc(it.id)+'">복원</button><button class="sbtn warn" data-purge="'+esc(it.id)+'">완전삭제</button></div></div>'
+  ).join("") : '<div class="mgr-empty">삭제한 항목이 없습니다.</div>';
+  const bkRows = BACKUPS.length ? BACKUPS.map((b,i)=>
+    '<div class="mgr-row"><div class="info"><div class="nm">'+fmtDate(b.ts)+' 자동저장</div><div class="sub">항목 '+(b.items?b.items.length:0)+'개</div></div>'
+    +'<div class="acts"><button class="sbtn" data-restoreBk="'+i+'">이 시점으로 복원</button></div></div>'
+  ).join("") : '<div class="mgr-empty">아직 자동저장된 백업이 없습니다. (일주일마다 자동 생성)</div>';
+
+  sheet.innerHTML=
+    '<div class="sheet-head"><div class="head-actions"><button class="icon-btn" data-close aria-label="닫기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'
+    +'<div class="eyebrow" style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">삭제함 · 백업</div><h2 style="margin-top:4px">삭제함 · 주간 백업</h2></div>'
+    +'<div class="sheet-body">'
+      +'<div class="mgr-sec"><div class="sec-h">삭제함 ('+TRASH.length+')</div>'+trashRows
+        +(TRASH.length?'<div style="margin-top:12px"><button class="sbtn warn" id="emptyTrash">삭제함 비우기 (완전삭제)</button></div>':'')+'</div>'
+      +'<div class="mgr-sec"><div class="sec-h">주간 자동저장 백업</div>'+bkRows+'</div>'
+    +'</div>';
+  sheet.querySelectorAll("[data-restore]").forEach(b=>b.onclick=()=>{ const id=b.dataset.restore; const i=TRASH.findIndex(t=>t.id===id); if(i>=0){ const it=TRASH.splice(i,1)[0]; delete it._deletedAt; DATA.push(it); saveData("복원했어요"); openTrash(); } });
+  sheet.querySelectorAll("[data-purge]").forEach(b=>b.onclick=()=>{ if(confirm("완전히 삭제할까요? 되돌릴 수 없습니다.")){ TRASH=TRASH.filter(t=>t.id!==b.dataset.purge); saveData("완전 삭제했어요"); openTrash(); } });
+  const et=sheet.querySelector("#emptyTrash"); if(et) et.onclick=()=>{ if(confirm("삭제함을 모두 비울까요? 되돌릴 수 없습니다.")){ TRASH=[]; saveData("삭제함을 비웠어요"); openTrash(); } };
+  sheet.querySelectorAll("[data-restoreBk]").forEach(b=>b.onclick=()=>{ const bk=BACKUPS[+b.dataset.restoreBk]; if(bk && confirm(fmtDate(bk.ts)+" 시점으로 되돌릴까요? 현재 목록이 이 백업으로 교체됩니다.")){ DATA=normalize(bk.items); if(bk.config)CONFIG=Object.assign(CONFIG,bk.config); collectConfigFrom(DATA); saveData("백업 시점으로 복원했어요"); closeModal(); } });
+  openModal(); sheet.scrollTop=0;
+}
+
+/* ============================================================
+   설정 (분야 · 분류 · 장소 + JSON 가져오기)
+   ============================================================ */
+function openSettings(){
+  const sheet=$("#sheet"); sheet.dataset.d="";
+  sheet.innerHTML=
+    '<div class="sheet-head"><div class="head-actions"><button class="icon-btn" data-cancel aria-label="닫기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'
+    +'<div class="eyebrow" style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">설정</div><h2 style="margin-top:4px">선택지 관리</h2><p class="tag">편집 화면의 분야·분류·장소 드롭다운 목록입니다.</p></div>'
+    +'<div class="edit-body" id="setBody">'
+      +'<div class="ef"><label class="ef-label">분야 (탭)</label><textarea data-s="domains" rows="6">'+esc(CONFIG.domains.join("\n"))+'</textarea><div class="ef-hint">한 줄에 하나씩. 장비·주사제·실리프팅·수액·간호준비·피부관리 외 새 분야는 회색으로 표시됩니다.</div></div>'
+      +'<div class="ef"><label class="ef-label">분류</label><textarea data-s="cats" rows="8">'+esc(CONFIG.cats.join("\n"))+'</textarea><div class="ef-hint">한 줄에 하나씩.</div></div>'
+      +'<div class="ef"><label class="ef-label">장소</label><textarea data-s="rooms" rows="4">'+esc(CONFIG.rooms.join("\n"))+'</textarea><div class="ef-hint">한 줄에 하나씩.</div></div>'
+      +'<div class="ef"><label class="ef-label">백업 · 가져오기</label><button class="sbtn" id="importXlsx" style="margin-right:6px">엑셀 가져오기 (수정 반영)</button><button class="sbtn" id="importJson">JSON 백업 가져오기</button><div class="ef-hint">엑셀: ID가 있으면 수정, 비면 추가 (없는 항목은 유지). JSON: 전체를 그 파일로 되돌림.</div></div>'
+      +'<p class="ef-hint">※ 이미 쓰이는 값을 목록에서 지워도, 그 값을 쓰던 항목은 그대로 유지됩니다.</p>'
+    +'</div>'
+    +'<div class="edit-actions"><button class="btn btn-cancel" type="button" data-cancel>취소</button><button class="btn btn-save" type="button" id="setSave">저장</button></div>';
+  sheet.querySelectorAll("textarea[data-s]").forEach(ta=>{ autoGrow(ta); ta.oninput=()=>autoGrow(ta); });
+  sheet.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=closeModal);
+  sheet.querySelector("#importJson").onclick=()=>$("#jsonFile").click();
+  sheet.querySelector("#importXlsx").onclick=()=>$("#xlsxFile").click();
+  sheet.querySelector("#setSave").onclick=()=>{
+    const body=sheet.querySelector("#setBody");
+    const rd=k=>splitLines(body.querySelector('[data-s="'+k+'"]').value);
+    const doms=rd("domains"); if(doms.length) CONFIG.domains=doms;
+    CONFIG.cats=rd("cats"); CONFIG.rooms=rd("rooms");
+    closeModal(); saveData("설정을 저장했어요");
+  };
+  openModal(); sheet.scrollTop=0;
+}
+
+/* ============================================================
+   엑셀 / JSON 내보내기 · 가져오기
+   ============================================================ */
+function exportExcel(){
+  if(typeof XLSX==="undefined"){ toast("엑셀 모듈 로딩 중… 잠시 후 다시"); return; }
+  const j=a=>(a||[]).join("\n");
+  const doseTxt=d=>{ if(!d)return""; const h=(d.head||[]).join(" | "); const r=(d.rows||[]).map(x=>x.join(" | ")).join("\n"); return (d.title?d.title+"\n":"")+(h?h+"\n":"")+r; };
+  const rows=DATA.map(x=>({
+    "ID":x.id,"분야":x.domain,"분류":x.cat||"","이름":x.name,"장소":x.room||"","마취":x.anes||"","시술시간":x.time||"","사용기한":x.exp||"",
+    "처방":x.rx?"O":"","시행":x.active===false?"미시행":"","태그":x.tag||"",
+    "효과":j(x.effects),"준비물":j(x.prep),"시술준비":j(x.setting),"MIX":x.mix||"","시술순서":j(x.steps),
+    "차팅":j(x.charting),"시술후":j(x.after),"특이사항":j(x.notes),"용량표":doseTxt(x.dose)
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws["!cols"]=[{wch:14},{wch:9},{wch:11},{wch:16},{wch:10},{wch:14},{wch:12},{wch:9},{wch:6},{wch:8},{wch:24},{wch:30},{wch:34},{wch:30},{wch:34},{wch:40},{wch:30},{wch:30},{wch:34},{wch:34}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"시술준비");
+  const fname=APP_NAME+"_"+ymd()+".xlsx";
+  XLSX.writeFile(wb, fname);
+  const saved=cloudBackup({ type:"driveXlsx", name:fname, b64:XLSX.write(wb,{bookType:"xlsx",type:"base64"}) });
+  toast(saved?"엑셀 저장 — 다운로드 + 드라이브 백업":"엑셀로 저장했어요");
+}
+function ymd(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function exportJson(){
+  const blob=new Blob([payload()],{type:"application/json"});
+  const fname=APP_NAME+"_"+ymd()+".json";
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=fname; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  const saved=cloudBackup({ type:"driveJson", name:fname, content:payload() });
+  toast(saved?"JSON 저장 — 다운로드 + 드라이브 백업":"JSON으로 저장했어요");
+}
+$("#jsonFile").addEventListener("change",function(e){
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{ try{
+      const p=JSON.parse(r.result);
+      const items=Array.isArray(p)?p:(p.items||[]);
+      if(!items.length){ toast("가져올 항목이 없어요"); return; }
+      if(!confirm("JSON 파일의 내용으로 전체를 교체할까요? ("+items.length+"개 항목)")) return;
+      DATA=normalize(items);
+      if(p.config) CONFIG=Object.assign(CONFIG,p.config);
+      if(Array.isArray(p.trash)) TRASH=p.trash;
+      collectConfigFrom(DATA);
+      syncedOK=true; saveData("JSON을 가져왔어요"); closeModal();
+    }catch(err){ toast("JSON 파일을 읽을 수 없어요"); }
+    e.target.value="";
+  };
+  r.readAsText(f);
+});
+
+/* ---------- 되돌리기용 자동 백업 (다운로드 + 드라이브) ---------- */
+function autoBackupJson(label){
+  try{
+    const str=payload();
+    const blob=new Blob([str],{type:"application/json"});
+    const fname=APP_NAME+"_"+(label||"자동백업")+"_"+ymd()+".json";
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=fname; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    cloudBackup({ type:"driveJson", name:fname, content:str });
+  }catch(e){}
+}
+
+/* ---------- 엑셀 가져오기 (ID 있으면 수정 / 비면 추가) ---------- */
+function splitCell(v){
+  return String(v==null?"":v).split(/\r?\n/).reduce((acc,s)=>{
+    if(s.indexOf(" / ")>=0) acc.push.apply(acc, s.split(" / ")); else acc.push(s); return acc;
+  },[]).map(s=>s.trim()).filter(Boolean);
+}
+$("#xlsxFile").addEventListener("change",function(e){
+  const f=e.target.files[0]; if(!f)return;
+  if(typeof XLSX==="undefined"){ toast("엑셀 모듈 로딩 중… 잠시 후 다시"); e.target.value=""; return; }
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(r.result),{type:"array"});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:""});
+      if(!rows.length){ toast("가져올 행이 없어요"); e.target.value=""; return; }
+      const named=rows.filter(row=>String(row["이름"]||"").trim());
+      if(!confirm(named.length+"개 행을 반영할까요?\n\nID가 있으면 그 항목을 수정, ID가 비어 있으면 새 항목으로 추가합니다.\n엑셀에 없는 항목은 그대로 유지됩니다.\n\n(되돌리기용 백업을 먼저 내려받습니다.)")){ e.target.value=""; return; }
+      autoBackupJson("엑셀반영전");
+      let added=0, updated=0;
+      named.forEach(row=>{
+        const id=String(row["ID"]||row["id"]||"").trim();
+        let it = id ? DATA.find(d=>d.id===id) : null;
+        const isNew=!it;
+        if(isNew){ it=blankItem(); if(id) it.id=id; }
+        it.domain=String(row["분야"]||it.domain||CONFIG.domains[0]).trim();
+        it.cat=String(row["분류"]||"").trim();
+        it.name=String(row["이름"]||"").trim();
+        it.room=String(row["장소"]||"").trim();
+        it.anes=String(row["마취"]||"").trim();
+        it.time=String(row["시술시간"]||row["시간"]||"").trim();
+        it.exp=String(row["사용기한"]||"").trim();
+        it.rx=/O|o|Y|y|예|처방|1|true/.test(String(row["처방"]||""));
+        it.active=!/미시행|중지|안함|false/.test(String(row["시행"]||""));
+        it.tag=String(row["태그"]||"").trim();
+        it.effects=splitCell(row["효과"]);
+        it.prep=splitCell(row["준비물"]);
+        it.setting=splitCell(row["시술준비"]);
+        it.mix=String(row["MIX"]||"").trim();
+        it.steps=splitCell(row["시술순서"]);
+        it.charting=splitCell(row["차팅"]);
+        it.after=splitCell(row["시술후"]);
+        it.notes=splitCell(row["특이사항"]);
+        if(isNew){ it.dose=null; DATA.push(it); added++; } else { updated++; }
+        if(it.cat && CONFIG.cats.indexOf(it.cat)<0) CONFIG.cats.push(it.cat);
+        if(it.room && CONFIG.rooms.indexOf(it.room)<0) CONFIG.rooms.push(it.room);
+        if(it.domain && CONFIG.domains.indexOf(it.domain)<0) CONFIG.domains.push(it.domain);
+      });
+      syncedOK=true; saveData("엑셀 반영 — 추가 "+added+" · 수정 "+updated); closeModal();
+    }catch(err){ toast("엑셀 파일을 읽을 수 없어요"); }
+    e.target.value="";
+  };
+  r.readAsArrayBuffer(f);
+});
+
+/* ---------- 모달 ---------- */
+function openModal(){ $("#modal").classList.add("open"); document.body.style.overflow="hidden"; }
+function closeModal(){ $("#modal").classList.remove("open"); document.body.style.overflow=""; editingNew=false; }
+document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest("[data-close]")){ closeModal(); return; } if(e.target.classList&&e.target.classList.contains("scrim")) closeModal(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeModal(); });
+$("#q").addEventListener("input",e=>{ state.q=e.target.value.trim(); renderGrid(); });
+$("#addBtn").onclick=openNew;
+$("#setBtn").onclick=openSettings;
+$("#trashBtn").onclick=openTrash;
+$("#saveBtn").onclick=()=>{ if(!CLOUD_URL){ toast("배포 URL 미설정 — 저장할 수 없어요"); return; } if(!syncedOK){ toast("동기화 준비 중이에요. 잠시 후 다시"); pullCloud(); return; } pushCloud(true); toast("저장했어요"); };
+$("#xlsxBtn").onclick=exportExcel;
+$("#jsonBtn").onclick=exportJson;
+
+/* ---------- footer ---------- */
+function renderFoot(){
+  const last = META.lastAuto ? fmtDate(META.lastAuto) : "없음";
+  $("#foot").innerHTML= APP_NAME+" · 총 "+DATA.length+"개 항목 · 주간 자동저장 마지막: "+last+"<br>"
+    +(CLOUD_URL?"수정 내용은 접속한 모두에게 자동 저장됩니다.":"⚠ 배포 URL 미설정 — 지금은 저장되지 않습니다 (새로고침 시 초기화).")
+    +" 준비물 체크는 이 기기에만 저장됩니다.";
+}
+
+/* ---------- init ---------- */
+(function setToday(){ const d=new Date(); const t=$("#today"); if(t) t.textContent="오늘 "+String(d.getFullYear()).slice(2)+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); })();
+{ const lt=loadLastTab(); if(lt) state.domain=lt; }
+render();
+if(CLOUD_URL){ pullCloud(); } else { setSync("off"); }
+
+</script>
+</body>
+</html>
