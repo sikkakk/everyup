@@ -1304,7 +1304,8 @@ function renderReport(){
 }
 
 // ── 자동저장 ──────────────────────────────
-const STORAGE_KEY = 'geuntae_v3'; // 이전 캐시 무시
+const STORAGE_KEY = 'geuntae_v4'; // 2026-09-06 업로드 최신 데이터 기준
+const STAFF_DATA_BASELINE = '2026-09-06-uploaded';
 
 /* ===== 드라이브 백업 (선택) ===== */
 /* '직원관리 백업 백엔드(.gs)'를 배포한 뒤 그 /exec 주소를 아래 따옴표 안에 넣으면,
@@ -1318,14 +1319,28 @@ function cloudBackup(name, content){
     return true;
   }catch(e){ return false; }
 }
-function saveLocal(){
+function saveCacheOnly(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+}
+function saveLocal(){
+  // 브라우저 저장은 비상 캐시. 실제 원본은 공통 Apps Script 클라우드에 저장합니다.
+  saveCacheOnly();
+  try{ if(typeof window.euStaffCloudSave==='function') window.euStaffCloudSave(state); }catch(e){}
 }
 function loadLocal(){
   try{
-    const keys=[STORAGE_KEY,'geuntae_v2','geuntae_v1'];
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const parsed=JSON.parse(raw);
+    if(!parsed || !Array.isArray(parsed.empList) || !Array.isArray(parsed.leaves)) return false;
+    state=migrateState(parsed);
+    return true;
+  }catch(e){ return false; }
+}
+function recoverLegacyData(){
+  try{
+    const keys=['geuntae_v3','geuntae_v2','geuntae_v1'];
     const candidates=[];
-    const defSig=JSON.stringify(migrateState(JSON.parse(JSON.stringify(DEFAULT_STATE))));
     for(const key of keys){
       const raw=localStorage.getItem(key);
       if(!raw) continue;
@@ -1333,29 +1348,17 @@ function loadLocal(){
         const parsed=JSON.parse(raw);
         if(!parsed || !Array.isArray(parsed.empList) || !Array.isArray(parsed.leaves)) continue;
         const migrated=migrateState(parsed);
-        const sig=JSON.stringify(migrated);
         const score=(migrated.empList?.length||0)*10+(migrated.leaves?.length||0)+(migrated.otEarned?.length||0)+(migrated.otDaily?.length||0)+(migrated.otUsed?.length||0);
-        candidates.push({key,data:migrated,sig,score,isDefault:sig===defSig});
+        candidates.push({key,data:migrated,score});
       }catch(ex){}
     }
-    if(!candidates.length) return false;
-    // 새 파일이 기본 예시 데이터를 v3에 저장한 경우, 실제로 남아 있는 예전 사용자 데이터를 우선 복구한다.
-    const nonDefault=candidates.filter(c=>!c.isDefault);
-    const chosen=(nonDefault.length?nonDefault:candidates).sort((a,b)=>b.score-a.score)[0];
+    if(!candidates.length){showToast('복구할 이전 데이터가 없습니다');return;}
+    const chosen=candidates.sort((a,b)=>b.score-a.score)[0];
+    if(!confirm('이전 저장 데이터('+chosen.key+')로 현재 데이터를 바꾸시겠습니까?\n현재 데이터는 덮어써집니다.')) return;
     state=chosen.data;
-    try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); }catch(ex){}
-    window.__EU_STAFF_RECOVERED_FROM=chosen.key;
-    return true;
-  } catch(e){ return false; }
-}
-function recoverLegacyData(){
-  try{
-    const before=JSON.stringify(state);
-    const ok=loadLocal();
-    if(!ok){showToast('복구할 이전 데이터가 없습니다');return;}
-    renderLeave();renderTeam();renderOT();renderReport();saveLocal();
-    const from=window.__EU_STAFF_RECOVERED_FROM||STORAGE_KEY;
-    showToast(before===JSON.stringify(state)?'현재 데이터가 가장 최신입니다':'이전 데이터를 복구했습니다 ('+from+')');
+    saveLocal();
+    renderLeave();renderTeam();renderOT();renderReport();
+    showToast('이전 데이터를 복구했습니다 ('+chosen.key+')');
   }catch(e){alert('이전 데이터 복구 중 오류가 발생했습니다.');}
 }
 
@@ -1389,6 +1392,7 @@ function importData(ev){
       try{ localStorage.removeItem('geuntae_v1'); }catch(ex){}
       try{ localStorage.removeItem('geuntae_v2'); }catch(ex){}
       try{ localStorage.removeItem('geuntae_v3'); }catch(ex){}
+      try{ localStorage.removeItem('geuntae_v4'); }catch(ex){}
       saveLocal();
       renderLeave();
       renderTeam();
@@ -1411,6 +1415,7 @@ function resetToDefault(){
   try{ localStorage.removeItem('geuntae_v1'); }catch(ex){}
   try{ localStorage.removeItem('geuntae_v2'); }catch(ex){}
   try{ localStorage.removeItem('geuntae_v3'); }catch(ex){}
+  try{ localStorage.removeItem('geuntae_v4'); }catch(ex){}
   state = migrateState(JSON.parse(JSON.stringify(DEFAULT_STATE)));
   saveLocal();
   renderLeave();renderTeam();renderOT();renderReport();
@@ -1439,7 +1444,6 @@ delEmp = function(id){ _origDelEmp(id); saveLocal(); }
 // ── 초기화 ──────────────────────────────
 if(!loadLocal()){
   state = migrateState(JSON.parse(JSON.stringify(DEFAULT_STATE)));
-  saveLocal();
 }
 renderLeave();renderTeam();renderOT();renderReport();
 
@@ -1597,7 +1601,128 @@ document.getElementById('btn-logout').addEventListener('click', doLogout);
 })();
 </script>
 <script>
-(function(){const APP='직원관리',user=euSessionUser()||'default',K='everyup_lasttab_'+APP+'_'+user;const os=window.showPage;window.showPage=function(name,el){const r=os(name,el);try{localStorage.setItem(K,name)}catch(e){}return r};try{const v=localStorage.getItem(K);if(['ot','leave','report','team'].includes(v)){const el=document.querySelector('.nav-item[data-page="'+v+'"]');if(el)setTimeout(()=>showPage(v,el),0)}}catch(e){}function excel(){if(typeof XLSX==='undefined')return alert('엑셀 모듈을 불러오지 못했습니다.');const wb=XLSX.utils.book_new();[['직원',state.empList],['휴가연차',state.leaves],['OT발생',state.otEarned],['OT건별',state.otDaily||[]],['OT사용',state.otUsed]].forEach(([n,a])=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(a||[]),n));XLSX.writeFile(wb,'직원관리_전체_'+new Date().toISOString().slice(0,10)+'.xlsx')}document.getElementById('euExcelBtn').onclick=excel;document.getElementById('euJsonBtn').onclick=exportData;const act=document.getElementById('euSettingsActions');act.innerHTML='<label>JSON 복원<input id="euStaffRestore" type="file" accept=".json" hidden></label><button id="euRecoverStaff">이전 데이터 복구</button><button id="euResetStaff">기본 데이터로 초기화</button>';document.getElementById('euStaffRestore').onchange=importData;document.getElementById('euRecoverStaff').onclick=()=>{document.getElementById('euSettingsModal').classList.remove('show');recoverLegacyData()};document.getElementById('euResetStaff').onclick=()=>{document.getElementById('euSettingsModal').classList.remove('show');resetToDefault()};const sl=window.saveLocal;window.saveLocal=function(){const r=sl.apply(this,arguments);euBackupSnapshot(APP,state);euSetTopStatus('저장됨','ok');return r};const add=document.getElementById('euStaffAddItem');if(add){add.onclick=()=>{const active=document.querySelector('.nav-item.active')?.dataset.page||'ot';if(active==='leave')openModal('lm');else if(active==='team')openModal('em');else if(active==='ot')openModal('odm');else showToast('월간 리포트에서는 추가할 항목이 없습니다');};}const gs=euReadSession();if(gs&&(gs.name==='송우철'||String(gs.part||'').includes('원장'))){try{document.getElementById('login-gate').classList.add('hidden')}catch(e){}}document.getElementById('btn-logout')?.remove();euSetTopStatus('저장됨','ok');euBackupSnapshot(APP,state);})();
+(function(){
+  const APP='직원관리', user=euSessionUser()||'default', K='everyup_lasttab_'+APP+'_'+user;
+  const CFG=window.EVERYUP_CONFIG||{};
+  const CLOUD_URL=String(CFG.backupApi||'');
+  let cloudSaveTimer=null;
+  let cloudLoaded=false;
+
+  // 사용자별 마지막 탭
+  const os=window.showPage;
+  window.showPage=function(name,el){
+    const r=os(name,el);
+    try{localStorage.setItem(K,name)}catch(e){}
+    return r;
+  };
+  try{
+    const v=localStorage.getItem(K);
+    if(['ot','leave','report','team'].includes(v)){
+      const el=document.querySelector('.nav-item[data-page="'+v+'"]');
+      if(el)setTimeout(()=>showPage(v,el),0);
+    }
+  }catch(e){}
+
+  function renderAll(){
+    renderLeave(); renderTeam(); renderOT(); renderReport();
+  }
+
+  // JSONP로 클라우드의 현재 직원관리 원본을 읽습니다.
+  function cloudGet(){
+    return new Promise((resolve,reject)=>{
+      if(!CLOUD_URL || CLOUD_URL.includes('__EVERYUP')) return reject(new Error('NO_URL'));
+      const cb='__eu_staff_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+      const sc=document.createElement('script');
+      const timer=setTimeout(()=>{cleanup();reject(new Error('TIMEOUT'));},12000);
+      function cleanup(){
+        clearTimeout(timer);
+        try{delete window[cb]}catch(e){window[cb]=undefined}
+        try{sc.remove()}catch(e){}
+      }
+      window[cb]=(r)=>{cleanup();resolve(r)};
+      sc.onerror=()=>{cleanup();reject(new Error('NETWORK'))};
+      const sep=CLOUD_URL.includes('?')?'&':'?';
+      sc.src=CLOUD_URL+sep+'action=stateGet&app='+encodeURIComponent(APP)+'&token='+encodeURIComponent(CFG.backupToken||'')+'&callback='+encodeURIComponent(cb)+'&_='+Date.now();
+      document.head.appendChild(sc);
+    });
+  }
+
+  // 저장은 모든 수정 직후 호출됩니다. 브라우저는 캐시이고, 클라우드가 원본입니다.
+  window.euStaffCloudSave=function(data){
+    saveCacheOnly();
+    if(!CLOUD_URL || CLOUD_URL.includes('__EVERYUP')){
+      euSetTopStatus('오프라인','offline');
+      return;
+    }
+    euSetTopStatus('저장 중…','busy');
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer=setTimeout(()=>{
+      let payload='';
+      try{payload=JSON.stringify(data)}catch(e){euSetTopStatus('저장 오류','error');return;}
+      fetch(CLOUD_URL,{
+        method:'POST',mode:'no-cors',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'stateSave',token:CFG.backupToken||'',app:APP,payload:payload})
+      }).then(()=>{
+        setTimeout(()=>euSetTopStatus('저장됨','ok'),500);
+      }).catch(()=>euSetTopStatus('연결 오류','error'));
+    },180);
+  };
+
+  async function cloudLoad(){
+    euSetTopStatus('연결 중…','busy');
+    try{
+      const r=await cloudGet();
+      if(!r || !r.ok) throw new Error((r&&r.error)||'LOAD');
+      if(r.hasData && r.payload && typeof r.payload==='object'){
+        state=migrateState(r.payload);
+        saveCacheOnly();
+        renderAll();
+      }else{
+        // 클라우드 최초 사용: 현재 화면의 데이터를 첫 원본으로 등록합니다.
+        window.euStaffCloudSave(state);
+      }
+      cloudLoaded=true;
+      if(r.hasData) euSetTopStatus('연결됨','ok');
+    }catch(e){
+      // 네트워크 장애 때만 이 기기의 마지막 캐시를 사용합니다.
+      cloudLoaded=false;
+      euSetTopStatus('오프라인','offline');
+    }
+  }
+
+  function excel(){
+    if(typeof XLSX==='undefined')return alert('엑셀 모듈을 불러오지 못했습니다.');
+    const wb=XLSX.utils.book_new();
+    [['직원',state.empList],['휴가연차',state.leaves],['OT발생',state.otEarned],['OT건별',state.otDaily||[]],['OT사용',state.otUsed]].forEach(([n,a])=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(a||[]),n));
+    XLSX.writeFile(wb,'직원관리_전체_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  }
+  document.getElementById('euExcelBtn').onclick=excel;
+  document.getElementById('euJsonBtn').onclick=exportData;
+  const act=document.getElementById('euSettingsActions');
+  act.innerHTML='<label>JSON 복원<input id="euStaffRestore" type="file" accept=".json" hidden></label><button id="euRecoverStaff">이전 데이터 복구</button><button id="euResetStaff">기본 데이터로 초기화</button>';
+  document.getElementById('euStaffRestore').onchange=importData;
+  document.getElementById('euRecoverStaff').onclick=()=>{document.getElementById('euSettingsModal').classList.remove('show');recoverLegacyData()};
+  document.getElementById('euResetStaff').onclick=()=>{document.getElementById('euSettingsModal').classList.remove('show');resetToDefault()};
+  const add=document.getElementById('euStaffAddItem');
+  if(add){
+    add.onclick=()=>{
+      const active=document.querySelector('.nav-item.active')?.dataset.page||'ot';
+      if(active==='leave')openModal('lm');
+      else if(active==='team')openModal('em');
+      else if(active==='ot')openModal('odm');
+      else showToast('월간 리포트에서는 추가할 항목이 없습니다');
+    };
+  }
+  const gs=euReadSession();
+  if(gs&&(gs.name==='송우철'||String(gs.part||'').includes('원장'))){
+    try{document.getElementById('login-gate').classList.add('hidden')}catch(e){}
+  }
+  document.getElementById('btn-logout')?.remove();
+
+  // 페이지를 열 때마다 클라우드 원본을 먼저 가져옵니다.
+  cloudLoad();
+})();
 </script>
 </body>
 </html>
