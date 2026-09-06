@@ -21,8 +21,44 @@ select{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.32);z-index:40;display:none;align-items:center;justify-content:center;padding:18px}.overlay.show{display:flex}.modal{width:100%;max-width:500px;background:#fff;border-radius:16px;padding:20px;box-shadow:var(--shadow)}.modal h3{margin:0 0 16px;font-size:17px;font-weight:800;letter-spacing:-.01em}.field{margin:11px 0}.field label{display:block;font-size:12.5px;font-weight:700;color:var(--sub);margin-bottom:5px}.field input,.field select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px}.modalactions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(18px);background:var(--green);color:#fff;padding:11px 18px;border-radius:11px;font-size:14px;font-weight:700;opacity:0;pointer-events:none;transition:.2s;z-index:60}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media(max-width:800px){.topin{flex-wrap:wrap}.toolbar{order:3;width:100%;margin:0;display:flex}.toolbar .btn{padding:9px 6px;flex:1}.toolbar .gear-btn{flex:0 0 34px}.brand img{height:28px}.brand-title{font-size:15px}.hero{align-items:stretch;flex-direction:column}.hero .actions{margin-left:0}.hero .actions select{flex:1;min-width:0}.dashboard{overflow-x:auto;padding-bottom:3px}.periodnav{grid-template-columns:repeat(5,minmax(125px,1fr));min-width:665px}.item{grid-template-columns:28px 1fr}.itemactions{grid-column:2;justify-self:end}.topin{padding:10px 12px}main{padding:18px 12px 50px}.stats-panel{padding:12px}.stats-periodnav{grid-template-columns:repeat(5,minmax(78px,1fr));overflow-x:auto}.stats-summary{grid-template-columns:1fr}.stats-label{width:100%;margin:2px 0 0}.mode-tabs{width:100%}.mode-tab{flex:1}}
 </style>
+<script src="everyup-config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* ===== 에브리업 7앱 공통 상단 ===== */
+.eu-unified-top{position:sticky;top:0;z-index:120;background:rgba(247,248,250,.96);backdrop-filter:blur(12px);border-bottom:1px solid #E3E7EC;font-family:"Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+.eu-unified-top *{box-sizing:border-box}
+.eu-unified-inner{max-width:1180px;margin:0 auto;padding:11px 18px;display:flex;align-items:center;gap:14px;min-height:60px;overflow-x:auto;scrollbar-width:none}
+.eu-unified-inner::-webkit-scrollbar{display:none}.eu-u-brand{display:flex;align-items:center;gap:12px;flex:0 0 auto;white-space:nowrap}.eu-u-logo{height:34px;width:auto;display:block}.eu-u-divider{width:1px;height:25px;background:#DCE1E7}.eu-u-title{font-size:20px;font-weight:800;letter-spacing:-.025em;color:#161A20}.eu-u-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex:0 0 auto;white-space:nowrap}.eu-u-today{font-size:12px;font-weight:650;color:#8792A1}.eu-u-status{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;background:#E8F5EE;color:#168154;font-size:12px;font-weight:800;border:1px solid #DCEFE4}.eu-u-status i{width:7px;height:7px;border-radius:50%;background:#16905F;display:block}.eu-u-status[data-s="busy"]{background:#EEF0FA;color:#5A4FC7;border-color:#E0DDF5}.eu-u-status[data-s="busy"] i{background:#5A4FC7}.eu-u-status[data-s="error"]{background:#FCEBE7;color:#B54A34;border-color:#F3D4CD}.eu-u-status[data-s="error"] i{background:#C6533D}.eu-u-status[data-s="offline"]{background:#F7F0DF;color:#946A10;border-color:#EFE2C2}.eu-u-status[data-s="offline"] i{background:#C19026}.eu-u-btn{height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #DDE2E8;background:#fff;color:#1F2937;border-radius:10px;padding:0 13px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 1px 2px rgba(20,30,40,.03);white-space:nowrap}.eu-u-btn:hover{border-color:#C9D0D8}.eu-u-btn.excel{background:#EAF6EF;border-color:#CDE7D6;color:#187545}.eu-u-btn.json{background:#F0EEFC;border-color:#DFDBF8;color:#5144B8}.eu-u-btn.gear{width:38px;padding:0;color:#40566F;background:#F0F3F7}.eu-u-settings{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(20,25,32,.35);padding:18px}.eu-u-settings.show{display:flex}.eu-u-settings-card{width:min(420px,100%);background:#fff;border:1px solid #E2E6EA;border-radius:16px;padding:18px;box-shadow:0 18px 50px rgba(20,30,40,.18)}.eu-u-settings-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}.eu-u-settings-head h3{margin:0;font-size:17px}.eu-u-close{border:0;background:#F1F3F5;width:32px;height:32px;border-radius:9px;font-size:18px;cursor:pointer}.eu-u-settings-actions{display:grid;gap:8px}.eu-u-settings-actions button,.eu-u-settings-actions label{display:flex;align-items:center;justify-content:center;border:1px solid #DDE2E8;background:#fff;border-radius:11px;padding:11px 12px;font-size:13px;font-weight:800;cursor:pointer;color:#26313E}.eu-u-settings-note{margin-top:10px;color:#7A8491;font-size:11.5px;line-height:1.55}.eu-u-subtabs{max-width:1180px;margin:8px auto 0;padding:0 18px}.eu-u-subtabs .tabs,.eu-u-subtabs .tab-bar{margin:0!important}
+@media(max-width:800px){.eu-unified-inner{padding:9px 12px;gap:10px}.eu-u-logo{height:28px}.eu-u-title{font-size:16px}.eu-u-right{gap:6px}.eu-u-today{display:none}.eu-u-btn{height:34px;padding:0 10px;font-size:12px}.eu-u-btn.gear{width:34px}.eu-u-status{padding:5px 9px;font-size:11.5px}}
+
+.top{display:none!important} main{max-width:1180px!important;margin:0 auto!important;padding-left:18px!important;padding-right:18px!important}</style>
+
+<style id="eu-final-visual-patch">
+/* 최종 통일: 체크리스트와 비슷한 중앙 고정 폭 + 상단 한 줄 */
+.eu-unified-top{display:block!important;position:sticky!important;top:0!important;z-index:120!important}
+.eu-unified-inner{max-width:1180px!important;width:100%!important;margin:0 auto!important;display:flex!important;align-items:center!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:12px!important}
+.eu-u-brand,.eu-u-right{flex:0 0 auto!important;white-space:nowrap!important}
+.eu-u-right{margin-left:auto!important;display:flex!important;align-items:center!important;gap:7px!important}
+.eu-u-today{display:inline!important}
+body>header:not(.eu-unified-top){display:none!important}
+header.top:not(.eu-unified-top){display:none!important}
+.wrap>header.top{display:none!important}
+.tabrow .topbtns{display:none!important}
+@media(max-width:800px){
+  .eu-unified-inner{padding:9px 12px!important;gap:7px!important}
+  .eu-u-today{display:inline!important}
+  .eu-u-btn{height:34px!important;padding:0 10px!important}
+  .eu-u-btn.gear{width:34px!important;padding:0!important}
+}
+</style>
+
 </head>
 <body>
+<header class="eu-unified-top" id="euUnifiedHeader"><div class="eu-unified-inner">
+      <div class="eu-u-brand"><img class="eu-u-logo" src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원"><span class="eu-u-divider"></span><span class="eu-u-title">셀프 체크리스트</span></div>
+      <div class="eu-u-right"><span class="eu-u-today" id="euTopToday"></span><span class="eu-u-status" id="euTopStatus" data-s="busy"><i></i><span id="euTopStatusText">연결 중…</span></span><button class="eu-u-btn" id="euMenuBtn">← 메뉴</button><button class="eu-u-btn excel" id="euExcelBtn">엑셀 저장</button><button class="eu-u-btn json" id="euJsonBtn">JSON 저장</button><button class="eu-u-btn gear" id="euGearBtn" aria-label="설정" title="설정">⚙</button></div>
+    </div></header>
+    <div class="eu-u-settings" id="euSettingsModal"><div class="eu-u-settings-card"><div class="eu-u-settings-head"><h3>설정 · 복원</h3><button class="eu-u-close" data-eu-close>×</button></div><div class="eu-u-settings-actions" id="euSettingsActions"></div><div class="eu-u-settings-note">복원은 현재 데이터를 바꿀 수 있으므로 실행 전 자동으로 JSON 백업을 내려받도록 구성했습니다.</div></div></div>
 <header class="top"><div class="topin"><div class="brand"><img src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원"><span class="brand-title">셀프 체크리스트</span></div><div class="toolbar"><button class="btn" id="backBtn">← 메뉴</button><button class="btn" id="saveNowBtn" hidden>엑셀 백업</button><button class="btn" id="backupBtn" hidden>JSON 백업</button><button class="btn" id="importBtn" hidden>JSON 가져오기</button><button class="gear-btn" id="settingsBtn" hidden aria-label="체크리스트 설정" title="체크리스트 설정">⚙</button><input type="file" id="importFile" accept="application/json,.json" hidden></div></div></header>
 <main>
   <section class="hero"><div><h1 id="pageTitle">셀프 체크리스트</h1><p id="pageSub">내 업무를 확인하고 완료한 항목을 체크하세요.</p></div><div class="actions" id="adminActions" hidden><select id="staffSelect"></select><button class="btn primary" id="addBtn">+ 항목 추가</button></div></section>
@@ -54,9 +90,11 @@ const $=id=>document.getElementById(id);
 function toast(msg){const el=$("toast");el.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2200)}
 function jsonp(params){return new Promise((resolve,reject)=>{const cb="cl_"+Math.random().toString(36).slice(2);const s=document.createElement("script");const timer=setTimeout(()=>{cleanup();reject(new Error("timeout"))},15000);function cleanup(){clearTimeout(timer);delete window[cb];s.remove()}window[cb]=d=>{cleanup();resolve(d)};s.onerror=()=>{cleanup();reject(new Error("network"))};s.src=CHECKLIST_API+"?callback="+cb+"&"+Object.entries(params).map(([k,v])=>encodeURIComponent(k)+"="+encodeURIComponent(v??"")).join("&");document.body.appendChild(s)})}
 async function post(body){await fetch(CHECKLIST_API,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)})}
-function readSession(){try{const s=JSON.parse(sessionStorage.getItem(SESSION_KEY)||"null");if(!s||!s.name||!s.pw||Date.now()-s.at>8*60*60*1000)return null;return s}catch(e){return null}}
+function readSession(){try{const s=JSON.parse(sessionStorage.getItem(SESSION_KEY)||"null");if(!s||!s.name||!s.pw||Date.now()-s.at>60*60*1000)return null;return s}catch(e){return null}}
 function signOut(){try{sessionStorage.removeItem(SESSION_KEY)}catch(e){}location.replace(LOGIN_URL)}
-async function start(){session=readSession();if(!session){signOut();return}if(CHECKLIST_API.includes("__CHECKLIST")){showSetup();return}try{const r=await jsonp({action:"auth",name:session.name,pw:session.pw});if(!r.ok)throw new Error(r.msg||"인증 실패");token=r.token;sessionStorage.setItem(SESSION_KEY,JSON.stringify({name:session.name,part:session.part,at:session.at}));await load()}catch(e){$("status").textContent="로그인 확인에 실패했습니다. 메뉴로 돌아가 다시 로그인해주세요."}}
+function checklistTabKey(){try{const g=JSON.parse(localStorage.getItem('everyup_global_session_v1')||'null');const n=(g&&g.expiresAt>Date.now()&&g.name)||'';return 'everyup_lasttab_체크리스트_'+(n||'default')}catch(e){return 'everyup_lasttab_체크리스트_default'}}
+function restoreChecklistTab(){try{const s=JSON.parse(localStorage.getItem(checklistTabKey())||'null');if(s){if(s.period)activePeriod=s.period;if(s.view==='stats'&&model.canStats)activeView='stats';render();if(activeView==='stats')loadStats();}}catch(e){}}
+async function start(){session=readSession();if(!session){signOut();return}if(CHECKLIST_API.includes("__CHECKLIST")){showSetup();return}try{const r=await jsonp({action:"auth",name:session.name,pw:session.pw});if(!r.ok)throw new Error(r.msg||"인증 실패");token=r.token;sessionStorage.setItem(SESSION_KEY,JSON.stringify({name:session.name,part:session.part,at:session.at}));await load();restoreChecklistTab()}catch(e){$("status").textContent="로그인 확인에 실패했습니다. 메뉴로 돌아가 다시 로그인해주세요."}}
 function showSetup(){$("status").className="setup";$("status").innerHTML="체크리스트 백엔드 연결 전입니다.<code>체크리스트_백엔드.gs를 Apps Script로 배포한 뒤 웹앱 주소를 연결하세요.</code>"}
 async function load(target){const r=await jsonp({action:"load",token,targetUser:target||model.viewUser||""});if(!r.ok){if(r.code==="AUTH")signOut();throw new Error(r.msg||"불러오기 실패")}model=r;render()}
 function periodItems(items,key){if(key==="all")return items;if(key==="weekly")return items.filter(x=>x.cycle==="매주");if(key==="monthly")return items.filter(x=>x.cycle==="매월");if(key==="quarterly")return items.filter(x=>x.cycle==="분기");return items.filter(x=>["매일","오전","관리중","오후","필요시"].includes(x.cycle))}
@@ -90,6 +128,31 @@ async function backupNow(){if(!model.isDirector)return;try{const r=await jsonp({
 async function importBackup(file){if(!model.isDirector||!file)return;try{const text=await file.text();const data=JSON.parse(text);if(!confirm("이 백업을 가져오면 현재 체크리스트 데이터가 교체됩니다. 계속할까요?"))return;await post({action:"importBackup",token,backup:data});toast("가져오기를 요청했습니다.");await new Promise(r=>setTimeout(r,1200));await load(model.viewUser)}catch(e){toast("올바른 체크리스트 JSON 파일인지 확인해주세요.")}finally{$("importFile").value=""}}
 $("checklistTab").onclick=()=>switchView("checklist");$("statsTab").onclick=()=>switchView("stats");
 $("staffSelect").addEventListener("change",e=>{model.viewUser=e.target.value;activePeriod="daily";load(model.viewUser).catch(()=>toast("불러오지 못했습니다."))});$("addBtn").onclick=()=>$("modal").classList.add("show");$("cancelBtn").onclick=()=>$("modal").classList.remove("show");$("saveBtn").onclick=addItem;$("editCancelBtn").onclick=()=>$("editModal").classList.remove("show");$("editSaveBtn").onclick=saveEdit;$("saveNowBtn").onclick=saveNow;$("backupBtn").onclick=backupNow;$("importBtn").onclick=()=>$("importFile").click();$("settingsBtn").onclick=toggleSettings;$("importFile").addEventListener("change",e=>importBackup(e.target.files[0]));$("backBtn").onclick=()=>location.href=LOGIN_URL;start();
+</script>
+<script>
+(function(){
+  const CFG=window.EVERYUP_CONFIG||{};
+  const SESSION_KEY='everyup_global_session_v1';
+  window.euReadSession=function(){
+    try{const s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); if(!s||!s.name||!s.expiresAt||Date.now()>s.expiresAt){localStorage.removeItem(SESSION_KEY);return null;} return s;}catch(e){return null;}
+  };
+  window.euSessionUser=function(){const s=window.euReadSession();return s?s.name:'';};
+  window.euGoMenu=function(){location.href=(CFG.loginUrl||'로그인.html')+'?menu=1';};
+  window.euSetTopStatus=function(text,state){const el=document.getElementById('euTopStatus'),tx=document.getElementById('euTopStatusText');if(!el||!tx)return;tx.textContent=text||'연결됨';el.dataset.s=state||'ok';};
+  window.euBackupSnapshot=function(app,payload){
+    const url=CFG.backupApi||''; if(!url||url.includes('__EVERYUP')) return;
+    let data=payload; try{if(typeof data!=='string')data=JSON.stringify(data);}catch(e){return;}
+    try{fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'snapshot',token:CFG.backupToken||'',app:app,payload:data})});}catch(e){}
+  };
+  const d=new Date(), today=document.getElementById('euTopToday'); if(today) today.textContent='오늘 '+String(d.getFullYear()).slice(2)+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const menu=document.getElementById('euMenuBtn'); if(menu)menu.onclick=window.euGoMenu;
+  const gear=document.getElementById('euGearBtn'), modal=document.getElementById('euSettingsModal'); if(gear&&modal)gear.onclick=()=>modal.classList.add('show');
+  document.querySelectorAll('[data-eu-close]').forEach(x=>x.onclick=()=>modal&&modal.classList.remove('show'));
+  if(modal) modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('show')});
+})();
+</script>
+<script>
+(function(){const APP='체크리스트';function tabKey(){return 'everyup_lasttab_'+APP+'_'+(euSessionUser()||session?.name||'default')}function saveTab(){try{localStorage.setItem(tabKey(),JSON.stringify({view:activeView,period:activePeriod}))}catch(e){}}const _sv=window.switchView;window.switchView=function(v){_sv(v);saveTab()};const _rpn=window.renderPeriodNav;window.renderPeriodNav=function(items,records){_rpn(items,records);document.querySelectorAll('.periodbtn').forEach(b=>{const old=b.onclick;b.onclick=()=>{old&&old();saveTab()}})};const _render=window.render;window.render=function(){_render();try{if(model)euBackupSnapshot(APP,{model:model,activeView:activeView,activePeriod:activePeriod,exportedAt:new Date().toISOString()})}catch(e){}if(model&&model.isDirector){document.getElementById('euExcelBtn').style.display='';document.getElementById('euJsonBtn').style.display='';document.getElementById('euGearBtn').style.display=''}else{document.getElementById('euExcelBtn').style.display='none';document.getElementById('euJsonBtn').style.display='none';document.getElementById('euGearBtn').style.display='none'}euSetTopStatus('연결됨','ok')};document.getElementById('euExcelBtn').onclick=saveNow;document.getElementById('euJsonBtn').onclick=backupNow;const act=document.getElementById('euSettingsActions');act.innerHTML='<button id="euRestoreJson">JSON 복원</button><button id="euChecklistSettings">항목 설정 열기</button>';document.getElementById('euRestoreJson').onclick=()=>document.getElementById('importFile').click();document.getElementById('euChecklistSettings').onclick=()=>{document.getElementById('euSettingsModal').classList.remove('show');toggleSettings()};const _start=window.start;window.start=async function(){await _start();try{const s=JSON.parse(localStorage.getItem(tabKey())||'null');if(s){if(s.period)activePeriod=s.period;if(s.view==='stats'&&model.canStats)activeView='stats';render();if(activeView==='stats')loadStats();}}catch(e){}};})();
 </script>
 </body>
 </html>

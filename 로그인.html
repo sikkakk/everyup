@@ -129,6 +129,7 @@
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+<script src="everyup-config.js"></script>
 </head>
 <body>
 <div class="app" id="app">
@@ -173,7 +174,7 @@
         <div class="welcome-menu">
           <button class="btn-fill" id="goChecklist">✅ 셀프 체크리스트</button>
           <button class="btn-fill" id="goInventory">📦 재고 현황</button>
-          <button class="btn-fill" id="goManual">📋 시술준비 매뉴얼</button>
+          <button class="btn-fill" id="goManual">📋 시술매뉴얼</button>
           <button class="btn-fill" id="goAttendance" style="display:none">🕐 직원관리</button>
           <button class="btn-fill" id="goReservation" style="display:none">📊 예약통계</button>
           <button class="btn-fill" id="goConsult" style="display:none">💳 상담전환관리</button>
@@ -193,7 +194,7 @@ const API = "https://script.google.com/macros/s/AKfycbwUBiyI9x4OfeexcM1nVbdIyOPe
 
 /* ===== 로그인 후 이동할 앱 주소 ===== */
 const INVENTORY_URL = "https://sikkakk.github.io/everyup/%EC%9E%AC%EA%B3%A0%EA%B4%80%EB%A6%AC.html";
-const MANUAL_URL = "https://sikkakk.github.io/everyup/%EC%8B%9C%EC%88%A0%EC%A4%80%EB%B9%84%EB%A7%A4%EB%89%B4%EC%96%BC.html"; // 시술준비매뉴얼.html (구성원 모두)
+const MANUAL_URL = "https://sikkakk.github.io/everyup/%EC%8B%9C%EC%88%A0%EB%A7%A4%EB%89%B4%EC%96%BC.html"; // 시술준비매뉴얼.html (구성원 모두)
 const CHECKLIST_URL = "https://sikkakk.github.io/everyup/%EC%B2%B4%ED%81%AC%EB%A6%AC%EC%8A%A4%ED%8A%B8.html";
 const ATTENDANCE_URL = "https://sikkakk.github.io/everyup/%EC%A7%81%EC%9B%90%EA%B4%80%EB%A6%AC.html"; // 직원관리.html (송우철 원장님 전용)
 const RESERVATION_URL = "https://sikkakk.github.io/everyup/%EC%98%88%EC%95%BD%ED%86%B5%EA%B3%84.html"; // 예약통계.html (원장·실장·부실장 전용)
@@ -214,6 +215,19 @@ function api(params){
     document.body.appendChild(s);
   });
 }
+
+
+/* ===== 1시간 공통 로그인 유지 ===== */
+const GLOBAL_SESSION_KEY='everyup_global_session_v1';
+const GLOBAL_SESSION_MS=(window.EVERYUP_CONFIG&&window.EVERYUP_CONFIG.sessionMs)||60*60*1000;
+function saveGlobalSession(p,pw){
+  try{localStorage.setItem(GLOBAL_SESSION_KEY,JSON.stringify({name:p.name,part:p.part||'',pw64:btoa(unescape(encodeURIComponent(pw||''))),at:Date.now(),expiresAt:Date.now()+GLOBAL_SESSION_MS}));}catch(e){}
+}
+function readGlobalSession(){
+  try{const s=JSON.parse(localStorage.getItem(GLOBAL_SESSION_KEY)||'null');if(!s||!s.name||Date.now()>Number(s.expiresAt||0)){localStorage.removeItem(GLOBAL_SESSION_KEY);return null;}return s;}catch(e){return null;}
+}
+function clearGlobalSession(){try{localStorage.removeItem(GLOBAL_SESSION_KEY);}catch(e){}}
+function decodePw64(s){try{return decodeURIComponent(escape(atob(s||'')));}catch(e){return '';}}
 
 /* ===== 상태 ===== */
 let STAFF = [];
@@ -333,6 +347,7 @@ async function submit(){
         renderDots();
       }else{
         sessionPw=pw;
+        saveGlobalSession(cur,pw);
         welcome();
       }
     }catch(e){ busy=false; setMsg("연결이 불안정해요. 다시 눌러주세요.","bad"); shake(); }
@@ -361,6 +376,7 @@ async function submit(){
       busy=false;
       if(!r.ok){ setMsg(r.msg||"변경 실패","bad"); shake(); mode="change_new"; newPw=""; return; }
       sessionPw=newPw;
+      saveGlobalSession(cur,newPw);
       welcome();
     }catch(e){ busy=false; setMsg("연결이 불안정해요. 다시 시도해주세요.","bad"); shake(); }
     return;
@@ -423,12 +439,23 @@ $("goIncentive").onclick=()=>{
   location.href = INCENTIVE_URL;
 };
 backBtn.onclick=()=>{ buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
-$("logoutBtn").onclick=()=>{ cur=null; buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
+$("logoutBtn").onclick=()=>{ clearGlobalSession(); cur=null; buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
 
 /* ===== 시작 ===== */
 buildPad();
-show("names");
-loadNames();
+const remembered=readGlobalSession();
+if(remembered){
+  cur={name:remembered.name,part:remembered.part||''}; sessionPw=decodePw64(remembered.pw64||'');
+  // 각 앱에서 기존 인증 신호를 재사용할 수 있도록 1시간 세션을 전달
+  try{
+    sessionStorage.setItem('everyup_checklist_user',JSON.stringify({name:cur.name,part:cur.part||'',pw:sessionPw,at:Date.now()}));
+    sessionStorage.setItem('everyup_manual_user',JSON.stringify({name:cur.name,part:cur.part||'',at:Date.now()}));
+    sessionStorage.setItem('everyup_att_ok',String(Date.now())); sessionStorage.setItem('everyup_resv_ok',String(Date.now()));
+    sessionStorage.setItem('everyup_consult_ok',String(Date.now())); sessionStorage.setItem('everyup_incentive_ok',String(Date.now()));
+  }catch(e){}
+  welcome();
+}else{show('names');loadNames();}
+
 </script>
 </body>
 </html>

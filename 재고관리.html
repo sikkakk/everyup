@@ -217,8 +217,45 @@
   .hrow .hqty{margin-left:auto; font-weight:800; font-size:15px; color:var(--ink); font-variant-numeric:tabular-nums}
   .lotmore{display:inline-block; margin-left:5px; font-size:10.5px; font-weight:800; color:#8A6D1E; background:#F2EEE6; border-radius:5px; padding:1px 5px; vertical-align:middle; cursor:default}
 </style>
+<script src="everyup-config.js"></script>
+<style>
+/* ===== 에브리업 7앱 공통 상단 ===== */
+.eu-unified-top{position:sticky;top:0;z-index:120;background:rgba(247,248,250,.96);backdrop-filter:blur(12px);border-bottom:1px solid #E3E7EC;font-family:"Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+.eu-unified-top *{box-sizing:border-box}
+.eu-unified-inner{max-width:1180px;margin:0 auto;padding:11px 18px;display:flex;align-items:center;gap:14px;min-height:60px;overflow-x:auto;scrollbar-width:none}
+.eu-unified-inner::-webkit-scrollbar{display:none}.eu-u-brand{display:flex;align-items:center;gap:12px;flex:0 0 auto;white-space:nowrap}.eu-u-logo{height:34px;width:auto;display:block}.eu-u-divider{width:1px;height:25px;background:#DCE1E7}.eu-u-title{font-size:20px;font-weight:800;letter-spacing:-.025em;color:#161A20}.eu-u-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex:0 0 auto;white-space:nowrap}.eu-u-today{font-size:12px;font-weight:650;color:#8792A1}.eu-u-status{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;background:#E8F5EE;color:#168154;font-size:12px;font-weight:800;border:1px solid #DCEFE4}.eu-u-status i{width:7px;height:7px;border-radius:50%;background:#16905F;display:block}.eu-u-status[data-s="busy"]{background:#EEF0FA;color:#5A4FC7;border-color:#E0DDF5}.eu-u-status[data-s="busy"] i{background:#5A4FC7}.eu-u-status[data-s="error"]{background:#FCEBE7;color:#B54A34;border-color:#F3D4CD}.eu-u-status[data-s="error"] i{background:#C6533D}.eu-u-status[data-s="offline"]{background:#F7F0DF;color:#946A10;border-color:#EFE2C2}.eu-u-status[data-s="offline"] i{background:#C19026}.eu-u-btn{height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #DDE2E8;background:#fff;color:#1F2937;border-radius:10px;padding:0 13px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 1px 2px rgba(20,30,40,.03);white-space:nowrap}.eu-u-btn:hover{border-color:#C9D0D8}.eu-u-btn.excel{background:#EAF6EF;border-color:#CDE7D6;color:#187545}.eu-u-btn.json{background:#F0EEFC;border-color:#DFDBF8;color:#5144B8}.eu-u-btn.gear{width:38px;padding:0;color:#40566F;background:#F0F3F7}.eu-u-settings{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(20,25,32,.35);padding:18px}.eu-u-settings.show{display:flex}.eu-u-settings-card{width:min(420px,100%);background:#fff;border:1px solid #E2E6EA;border-radius:16px;padding:18px;box-shadow:0 18px 50px rgba(20,30,40,.18)}.eu-u-settings-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}.eu-u-settings-head h3{margin:0;font-size:17px}.eu-u-close{border:0;background:#F1F3F5;width:32px;height:32px;border-radius:9px;font-size:18px;cursor:pointer}.eu-u-settings-actions{display:grid;gap:8px}.eu-u-settings-actions button,.eu-u-settings-actions label{display:flex;align-items:center;justify-content:center;border:1px solid #DDE2E8;background:#fff;border-radius:11px;padding:11px 12px;font-size:13px;font-weight:800;cursor:pointer;color:#26313E}.eu-u-settings-note{margin-top:10px;color:#7A8491;font-size:11.5px;line-height:1.55}.eu-u-subtabs{max-width:1180px;margin:8px auto 0;padding:0 18px}.eu-u-subtabs .tabs,.eu-u-subtabs .tab-bar{margin:0!important}
+@media(max-width:800px){.eu-unified-inner{padding:9px 12px;gap:10px}.eu-u-logo{height:28px}.eu-u-title{font-size:16px}.eu-u-right{gap:6px}.eu-u-today{display:none}.eu-u-btn{height:34px;padding:0 10px;font-size:12px}.eu-u-btn.gear{width:34px}.eu-u-status{padding:5px 9px;font-size:11.5px}}
+
+.wrap{max-width:1180px!important;margin:0 auto!important;padding:0 18px 60px!important}.wrap>.top{display:none!important}.topbtns{display:none!important}.tabrow{margin-top:12px!important}</style>
+
+<style id="eu-final-visual-patch">
+/* 최종 통일: 체크리스트와 비슷한 중앙 고정 폭 + 상단 한 줄 */
+.eu-unified-top{display:block!important;position:sticky!important;top:0!important;z-index:120!important}
+.eu-unified-inner{max-width:1180px!important;width:100%!important;margin:0 auto!important;display:flex!important;align-items:center!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:12px!important}
+.eu-u-brand,.eu-u-right{flex:0 0 auto!important;white-space:nowrap!important}
+.eu-u-right{margin-left:auto!important;display:flex!important;align-items:center!important;gap:7px!important}
+.eu-u-today{display:inline!important}
+body>header:not(.eu-unified-top){display:none!important}
+header.top:not(.eu-unified-top){display:none!important}
+.wrap>header.top{display:none!important}
+.tabrow .topbtns{display:none!important}
+@media(max-width:800px){
+  .eu-unified-inner{padding:9px 12px!important;gap:7px!important}
+  .eu-u-today{display:inline!important}
+  .eu-u-btn{height:34px!important;padding:0 10px!important}
+  .eu-u-btn.gear{width:34px!important;padding:0!important}
+}
+</style>
+
+<style>.wrap>.top,.tabrow>.topbtns{display:none!important}</style>
+<style>#xlsxBtn{display:none!important}</style>
 </head>
 <body>
+<header class="eu-unified-top" id="euUnifiedHeader"><div class="eu-unified-inner">
+      <div class="eu-u-brand"><img class="eu-u-logo" src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원"><span class="eu-u-divider"></span><span class="eu-u-title">재고관리</span></div>
+      <div class="eu-u-right"><span class="eu-u-today" id="euTopToday"></span><span class="eu-u-status" id="euTopStatus" data-s="busy"><i></i><span id="euTopStatusText">연결 중…</span></span><button class="eu-u-btn" id="euMenuBtn">← 메뉴</button><button class="eu-u-btn excel" id="euExcelBtn">엑셀 저장</button><button class="eu-u-btn json" id="euJsonBtn">JSON 저장</button><button class="eu-u-btn gear" id="euGearBtn" aria-label="설정" title="설정">⚙</button></div>
+    </div></header>
+    <div class="eu-u-settings" id="euSettingsModal"><div class="eu-u-settings-card"><div class="eu-u-settings-head"><h3>설정 · 복원</h3><button class="eu-u-close" data-eu-close>×</button></div><div class="eu-u-settings-actions" id="euSettingsActions"></div><div class="eu-u-settings-note">복원은 현재 데이터를 바꿀 수 있으므로 실행 전 자동으로 JSON 백업을 내려받도록 구성했습니다.</div></div></div>
 <div class="wrap">
   <header class="top">
     <img class="logo" src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원">
@@ -1233,6 +1270,31 @@ try{
   const emp=document.getElementById("empty");
   if(emp){ emp.style.display="block"; emp.innerHTML="<b>화면을 그리는 중 문제가 발생했어요</b>"+String((err&&err.message)||err); }
 }
+</script>
+<script>
+(function(){
+  const CFG=window.EVERYUP_CONFIG||{};
+  const SESSION_KEY='everyup_global_session_v1';
+  window.euReadSession=function(){
+    try{const s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); if(!s||!s.name||!s.expiresAt||Date.now()>s.expiresAt){localStorage.removeItem(SESSION_KEY);return null;} return s;}catch(e){return null;}
+  };
+  window.euSessionUser=function(){const s=window.euReadSession();return s?s.name:'';};
+  window.euGoMenu=function(){location.href=(CFG.loginUrl||'로그인.html')+'?menu=1';};
+  window.euSetTopStatus=function(text,state){const el=document.getElementById('euTopStatus'),tx=document.getElementById('euTopStatusText');if(!el||!tx)return;tx.textContent=text||'연결됨';el.dataset.s=state||'ok';};
+  window.euBackupSnapshot=function(app,payload){
+    const url=CFG.backupApi||''; if(!url||url.includes('__EVERYUP')) return;
+    let data=payload; try{if(typeof data!=='string')data=JSON.stringify(data);}catch(e){return;}
+    try{fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'snapshot',token:CFG.backupToken||'',app:app,payload:data})});}catch(e){}
+  };
+  const d=new Date(), today=document.getElementById('euTopToday'); if(today) today.textContent='오늘 '+String(d.getFullYear()).slice(2)+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const menu=document.getElementById('euMenuBtn'); if(menu)menu.onclick=window.euGoMenu;
+  const gear=document.getElementById('euGearBtn'), modal=document.getElementById('euSettingsModal'); if(gear&&modal)gear.onclick=()=>modal.classList.add('show');
+  document.querySelectorAll('[data-eu-close]').forEach(x=>x.onclick=()=>modal&&modal.classList.remove('show'));
+  if(modal) modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('show')});
+})();
+</script>
+<script>
+(function(){const APP='재고관리',user=euSessionUser()||'default',K='everyup_lasttab_'+APP+'_'+user;const orig=window.setView;window.setView=function(v){const r=orig(v);try{localStorage.setItem(K,v)}catch(e){}return r;};try{const v=localStorage.getItem(K);if(['stock','history','trash'].includes(v))setTimeout(()=>setView(v),0)}catch(e){}document.getElementById('euExcelBtn').onclick=backupFullXlsx;document.getElementById('euJsonBtn').onclick=()=>backupJson(false);const act=document.getElementById('euSettingsActions');act.innerHTML='<button id="euRestoreJson">JSON 복원</button><button id="euRefresh">클라우드 새로고침</button>';document.getElementById('euRestoreJson').onclick=pickRestore;document.getElementById('euRefresh').onclick=()=>{document.getElementById('euSettingsModal').classList.remove('show');if(typeof pullCloud==='function')pullCloud(true);else location.reload()};setInterval(()=>{try{euBackupSnapshot(APP,{app:'everyup-inventory',version:1,exportedAt:new Date().toISOString(),count:items.length,items:items})}catch(e){}},120000);window.addEventListener('pagehide',()=>{try{euBackupSnapshot(APP,{app:'everyup-inventory',version:1,exportedAt:new Date().toISOString(),count:items.length,items:items})}catch(e){}});const sp=document.getElementById('syncpill');if(sp)new MutationObserver(()=>{const t=sp.textContent||'';euSetTopStatus(t.includes('실패')||t.includes('오류')?'연결 오류':t.includes('저장 중')?'저장 중…':t.includes('오프')||t.includes('미리보기')?'오프라인':t.includes('저장')?'저장됨':'연결됨',t.includes('실패')||t.includes('오류')?'error':t.includes('저장 중')?'busy':t.includes('오프')||t.includes('미리보기')?'offline':'ok')}).observe(sp,{childList:true,subtree:true,characterData:true});})();
 </script>
 </body>
 </html>

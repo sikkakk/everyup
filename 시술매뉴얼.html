@@ -34,12 +34,12 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,system-ui,sans-s
 
 /* Topbar */
 .topbar{position:sticky;top:0;z-index:30;background:rgba(244,245,247,.85);backdrop-filter:saturate(1.8) blur(12px);border-bottom:1px solid var(--line)}
-.topbar-inner{max-width:1120px;margin:0 auto;padding:14px 20px 12px}
-.brandbar{display:flex;align-items:center;gap:11px}
+.topbar-inner{max-width:1180px;margin:0 auto;padding:14px 20px 12px}
+.brandbar{display:flex;align-items:center;gap:11px;overflow-x:auto;scrollbar-width:none}
 .logo{height:34px;width:auto;display:block}
 .divider{width:1px;height:24px;background:var(--line);flex:0 0 auto}
 .brandbar h1{font-size:21px;font-weight:800;letter-spacing:-.02em}
-.brand-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.brand-right{margin-left:auto;display:flex;align-items:center;gap:7px;white-space:nowrap;flex:0 0 auto}
 .today{font-size:12px;font-weight:600;color:var(--faint);white-space:nowrap}
 .sync-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;transition:.15s}
 .sync-pill .dot{width:7px;height:7px;border-radius:50%;background:#C6CBD3}
@@ -52,7 +52,7 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,system-ui,sans-s
 .sync-pill[data-s="off"]{color:var(--nz-ink);background:var(--nz-tint);border-color:#F0DCB8}
 .sync-pill[data-s="off"] .dot{background:var(--nz)}
 @keyframes pulse{50%{opacity:.35}}
-.top-actions{display:flex;justify-content:flex-end;align-items:center;gap:7px;margin-top:10px}
+.top-actions{display:none!important}
 .search{position:relative;margin-top:10px}
 .search input{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 14px 12px 42px;font-size:15px;font-family:inherit;color:var(--ink);transition:border-color .15s, box-shadow .15s}
 .search input:focus{outline:none;border-color:var(--eq);box-shadow:0 0 0 3px var(--eq-tint)}
@@ -85,7 +85,7 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,system-ui,sans-s
 .tab[data-d="삭제항목"][aria-selected="true"]{background:var(--rgray);border-color:var(--rgray);color:#fff}
 
 /* Toolbar */
-main{max-width:1120px;margin:0 auto;padding:18px 20px}
+main{max-width:1180px;margin:0 auto;padding:18px 20px}
 .toolbar{display:none}
 .count{font-size:13px;color:var(--muted)}
 .count b{color:var(--ink);font-weight:700}
@@ -265,7 +265,7 @@ table.dose tr:last-child td{border-bottom:none}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 20px;border-radius:12px;font-size:14px;font-weight:700;opacity:0;pointer-events:none;transition:.25s;z-index:100;box-shadow:var(--shadow)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-footer{max-width:1120px;margin:0 auto;padding:0 20px;text-align:center}
+footer{max-width:1180px;margin:0 auto;padding:0 20px;text-align:center}
 .foot{border-top:1px solid var(--line);margin-top:24px;padding:20px 0;color:var(--faint);font-size:12.5px;line-height:1.6}
 
 @media (max-width:640px){
@@ -310,6 +310,7 @@ footer{max-width:1120px;margin:0 auto;padding:0 20px;text-align:center}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
+<script src="everyup-config.js"></script>
 </head>
 <body>
 <header class="topbar">
@@ -320,13 +321,18 @@ footer{max-width:1120px;margin:0 auto;padding:0 20px;text-align:center}
       <h1>시술매뉴얼</h1>
       <div class="brand-right">
         <span class="today" id="today"></span>
-        <button class="sync-pill" id="syncPill" data-s="off" title="동기화 상태"><span class="dot"></span><span id="syncText">오프라인</span></button>
+        <button class="sync-pill" id="syncPill" data-s="syncing" title="동기화 상태"><span class="dot"></span><span id="syncText">연결 중…</span></button>
+        <button class="tbtn" id="manualMenuBtn">← 메뉴</button>
+        <button class="tbtn c-excel" id="manualXlsxBtn">엑셀 저장</button>
+        <button class="tbtn c-json" id="manualJsonBtn">JSON 저장</button>
+        <button class="tbtn c-set" id="manualSetBtn" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></button>
+      
       </div>
     </div>
     <div class="top-actions">
-      <button class="tbtn c-save" id="saveBtn" title="지금 클라우드에 저장"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>저장</button>
-      <button class="tbtn c-excel" id="xlsxBtn" title="모든 항목을 엑셀 백업으로 저장">엑셀 백업</button>
-      <button class="tbtn c-json" id="jsonBtn" title="모든 항목을 JSON 백업으로 저장">JSON 백업</button>
+      
+      <button class="tbtn c-excel" id="xlsxBtn" title="모든 항목을 엑셀 저장으로 저장">엑셀 저장</button>
+      <button class="tbtn c-json" id="jsonBtn" title="모든 항목을 JSON 저장으로 저장">JSON 저장</button>
       <button class="tbtn c-set" id="setBtn" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></button>
     </div>
     <div class="search">
@@ -955,7 +961,7 @@ let syncedOK=false, pushTimer=null;
 let CURRENT_USER = "";
 let CURRENT_USER_OBJ = null;
 try{
-  const _u=JSON.parse(sessionStorage.getItem("everyup_manual_user")||"null");
+  let _u=JSON.parse(sessionStorage.getItem("everyup_manual_user")||"null"); if(!_u){try{const g=JSON.parse(localStorage.getItem('everyup_global_session_v1')||'null');if(g&&g.expiresAt>Date.now())_u=g;}catch(e){}}
   if(_u){ CURRENT_USER_OBJ=_u; if(_u.name) CURRENT_USER=String(_u.name); }
 }catch(e){}
 function isOwner(){
@@ -1031,7 +1037,7 @@ let toastT=null;
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- 동기화 UI ---------- */
-function setSync(s){ const p=$("#syncPill"),t=$("#syncText"); p.dataset.s=s; t.textContent={ok:"저장됨",syncing:"저장 중…",error:"연결 오류",off:"오프라인"}[s]||s; }
+function setSync(s){ const p=$("#syncPill"),t=$("#syncText"); p.dataset.s=(s==="connected"?"ok":s); t.textContent={connected:"연결됨",ok:"저장됨",syncing:"저장 중…",error:"연결 오류",off:"오프라인"}[s]||s; }
 $("#syncPill") && ($("#syncPill").onclick=()=>{ if(!CLOUD_URL){ toast("배포 URL이 아직 설정되지 않았어요"); return; } pullCloud(true); });
 
 /* ---------- 클라우드 읽기 (JSONP) ---------- */
@@ -1055,9 +1061,9 @@ function pullCloud(manual){
           }
           collectConfigFrom(DATA);
           applyAccountTab();
-          syncedOK=true; setSync("ok"); if(manual) toast("최신 내용을 불러왔어요");
+          syncedOK=true; setSync("connected"); if(manual) toast("최신 내용을 불러왔어요");
           weeklyAutoSave();
-        } else { syncedOK=true; pushCloud(true); setSync("ok"); }
+        } else { syncedOK=true; pushCloud(true); setSync("connected"); }
       } else setSync("error");
     }catch(err){ setSync("error"); }
     render(); cleanup();
@@ -1083,7 +1089,7 @@ function pushCloud(immediate){
   };
   if(immediate) run(); else pushTimer=setTimeout(run,700);
 }
-function saveData(msg){ render(); pushCloud(); if(msg) toast(msg); }
+function saveData(msg){ render(); pushCloud(); if(window.euBackupSnapshot) euBackupSnapshot(APP_NAME,payload()); if(msg) toast(msg); }
 
 /* ---------- 드라이브 백업 폴더로 전송 (재고관리 방식) ---------- */
 function cloudBackup(op){
@@ -1428,7 +1434,7 @@ function openSettings(){
       +'<div class="ef"><label class="ef-label">분야 (탭)</label><textarea data-s="domains" rows="6">'+esc(CONFIG.domains.join("\n"))+'</textarea><div class="ef-hint">한 줄에 하나씩. 장비·주사제·실리프팅·수액·간호준비·피부관리 외 새 분야는 회색으로 표시됩니다.</div></div>'
       +'<div class="ef"><label class="ef-label">분류</label><textarea data-s="cats" rows="8">'+esc(CONFIG.cats.join("\n"))+'</textarea><div class="ef-hint">한 줄에 하나씩.</div></div>'
       +'<div class="ef"><label class="ef-label">장소</label><textarea data-s="rooms" rows="4">'+esc(CONFIG.rooms.join("\n"))+'</textarea><div class="ef-hint">한 줄에 하나씩.</div></div>'
-      +'<div class="ef"><label class="ef-label">백업 복원</label><div class="mini-btns" style="margin-top:0"><button class="sbtn" id="importXlsx">엑셀 백업 복원</button><button class="sbtn" id="importJson">JSON 백업 복원</button></div><div class="ef-hint">백업 파일에 저장된 전체 항목과 설정으로 되돌립니다. 복원 전 현재 상태는 JSON으로 자동 백업됩니다.</div></div>'
+      +'<div class="ef"><label class="ef-label">백업 복원</label><div class="mini-btns" style="margin-top:0"><button class="sbtn" id="importXlsx">엑셀 복원</button><button class="sbtn" id="importJson">JSON 복원</button></div><div class="ef-hint">백업 파일에 저장된 전체 항목과 설정으로 되돌립니다. 복원 전 현재 상태는 JSON으로 자동 백업됩니다.</div></div>'
       +'<p class="ef-hint">※ 이미 쓰이는 값을 목록에서 지워도, 그 값을 쓰던 항목은 그대로 유지됩니다.</p>'
     +'</div>'
     +'<div class="edit-actions"><button class="btn btn-cancel" type="button" data-cancel>취소</button><button class="btn btn-save" type="button" id="setSave">저장</button></div>';
@@ -1498,7 +1504,7 @@ function exportExcel(){
   const fname=APP_NAME+"_전체백업_"+ymd()+".xlsx";
   XLSX.writeFile(wb, fname);
   const saved=cloudBackup({ type:"driveXlsx", name:fname, b64:XLSX.write(wb,{bookType:"xlsx",type:"base64"}) });
-  toast(saved?"전체 항목 엑셀 백업 완료 — 다운로드 + 드라이브":"전체 항목을 엑셀로 백업했어요");
+  toast(saved?"전체 항목 엑셀 저장 완료 — 다운로드 + 드라이브":"전체 항목을 엑셀로 백업했어요");
 }
 function ymd(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function exportJson(){
@@ -1507,7 +1513,7 @@ function exportJson(){
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=fname; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   const saved=cloudBackup({ type:"driveJson", name:fname, content:payload() });
-  toast(saved?"전체 항목 JSON 백업 완료 — 다운로드 + 드라이브":"전체 항목을 JSON으로 백업했어요");
+  toast(saved?"전체 항목 JSON 저장 완료 — 다운로드 + 드라이브":"전체 항목을 JSON으로 백업했어요");
 }
 $("#jsonFile").addEventListener("change",function(e){
   const f=e.target.files[0]; if(!f)return;
@@ -1543,7 +1549,7 @@ function autoBackupJson(label){
   }catch(e){}
 }
 
-/* ---------- 엑셀 백업 복원 ---------- */
+/* ---------- 엑셀 복원 ---------- */
 function splitCell(v){
   return String(v==null?"":v).split(/\r?\n/).reduce((acc,s)=>{
     if(s.indexOf(" / ")>=0) acc.push.apply(acc, s.split(" / ")); else acc.push(s); return acc;
@@ -1632,7 +1638,6 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeModal(); });
 $("#q").addEventListener("input",e=>{ state.q=e.target.value.trim(); renderGrid(); });
 $("#addBtn").onclick=openNew;
 $("#setBtn").onclick=openSettings;
-$("#saveBtn").onclick=()=>{ if(!CLOUD_URL){ toast("배포 URL 미설정 — 저장할 수 없어요"); return; } if(!syncedOK){ toast("동기화 준비 중이에요. 잠시 후 다시"); pullCloud(); return; } pushCloud(true); toast("저장했어요"); };
 $("#xlsxBtn").onclick=exportExcel;
 $("#jsonBtn").onclick=exportJson;
 
@@ -1650,6 +1655,22 @@ function renderFoot(){
 render();
 if(CLOUD_URL){ pullCloud(); } else { setSync("off"); }
 
+</script>
+<script>
+(function(){
+  const CFG=window.EVERYUP_CONFIG||{};
+  window.euBackupSnapshot=window.euBackupSnapshot||function(app,p){const u=CFG.backupApi||'';if(!u||u.includes('__EVERYUP'))return;try{fetch(u,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'snapshot',token:CFG.backupToken||'',app:app,payload:typeof p==='string'?p:JSON.stringify(p)})});}catch(e){}};
+  const m=document.getElementById('manualMenuBtn');if(m)m.onclick=()=>location.href=(CFG.loginUrl||'로그인.html')+'?menu=1';
+  const x=document.getElementById('manualXlsxBtn');if(x)x.onclick=exportExcel;
+  const j=document.getElementById('manualJsonBtn');if(j)j.onclick=exportJson;
+  const s=document.getElementById('manualSetBtn');if(s)s.onclick=openSettings;
+})();
+</script>
+<script>
+(function(){
+ const CFG=window.EVERYUP_CONFIG||{};
+ window.euBackupSnapshot=window.euBackupSnapshot||function(app,payload){const u=CFG.backupApi||'';if(!u||u.includes('__EVERYUP'))return;let d=payload;try{if(typeof d!=='string')d=JSON.stringify(d)}catch(e){return}try{fetch(u,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'snapshot',token:CFG.backupToken||'',app:app,payload:d})})}catch(e){}};
+})();
 </script>
 </body>
 </html>
