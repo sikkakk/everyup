@@ -4,9 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>에브리업의원 로그인</title>
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+
 <style>
   :root{
     --bg:#F1EEE8;
@@ -120,6 +118,19 @@
   }
   .btn-line:active{background:var(--accent-soft)}
 
+  .btn-fill.app-off{background:#E3E3E3;color:#858585;cursor:not-allowed;box-shadow:none}
+  .app-setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px;text-align:left}
+  .app-switch{display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--accent)}
+  .app-switch input{appearance:none;-webkit-appearance:none;position:relative;width:38px;height:22px;border-radius:12px;margin:0;background:#C7CBC9;cursor:pointer;flex-shrink:0}
+  .app-switch input::before{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:white;transition:transform .15s}
+  .app-switch input:checked{background:var(--accent)}
+  .app-switch input:checked::before{transform:translateX(16px)}
+  .app-switch input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .app-switch input:disabled{opacity:.5;cursor:wait}
+  #appSettingsPanel{margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:14px;background:#FAFAF8}
+  #appSettingsPanel h2{font-size:15px;margin:0 0 6px;text-align:left}
+  #appSettingsStatus{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.5;min-height:18px}
+  [hidden]{display:none!important}
   .foot{text-align:center;font-size:11px;color:var(--muted);margin-top:18px;letter-spacing:.02em}
 
   @media(max-width:520px){
@@ -129,13 +140,20 @@
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
-<script src="everyup-config.js"></script>
+<script>
+const EVERYUP_LIVE = location.protocol === 'https:' && location.hostname === 'sikkakk.github.io';
+if (EVERYUP_LIVE) {
+  for (const href of ['https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css','https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&display=swap']) {
+    const link=document.createElement('link'); link.rel='stylesheet'; link.href=href; document.head.appendChild(link);
+  }
+}
+</script>
 </head>
 <body>
 <div class="app" id="app">
 
   <div class="brand">
-    <img class="brand-logo" src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원"
+    <img class="brand-logo" src="logo.png" alt="에브리업의원"
          onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
     <h1 class="brand-fallback" style="display:none">에브리업의원</h1>
     <p class="tag">안녕하십니까? 전문가의 손길 에브리업의원입니다.</p>
@@ -180,6 +198,13 @@
           <button class="btn-fill" id="goConsult" style="display:none">💳 상담전환관리</button>
           <button class="btn-fill" id="goIncentive" style="display:none">🧴 화장품관리 인센티브</button>
         </div>
+        <p id="appSettingsStatus" role="status" aria-live="polite"></p>
+        <button class="btn-line" id="appSettingsRetry" hidden>설정 다시 확인</button>
+        <button class="btn-line" id="appSettingsBtn" hidden aria-expanded="false" aria-controls="appSettingsPanel">⚙ 앱 사용 설정</button>
+        <section id="appSettingsPanel" hidden aria-labelledby="appSettingsTitle">
+          <h2 id="appSettingsTitle">앱 사용 설정</h2>
+          <div id="appSettingsRows"></div>
+        </section>
         <button class="btn-line" id="logoutBtn">다른 계정으로</button>
       </div>
     </div>
@@ -203,6 +228,8 @@ const INCENTIVE_URL = "https://sikkakk.github.io/everyup/%ED%99%94%EC%9E%A5%ED%9
 
 /* ===== JSONP 헬퍼 (읽기 전용, CORS 우회) ===== */
 function api(params){
+  if (!EVERYUP_LIVE) return Promise.reject(new Error("preview"));
+  params = {...params, _nonce:Date.now()+"_"+Math.random().toString(36).slice(2)};
   return new Promise((resolve,reject)=>{
     const cb = "cb_" + Math.random().toString(36).slice(2);
     const timer = setTimeout(()=>{ cleanup(); reject(new Error("timeout")); }, 12000);
@@ -256,6 +283,7 @@ function show(view){
 
 /* ===== 이름 목록 ===== */
 async function loadNames(){
+  if(!EVERYUP_LIVE){ $("nameLoading").textContent="미리보기 · 네트워크 차단 (운영 사이트에서 로그인하세요)"; return; }
   try{
     const r = await api({action:"list"});
     if(!r.ok) throw new Error(r.msg||"목록 오류");
@@ -329,7 +357,7 @@ function shake(){
 
 /* ===== 제출 처리 ===== */
 async function submit(){
-  if(busy) return;
+  if(busy || buf.length!==6 || !cur) return;
   const pw=buf;
 
   /* 1) 로그인 */
@@ -339,6 +367,8 @@ async function submit(){
       const r=await api({action:"login",name:cur.name,pw});
       busy=false;
       if(!r.ok){ setMsg(r.msg||"비밀번호가 틀렸습니다.","bad"); shake(); return; }
+      cur = {name:r.name,part:r.part||""};
+      sessionPw=pw;
       if(r.mustChange){
         mode="change_new"; buf=""; newPw="";
         cardTitle.textContent="비밀번호 변경";
@@ -372,7 +402,7 @@ async function submit(){
     }
     busy=true; setMsg("저장 중…","hint");
     try{
-      const r=await api({action:"change",name:cur.name,pw:newPw});
+      const r=await api({action:"change",name:cur.name,pw:newPw,oldPw:sessionPw});
       busy=false;
       if(!r.ok){ setMsg(r.msg||"변경 실패","bad"); shake(); mode="change_new"; newPw=""; return; }
       sessionPw=newPw;
@@ -405,6 +435,7 @@ function welcome(){
   const canIncentive = isDirector || isSiljang || isSkin || INCENTIVE_NAMES.includes(cur.name);
   $("goIncentive").style.display = canIncentive ? "block" : "none";
   show("welcome");
+  refreshAppSettings();
 }
 
 /* ===== 뒤로 / 로그아웃 ===== */
@@ -438,12 +469,140 @@ $("goIncentive").onclick=()=>{
   try{ sessionStorage.setItem('everyup_incentive_ok', String(Date.now())); }catch(e){}
   location.href = INCENTIVE_URL;
 };
-backBtn.onclick=()=>{ buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
-$("logoutBtn").onclick=()=>{ clearGlobalSession(); cur=null; buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
+backBtn.onclick=()=>{ if(busy) return; buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
+$("logoutBtn").onclick=()=>{ resetAppSettings(); clearGlobalSession(); sessionPw=""; loadNames(); cur=null; buf=""; newPw=""; mode="login"; cardTitle.textContent="누구세요?"; cardSub.textContent="이름을 선택하세요"; show("names"); };
+
+/* ===== 로그인 메뉴 전용 클라우드 사용 설정 ===== */
+const MENU_APPS = [
+  ['checklist','goChecklist','셀프 체크리스트'],
+  ['inventory','goInventory','재고 현황'],
+  ['manual','goManual','시술매뉴얼'],
+  ['attendance','goAttendance','직원관리'],
+  ['reservation','goReservation','예약통계'],
+  ['consult','goConsult','상담전환관리'],
+  ['incentive','goIncentive','화장품관리 인센티브']
+];
+let appState=null, appRevision=0, appCanManage=false, appSaving=false, appNavigating=false;
+let appRequest=0;
+function setAppStatus(text){ $('appSettingsStatus').textContent=text; }
+function activeMenuSession(){
+  const s=readGlobalSession();
+  return !!(EVERYUP_LIVE && cur && s && s.name===cur.name);
+}
+function resetAppSettings(){
+  ++appRequest; appState=null; appCanManage=false; appSaving=false; appNavigating=false;
+  $('appSettingsPanel').hidden=true; $('appSettingsBtn').setAttribute('aria-expanded','false');
+  renderAppSettings();
+}
+function expireMenu(){
+  $('logoutBtn').click();
+  alert('로그인 유지 시간이 끝났거나 인증이 변경되었습니다. 다시 로그인해 주세요.');
+}
+function renderAppSettings(){
+  for(const [key,id] of MENU_APPS){
+    const off=!appState || appState[key]!==true;
+    $(id).classList.toggle('app-off',off);
+    $(id).setAttribute('aria-disabled',String(off));
+    $(id).title=!appState ? '앱 사용 상태 확인 필요' : off ? '현재 사용 중지된 앱입니다' : '';
+  }
+  $('appSettingsBtn').hidden=!appCanManage;
+  if(!appCanManage) $('appSettingsPanel').hidden=true;
+  const rows=$('appSettingsRows'); rows.replaceChildren();
+  if(!appCanManage) return;
+  for(const [key,,label] of MENU_APPS){
+    const row=document.createElement('label'); row.className='app-setting-row';
+    const title=document.createElement('span'); title.textContent=label;
+    const control=document.createElement('span'); control.className='app-switch';
+    const input=document.createElement('input'); input.type='checkbox'; input.setAttribute('role','switch');
+    input.setAttribute('aria-label',label+' 사용'); input.checked=!!(appState && appState[key]);
+    input.disabled=appSaving || !appState;
+    const state=document.createElement('span'); state.textContent=input.checked?'사용':'사용중지';
+    input.onchange=()=>saveAppSetting(key,input.checked);
+    control.append(input,state); row.append(title,control); rows.appendChild(row);
+  }
+}
+function acceptAppSettings(r){
+  if(!r.apps || !Number.isInteger(r.revision) || MENU_APPS.some(([key])=>typeof r.apps[key]!=='boolean')) throw new Error('invalid settings');
+  appState=r.apps; appRevision=r.revision; appCanManage=r.canManage===true;
+  $('appSettingsRetry').hidden=true;
+  renderAppSettings();
+}
+async function refreshAppSettings(){
+  if(appSaving) return false;
+  if(!activeMenuSession()){ if(cur) expireMenu(); return false; }
+  const person=cur, request=++appRequest;
+  if(!appState) setAppStatus('앱 사용 상태 확인 중…');
+  try{
+    const r=await api({action:'appSettings',name:person.name,pw:sessionPw});
+    if(request!==appRequest || cur!==person) return false;
+    if(!activeMenuSession()){expireMenu();return false;}
+    if(!r.ok){if(r.code==='AUTH'){expireMenu();return false;}throw new Error(r.msg);}
+    acceptAppSettings(r); setAppStatus('클라우드 설정 적용됨'); return true;
+  }catch(e){
+    if(request!==appRequest || cur!==person) return false;
+    appState=null; appCanManage=false; renderAppSettings();
+    $('appSettingsRetry').hidden=false;
+    setAppStatus('앱 사용 상태를 확인하지 못했습니다. 다시 확인해 주세요.');
+    return false;
+  }
+}
+async function saveAppSetting(key,enabled){
+  if(appSaving || !appCanManage) return;
+  if(!activeMenuSession()){expireMenu();return;}
+  const person=cur;
+  appSaving=true; ++appRequest; renderAppSettings(); setAppStatus('클라우드에 저장 중…');
+  let problem='';
+  try{
+    const r=await api({action:'setAppSetting',name:person.name,pw:sessionPw,app:key,enabled:String(enabled),revision:appRevision});
+    if(cur!==person) return;
+    if(!activeMenuSession()){expireMenu();return;}
+    if(!r.ok){if(r.code==='AUTH'){expireMenu();return;}throw new Error(r.msg||'저장 실패');}
+    acceptAppSettings(r); setAppStatus('저장됨 · 모든 컴퓨터에 적용됩니다.');
+  }catch(e){
+    if(cur===person) problem=e.message==='network'||e.message==='timeout' ? '저장 결과를 확인하지 못했습니다. 최신 상태를 다시 확인합니다.' : e.message;
+  }finally{
+    if(cur===person){appSaving=false;renderAppSettings();}
+  }
+  if(problem && cur===person){
+    await refreshAppSettings();
+    if(cur===person) setAppStatus(problem+' 현재 표시된 상태를 확인해 주세요.');
+  }
+}
+$('appSettingsBtn').onclick=async()=>{
+  if(appSaving) return;
+  if(!await refreshAppSettings() || !appCanManage) return;
+  $('appSettingsPanel').hidden=!$('appSettingsPanel').hidden;
+  $('appSettingsBtn').setAttribute('aria-expanded',String(!$('appSettingsPanel').hidden));
+};
+$('appSettingsRetry').onclick=()=>refreshAppSettings();
+// 기존 이동 함수를 보존하고, 어떤 인증 신호도 쓰기 전에 최신 클라우드 상태를 확인합니다.
+for(const [key,id] of MENU_APPS){
+  const button=$(id), original=button.onclick;
+  button.onclick=null;
+  button.addEventListener('click',async event=>{
+    event.preventDefault(); event.stopImmediatePropagation();
+    if(appNavigating || appSaving) return;
+    if(!activeMenuSession()){expireMenu();return;}
+    appNavigating=true;
+    try{
+      if(!await refreshAppSettings()) return;
+      if(appState[key]!==true){alert('현재 사용 중지된 앱입니다');return;}
+      if(button.style.display==='none') return;
+      original.call(button,event);
+    }finally{appNavigating=false;}
+  },true);
+}
+window.addEventListener('focus',()=>{if(cur && viewWelcome.style.display!=='none' && !appSaving && !appNavigating) refreshAppSettings();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden && cur && viewWelcome.style.display!=='none' && !appSaving && !appNavigating) refreshAppSettings();});
+window.addEventListener('storage',e=>{
+  if(e.key===GLOBAL_SESSION_KEY && cur && viewWelcome.style.display!=='none' && !activeMenuSession()) expireMenu();
+});
+setInterval(()=>{if(!document.hidden && cur && viewWelcome.style.display!=='none' && !appSaving && !appNavigating) refreshAppSettings();},30000);
+renderAppSettings();
 
 /* ===== 시작 ===== */
 buildPad();
-const remembered=readGlobalSession();
+const remembered=EVERYUP_LIVE ? readGlobalSession() : null;
 if(remembered){
   cur={name:remembered.name,part:remembered.part||''}; sessionPw=decodePw64(remembered.pw64||'');
   // 각 앱에서 기존 인증 신호를 재사용할 수 있도록 1시간 세션을 전달
