@@ -381,6 +381,8 @@ function cloudPull(){
       if(res && res.ok && res.resv && typeof res.resv==='object'){
         store=res.resv;
         try{ localStorage.setItem('ct_daily_v1', JSON.stringify(store)); }catch(e){}
+        // 통합 자동백업용 최신 스냅샷도 즉시 갱신
+        try{ if(window.euBackupSnapshot) window.euBackupSnapshot('예약통계',store); }catch(e){}
         syncedOK=true; resolve(true);
       } else resolve(false);
     } finally { cleanup(); } };
