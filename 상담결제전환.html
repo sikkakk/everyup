@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>에브리업의원 · 상담 결제 전환 관리</title>
+<title>상담결제전환관리</title>
 <style>
   :root{
     --navy:#1C2B4A; --navy2:#2C3E50;
@@ -316,7 +316,7 @@ header.top:not(.eu-unified-top){display:none!important}
 </head>
 <body>
 <header class="eu-unified-top" id="euUnifiedHeader"><div class="eu-unified-inner">
-      <div class="eu-u-brand"><img class="eu-u-logo" src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원"><span class="eu-u-divider"></span><span class="eu-u-title">상담전환관리</span></div>
+      <div class="eu-u-brand"><img class="eu-u-logo" src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원"><span class="eu-u-divider"></span><span class="eu-u-title">상담결제전환관리</span></div>
       <div class="eu-u-right"><span class="eu-u-today" id="euTopToday"></span><span class="eu-u-status" id="euTopStatus" data-s="busy"><i></i><span id="euTopStatusText">연결 중…</span></span><button class="eu-u-btn" id="euMenuBtn">← 메뉴</button><button class="eu-u-btn excel" id="euExcelBtn">엑셀 저장</button><button class="eu-u-btn json" id="euJsonBtn">JSON 저장</button><button class="eu-u-btn gear" id="euGearBtn" aria-label="설정" title="설정">⚙</button></div>
     </div><div class="eu-u-subtabs"><div class="tabs"><button id="euConsultInput" class="on">상담 입력</button><button id="euConsultDash">대시보드</button><button id="euConsultReport">보고서</button></div></div></header>
     <div class="eu-u-settings" id="euSettingsModal"><div class="eu-u-settings-card"><div class="eu-u-settings-head"><h3>설정 · 복원</h3><button class="eu-u-close" data-eu-close>×</button></div><div class="eu-u-settings-actions" id="euSettingsActions"></div><div class="eu-u-settings-note">복원은 현재 데이터를 바꿀 수 있으므로 실행 전 자동으로 JSON 백업을 내려받도록 구성했습니다.</div></div></div>
@@ -627,7 +627,17 @@ function loadNotes(){
 function saveNotesObj(n){ try{ localStorage.setItem(NOTE_KEY, JSON.stringify(n)); }catch(e){} }
 
 /* 상태 표시 */
-function setChip(html){ const c=document.getElementById('saveChip'); if(c) c.innerHTML=html; }
+function setChip(html){
+  const c=document.getElementById('saveChip');
+  if(c) c.innerHTML=html;
+  const top=document.getElementById('euTopStatus'), tx=document.getElementById('euTopStatusText');
+  if(!top||!tx||!c) return;
+  const t=c.textContent||'';
+  if(t.includes('실패')||t.includes('미동기화')){ tx.textContent='연결 오류'; top.dataset.s='error'; }
+  else if(t.includes('동기화 중')){ tx.textContent='연결 중…'; top.dataset.s='busy'; }
+  else if(t.includes('자동 저장됨(이 PC)')||t.includes('미리보기')){ tx.textContent='오프라인'; top.dataset.s='offline'; }
+  else { tx.textContent='연결됨'; top.dataset.s='ok'; }
+}
 function chipSaved(){ setChip(cloudOn?'<b>●</b> 구글 시트에 저장됨':'<b>●</b> 자동 저장됨(이 PC)'); }
 function chipSyncing(){ setChip('<b style="color:#2E86C1">↻</b> 동기화 중…'); }
 function chipError(){ setChip('<b style="color:#D97706">●</b> 동기화 실패 · 로컬 저장됨'); }
@@ -657,7 +667,7 @@ function pushCloud(){
     mode:'no-cors',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify({action:'saveAll', records, notes:loadNotes()})
-  }).then(()=>{ chipSaved(); })
+  }).then(()=>{ chipSaved(); if(window.euSetTopStatus) window.euSetTopStatus('저장됨','ok'); })
     .catch(()=>chipError());
 }
 /* 클라우드에서 최신 데이터 받아오기 — JSONP(스크립트 태그)로 CORS 우회 */
@@ -1323,7 +1333,7 @@ if(cloudOn){
  document.getElementById('euExcelBtn').onclick=excel;document.getElementById('euJsonBtn').onclick=exportJSON;
  const act=document.getElementById('euSettingsActions');act.innerHTML='<button id="euRestoreJson">JSON 복원</button><button id="euRefresh">클라우드 새로고침</button>';
  document.getElementById('euRestoreJson').onclick=()=>{const f=document.getElementById('importFile');if(f)f.click()};document.getElementById('euRefresh').onclick=()=>{document.getElementById('euSettingsModal').classList.remove('show');refreshCloud()};
- const _ls=window.localSave; if(_ls)window.localSave=function(){const r=_ls.apply(this,arguments);euBackupSnapshot(APP,{records:records,notes:loadNotesObj()});return r;};
+ const _ls=window.localSave; if(_ls)window.localSave=function(){const r=_ls.apply(this,arguments);euBackupSnapshot(APP,{records:records,notes:loadNotes()});return r;};
  const oldChip=document.getElementById('saveChip');if(oldChip){const syncTopStatus=()=>{const t=oldChip.textContent||'';if(t.includes('실패'))euSetTopStatus('연결 오류','error');else if(t.includes('동기화 중'))euSetTopStatus('연결 중…','busy');else if(t.includes('자동 저장됨(이 PC)'))euSetTopStatus('오프라인','offline');else if(t.includes('저장'))euSetTopStatus('저장됨','ok');else euSetTopStatus('연결됨','ok');};syncTopStatus();new MutationObserver(syncTopStatus).observe(oldChip,{childList:true,subtree:true,characterData:true});}
 })();
 </script>
@@ -1331,7 +1341,7 @@ if(cloudOn){
 <script id="eu-consult-full-backup">
 (function(){
   function stamp(){return new Date().toISOString().slice(0,10)}
-  function pack(){return {app:'상담결제전환',version:2,exportedAt:new Date().toISOString(),records:Array.isArray(records)?records:[],notes:(typeof loadNotesObj==='function'?loadNotesObj():{})};}
+  function pack(){return {app:'상담결제전환',version:2,exportedAt:new Date().toISOString(),records:Array.isArray(records)?records:[],notes:(typeof loadNotes==='function'?loadNotes():{})};}
   function downloadJson(){const obj=pack(),blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='상담결제전환_전체_'+stamp()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);try{euBackupSnapshot('상담결제전환',obj)}catch(e){}}
   function downloadExcel(){if(typeof XLSX==='undefined'){alert('엑셀 모듈을 불러오지 못했습니다.');return;}const obj=pack(),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(obj.records),'상담전체');const notes=Object.entries(obj.notes||{}).map(([key,value])=>({키:key,내용:typeof value==='string'?value:JSON.stringify(value)}));XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(notes),'메모');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{항목:'백업버전',값:2},{항목:'백업일시',값:obj.exportedAt}]),'설정');XLSX.writeFile(wb,'상담결제전환_전체_'+stamp()+'.xlsx');try{euBackupSnapshot('상담결제전환',obj)}catch(e){}}
   function restore(file){if(!file)return;const rd=new FileReader();rd.onload=()=>{try{const p=JSON.parse(rd.result),arr=Array.isArray(p)?p:p.records;if(!Array.isArray(arr))throw 0;if(!confirm('선택한 JSON으로 상담결제전환 전체 데이터를 복원할까요?'))return;records=arr;if(p&&p.notes&&typeof p.notes==='object')saveNotesObj(p.notes);localSave();saveAll();renderRecords();renderDash();toast('전체 복원이 완료됐습니다.');}catch(e){toast('올바른 상담결제전환 JSON 파일인지 확인해주세요.',true)}};rd.readAsText(file)}
