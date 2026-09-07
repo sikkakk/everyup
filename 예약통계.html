@@ -72,6 +72,10 @@
   table.dt tfoot td:first-child{color:var(--teal); background:var(--teal-lt);}
   table.dt input[type=number]{width:62px; padding:7px 4px; border:1px solid var(--line); border-radius:7px; font-size:14px; text-align:center; background:#fff; color:var(--ink); font-family:inherit;}
   table.dt input[type=number]:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(14,165,160,.15);}
+  table.dt select.proc-sel{width:98px; padding:7px 4px; border:1px solid var(--line); border-radius:7px; font-size:12.5px; text-align:center; text-align-last:center; background:#fff; color:var(--ink); font-family:inherit;}
+  table.dt select.proc-sel:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(14,165,160,.15);}
+  table.dt input.proc-text{width:98px; margin-top:6px; padding:6px 4px; border:1px solid var(--line); border-radius:7px; font-size:12.5px; text-align:center; background:#fff; color:var(--ink); font-family:inherit;}
+  table.dt input.proc-text:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(14,165,160,.15);}
 
   /* ---- metric cards ---- */
   .metrics{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:16px 0;}
@@ -224,15 +228,15 @@ header.top:not(.eu-unified-top){display:none!important}
       <div class="card-title">요일 선택</div>
       <div class="day-tabs" id="dayTabs"></div>
       <table class="dt">
-        <thead><tr><th>채널</th><th>예약문의</th><th>예약성공</th><th>보류</th><th>무응답</th></tr></thead>
+        <thead><tr><th>채널</th><th>예약문의</th><th>예약성공</th><th>보류</th><th>문의 시술</th></tr></thead>
         <tbody id="inputBody"></tbody>
-        <tfoot><tr><td>합계</td><td id="t-inq">0</td><td id="t-bk">0</td><td id="t-hold">0</td><td id="t-nr">0</td></tr></tfoot>
+        <tfoot><tr><td>합계</td><td id="t-inq">0</td><td id="t-bk">0</td><td id="t-hold">0</td><td>—</td></tr></tfoot>
       </table>
     </div>
     <div class="metrics">
       <div class="mc"><div class="mc-label">전환율 (문의→예약)</div><div class="mc-val" id="m-conv">—</div><div class="mc-sub">예약성공 ÷ 예약문의</div></div>
       <div class="mc"><div class="mc-label">보류율</div><div class="mc-val" id="m-hold">—</div><div class="mc-sub">보류 ÷ 예약문의</div></div>
-      <div class="mc"><div class="mc-label">무응답율</div><div class="mc-val" id="m-nr">—</div><div class="mc-sub">무응답 ÷ 예약문의</div></div>
+      <div class="mc"><div class="mc-label">오늘 주요 문의 시술</div><div class="mc-val" id="m-proc" style="font-size:20px;">—</div><div class="mc-sub">채널 중 가장 많이 선택된 시술</div></div>
     </div>
     <div class="card">
       <div class="card-title">📊 주간 합계 (월~일)</div>
@@ -273,6 +277,11 @@ header.top:not(.eu-unified-top){display:none!important}
     <div class="card">
       <div class="card-title">채널별 누적 예약문의</div>
       <div class="chart-wrap2"><canvas id="chChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">주요 문의 시술 통계</div>
+      <div class="chart-wrap2"><canvas id="procChart"></canvas></div>
+      <div class="empty" id="procChartEmpty" style="display:none;">아직 문의 시술 데이터가 없습니다.</div>
     </div>
   </div>
 </main>
@@ -329,11 +338,13 @@ checkAccess();
 
 const CH = ['전화','네이버','카카오','여신티켓'];
 const COLORS = ['#0EA5A0','#2E86C1','#7D3C98','#D97706'];
-const MK = ['inq','bk','hold','nr'];
+const MK = ['inq','bk','hold'];
+const PROC_OPTIONS = ['보톡스','BBL','토닝','실리프팅','리투오','스킨부스터','포텐자'];
+const PROC_COLORS = ['#0EA5A0','#2E86C1','#7D3C98','#D97706','#DB2777','#1E8E54','#EA580C','#0891B2','#65A30D','#9333EA','#C2410C','#0D9488'];
 const DAY_NAMES = ['월','화','수','목','금','토','일'];
 
 let store = {};
-let chartM = null, chartC = null, curMode = 'overview';
+let chartM = null, chartC = null, chartP = null, curMode = 'overview';
 let chartGran = 'week';   // 추세 그래프 집계 단위: 기본 주별
 // 집계 단위별 기간(현재 기준 과거 N구간). 기본: 일별 30일, 주별 8주, 월별 6개월
 let rangeByGran = { day:'30', week:'8', month:'6' };
@@ -478,11 +489,46 @@ function buildTable(){
   tb.innerHTML = '';
   CH.forEach(ch => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${ch}</td>` + MK.map(m =>
+    const numCells = MK.map(m =>
       `<td><input type="number" min="0" value="0" id="i_${ch}_${m}" oninput="onInput()"></td>`
     ).join('');
+    const procOpts = ['<option value="">선택</option>']
+      .concat(PROC_OPTIONS.map(p => `<option value="${p}">${p}</option>`))
+      .concat(['<option value="직접입력">직접 입력</option>'])
+      .join('');
+    const procCell = `<td>
+      <select class="proc-sel" id="i_${ch}_proc" onchange="onProcChange('${ch}')">${procOpts}</select>
+      <input type="text" class="proc-text" id="i_${ch}_procText" placeholder="시술명 입력" oninput="onInput()" style="display:none;">
+    </td>`;
+    tr.innerHTML = `<td>${ch}</td>` + numCells + procCell;
     tb.appendChild(tr);
   });
+}
+
+function onProcChange(ch){
+  const sel = document.getElementById(`i_${ch}_proc`);
+  const txt = document.getElementById(`i_${ch}_procText`);
+  txt.style.display = sel.value === '직접입력' ? 'block' : 'none';
+  if(sel.value !== '직접입력') txt.value = '';
+  onInput();
+}
+
+// 채널의 현재 화면(입력 중) 선택 시술명을 반환 ('직접입력'이면 텍스트칸 값 사용)
+function resolvedProc(ch){
+  const sel = document.getElementById(`i_${ch}_proc`);
+  if(!sel || !sel.value) return '';
+  if(sel.value === '직접입력'){
+    const txt = document.getElementById(`i_${ch}_procText`);
+    return txt ? txt.value.trim() : '';
+  }
+  return sel.value;
+}
+
+// 저장된 day 데이터(store[ds][ch])에서 시술명을 반환
+function resolveStoredProc(dayObj){
+  if(!dayObj) return '';
+  if(dayObj.proc === '직접입력') return (dayObj.procText || '').trim();
+  return dayObj.proc || '';
 }
 
 function exportData(){
@@ -532,7 +578,14 @@ function autoSave(){
   if(!curWeek) return;
   const dateStr = weekDay(curWeek, curDayIdx);
   const wd = {};
-  CH.forEach(ch => { wd[ch] = {}; MK.forEach(m => { wd[ch][m] = +document.getElementById(`i_${ch}_${m}`).value || 0; }); });
+  CH.forEach(ch => {
+    wd[ch] = {};
+    MK.forEach(m => { wd[ch][m] = +document.getElementById(`i_${ch}_${m}`).value || 0; });
+    const sel = document.getElementById(`i_${ch}_proc`);
+    const txt = document.getElementById(`i_${ch}_procText`);
+    wd[ch].proc = sel ? sel.value : '';
+    wd[ch].procText = (sel && sel.value === '직접입력' && txt) ? txt.value.trim() : '';
+  });
   store[dateStr] = wd;
   persist();
   buildDayTabs();
@@ -545,7 +598,7 @@ function buildDayTabs(){
   // i=0 → 월요일, i=1 → 화요일 ... i=6 → 일요일
   for(let i = 0; i < 7; i++){
     const dateStr = weekDay(curWeek, i);  // curWeek은 항상 월요일
-    const hasData = store[dateStr] && CH.some(ch => MK.some(m => (store[dateStr][ch]?.[m] || 0) > 0));
+    const hasData = store[dateStr] && CH.some(ch => MK.some(m => (store[dateStr][ch]?.[m] || 0) > 0) || resolveStoredProc(store[dateStr][ch]));
     const btn = document.createElement('button');
     btn.className = 'dtab' + (i === curDayIdx ? ' active' : '') + (hasData ? ' has-data' : '');
     // DAY_NAMES[i]: i=0→월, i=4→금, i=6→일
@@ -558,42 +611,64 @@ function buildDayTabs(){
 function loadDay(){
   const dateStr = weekDay(curWeek, curDayIdx);
   const wd = store[dateStr];
-  CH.forEach(ch => MK.forEach(m => {
-    const el = document.getElementById(`i_${ch}_${m}`);
-    if(el) el.value = wd ? (wd[ch]?.[m] || 0) : 0;
-  }));
+  CH.forEach(ch => {
+    MK.forEach(m => {
+      const el = document.getElementById(`i_${ch}_${m}`);
+      if(el) el.value = wd ? (wd[ch]?.[m] || 0) : 0;
+    });
+    const sel = document.getElementById(`i_${ch}_proc`);
+    const txt = document.getElementById(`i_${ch}_procText`);
+    if(sel){
+      const savedProc = wd?.[ch]?.proc || '';
+      sel.value = savedProc;
+      if(txt){
+        txt.value = savedProc === '직접입력' ? (wd?.[ch]?.procText || '') : '';
+        txt.style.display = savedProc === '직접입력' ? 'block' : 'none';
+      }
+    }
+  });
   calcTotals();
   showWeekSummary();
 }
 
 function calcTotals(){
-  let inq=0,bk=0,hold=0,nr=0;
+  let inq=0,bk=0,hold=0;
+  const procCount = {};
   CH.forEach(ch => {
     inq  += +document.getElementById(`i_${ch}_inq`).value  || 0;
     bk   += +document.getElementById(`i_${ch}_bk`).value   || 0;
     hold += +document.getElementById(`i_${ch}_hold`).value  || 0;
-    nr   += +document.getElementById(`i_${ch}_nr`).value    || 0;
+    const p = resolvedProc(ch);
+    if(p) procCount[p] = (procCount[p]||0) + 1;
   });
   document.getElementById('t-inq').textContent  = inq;
   document.getElementById('t-bk').textContent   = bk;
   document.getElementById('t-hold').textContent = hold;
-  document.getElementById('t-nr').textContent   = nr;
   document.getElementById('m-conv').textContent = inq>0 ? Math.round(bk/inq*100)+'%' : '—';
   document.getElementById('m-hold').textContent = inq>0 ? Math.round(hold/inq*100)+'%' : '—';
-  document.getElementById('m-nr').textContent   = inq>0 ? Math.round(nr/inq*100)+'%' : '—';
+  const top = Object.entries(procCount).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('m-proc').textContent = top ? `${top[0]} (${top[1]})` : '—';
 }
 
 function showWeekSummary(){
   const wrap = document.getElementById('weekSummaryWrap');
-  let html = `<table class="dt"><thead><tr><th>채널</th><th>예약문의</th><th>예약성공</th><th>보류</th><th>무응답</th></tr></thead><tbody>`;
-  let tI=0,tB=0,tH=0,tN=0;
+  let html = `<table class="dt"><thead><tr><th>채널</th><th>예약문의</th><th>예약성공</th><th>보류</th><th>주요 문의 시술</th></tr></thead><tbody>`;
+  let tI=0,tB=0,tH=0;
   CH.forEach(ch => {
-    let inq=0,bk=0,hold=0,nr=0;
-    for(let i=0;i<7;i++){ const ds=weekDay(curWeek,i); inq+=store[ds]?.[ch]?.inq||0; bk+=store[ds]?.[ch]?.bk||0; hold+=store[ds]?.[ch]?.hold||0; nr+=store[ds]?.[ch]?.nr||0; }
-    tI+=inq; tB+=bk; tH+=hold; tN+=nr;
-    html += `<tr><td>${ch}</td><td>${inq}</td><td>${bk}</td><td>${hold}</td><td>${nr}</td></tr>`;
+    let inq=0,bk=0,hold=0;
+    const procCount = {};
+    for(let i=0;i<7;i++){
+      const ds=weekDay(curWeek,i);
+      const day = store[ds]?.[ch];
+      inq+=day?.inq||0; bk+=day?.bk||0; hold+=day?.hold||0;
+      const p = resolveStoredProc(day);
+      if(p) procCount[p]=(procCount[p]||0)+1;
+    }
+    tI+=inq; tB+=bk; tH+=hold;
+    const top = Object.entries(procCount).sort((a,b)=>b[1]-a[1])[0];
+    html += `<tr><td>${ch}</td><td>${inq}</td><td>${bk}</td><td>${hold}</td><td>${top ? `${top[0]} (${top[1]})` : '—'}</td></tr>`;
   });
-  html += `</tbody><tfoot><tr><td>합계</td><td>${tI}</td><td>${tB}</td><td>${tH}</td><td>${tN}</td></tr></tfoot></table>`;
+  html += `</tbody><tfoot><tr><td>합계</td><td>${tI}</td><td>${tB}</td><td>${tH}</td><td>—</td></tr></tfoot></table>`;
   wrap.innerHTML = html;
 }
 
@@ -608,24 +683,41 @@ function renderHistory(){
   const allDates = Object.keys(store).sort().reverse();
   if(!allDates.length){ el.innerHTML='<div class="empty">저장된 데이터가 없습니다.</div>'; return; }
   if(histView === 'day'){
-    let h = `<table class="ht"><thead><tr><th>날짜</th><th>요일</th><th>예약문의</th><th>예약성공</th><th>전환율</th><th>보류</th><th>무응답</th><th></th></tr></thead><tbody>`;
+    let h = `<table class="ht"><thead><tr><th>날짜</th><th>요일</th><th>예약문의</th><th>예약성공</th><th>전환율</th><th>보류</th><th>주요 문의 시술</th><th></th></tr></thead><tbody>`;
     allDates.forEach(ds => {
-      let inq=0,bk=0,hold=0,nr=0;
-      CH.forEach(ch => { inq+=store[ds][ch]?.inq||0; bk+=store[ds][ch]?.bk||0; hold+=store[ds][ch]?.hold||0; nr+=store[ds][ch]?.nr||0; });
+      let inq=0,bk=0,hold=0;
+      const procCount = {};
+      CH.forEach(ch => {
+        const day = store[ds][ch];
+        inq+=day?.inq||0; bk+=day?.bk||0; hold+=day?.hold||0;
+        const p = resolveStoredProc(day);
+        if(p) procCount[p]=(procCount[p]||0)+1;
+      });
+      const top = Object.entries(procCount).sort((a,b)=>b[1]-a[1])[0];
       const d = parseLocal(ds);
       const conv = inq>0 ? Math.round(bk/inq*100)+'%' : '—';
-      h += `<tr><td>${d.getMonth()+1}/${d.getDate()}</td><td>${DAY_NAMES[dayIndex(ds)]}</td><td>${inq}</td><td>${bk}</td><td><span class="badge">${conv}</span></td><td>${hold}</td><td>${nr}</td><td><button class="del-btn" onclick="delDay('${ds}')">삭제</button></td></tr>`;
+      h += `<tr><td>${d.getMonth()+1}/${d.getDate()}</td><td>${DAY_NAMES[dayIndex(ds)]}</td><td>${inq}</td><td>${bk}</td><td><span class="badge">${conv}</span></td><td>${hold}</td><td>${top ? `${top[0]} (${top[1]})` : '—'}</td><td><button class="del-btn" onclick="delDay('${ds}')">삭제</button></td></tr>`;
     });
     h += '</tbody></table>';
     el.innerHTML = h;
   } else {
     const weeks = [...new Set(allDates.map(ds => getMonday(ds)))].sort().reverse();
-    let h = `<table class="ht"><thead><tr><th>주차</th><th>예약문의</th><th>예약성공</th><th>전환율</th><th>보류</th><th>무응답</th></tr></thead><tbody>`;
+    let h = `<table class="ht"><thead><tr><th>주차</th><th>예약문의</th><th>예약성공</th><th>전환율</th><th>보류</th><th>주요 문의 시술</th></tr></thead><tbody>`;
     weeks.forEach(wk => {
-      let inq=0,bk=0,hold=0,nr=0;
-      for(let i=0;i<7;i++){ const ds=weekDay(wk,i); CH.forEach(ch => { inq+=store[ds]?.[ch]?.inq||0; bk+=store[ds]?.[ch]?.bk||0; hold+=store[ds]?.[ch]?.hold||0; nr+=store[ds]?.[ch]?.nr||0; }); }
+      let inq=0,bk=0,hold=0;
+      const procCount = {};
+      for(let i=0;i<7;i++){
+        const ds=weekDay(wk,i);
+        CH.forEach(ch => {
+          const day = store[ds]?.[ch];
+          inq+=day?.inq||0; bk+=day?.bk||0; hold+=day?.hold||0;
+          const p = resolveStoredProc(day);
+          if(p) procCount[p]=(procCount[p]||0)+1;
+        });
+      }
+      const top = Object.entries(procCount).sort((a,b)=>b[1]-a[1])[0];
       const conv = inq>0 ? Math.round(bk/inq*100)+'%' : '—';
-      h += `<tr class="week-total"><td>${fmtWeek(wk)}</td><td>${inq}</td><td>${bk}</td><td><span class="badge">${conv}</span></td><td>${hold}</td><td>${nr}</td></tr>`;
+      h += `<tr class="week-total"><td>${fmtWeek(wk)}</td><td>${inq}</td><td>${bk}</td><td><span class="badge">${conv}</span></td><td>${hold}</td><td>${top ? `${top[0]} (${top[1]})` : '—'}</td></tr>`;
     });
     h += '</tbody></table>';
     el.innerHTML = h;
@@ -653,6 +745,7 @@ function renderCharts(){
   if(!allDates.length) return;
   if(chartM){ chartM.destroy(); chartM=null; }
   if(chartC){ chartC.destroy(); chartC=null; }
+  if(chartP){ chartP.destroy(); chartP=null; }
 
   // 선택한 기간(현재 기준 과거 N구간)으로 날짜 자르기
   allDates = trimDatesByRange(allDates);
@@ -681,9 +774,9 @@ function renderCharts(){
 
   const lbs = periods.map(p=>p.label);
   const T = periods.map(p=>{
-    let inq=0,bk=0,hold=0,nr=0;
-    p.dates.forEach(ds=>CH.forEach(ch=>{ inq+=store[ds][ch]?.inq||0; bk+=store[ds][ch]?.bk||0; hold+=store[ds][ch]?.hold||0; nr+=store[ds][ch]?.nr||0; }));
-    return {inq,bk,hold,nr};
+    let inq=0,bk=0,hold=0;
+    p.dates.forEach(ds=>CH.forEach(ch=>{ inq+=store[ds][ch]?.inq||0; bk+=store[ds][ch]?.bk||0; hold+=store[ds][ch]?.hold||0; }));
+    return {inq,bk,hold};
   });
   // 채널별 예약성공(구간 합계)
   const chData = {};
@@ -695,7 +788,6 @@ function renderCharts(){
       {label:'예약문의',data:T.map(t=>t.inq),borderColor:'#0EA5A0',backgroundColor:'rgba(14,165,160,0.08)',tension:0.3,pointRadius:3,fill:true},
       {label:'예약성공',data:T.map(t=>t.bk),borderColor:'#059669',backgroundColor:'rgba(5,150,105,0.07)',tension:0.3,pointRadius:3,fill:true,borderDash:[5,3]},
       {label:'보류',data:T.map(t=>t.hold),borderColor:'#d97706',backgroundColor:'rgba(217,119,6,0.05)',tension:0.3,pointRadius:3,fill:true,borderDash:[3,4]},
-      {label:'무응답',data:T.map(t=>t.nr),borderColor:'#9AA6B2',backgroundColor:'rgba(156,163,175,0.05)',tension:0.3,pointRadius:3,fill:true,borderDash:[2,5]},
     ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:12},usePointStyle:true}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}},x:{ticks:{autoSkip:true,maxTicksLimit:14,maxRotation:45}}}}});
   } else if(curMode==='channel'){
     const maxTotal = Math.max(1, ...periods.map((p,i)=> CH.reduce((s,ch)=> s + chData[ch][i], 0)));
@@ -739,6 +831,32 @@ function renderCharts(){
   }
   const ctx2 = document.getElementById('chChart').getContext('2d');
   chartC = new Chart(ctx2,{type:'bar',data:{labels:CH,datasets:[{label:'누적 예약문의',data:CH.map(ch=>allDates.reduce((s,ds)=>s+(store[ds][ch]?.inq||0),0)),backgroundColor:COLORS.map(c=>c+'BB'),borderColor:COLORS,borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  // 주요 문의 시술 통계: 선택된 기간(allDates) 동안 채널 전체에서 선택된 시술명 집계
+  const procTally = {};
+  allDates.forEach(ds => CH.forEach(ch => {
+    const p = resolveStoredProc(store[ds][ch]);
+    if(p) procTally[p] = (procTally[p]||0) + 1;
+  }));
+  const procEmpty = document.getElementById('procChartEmpty');
+  const procCanvas = document.getElementById('procChart');
+  let procEntries = Object.entries(procTally).sort((a,b)=> b[1]-a[1]).slice(0,12);
+  procEntries.reverse();   // 오름차순으로 뒤집어 가장 많은 시술이 맨 아래로 가도록
+  if(procEntries.length === 0){
+    procCanvas.style.display = 'none';
+    procEmpty.style.display = 'block';
+  } else {
+    procCanvas.style.display = 'block';
+    procEmpty.style.display = 'none';
+    const ctx3 = procCanvas.getContext('2d');
+    chartP = new Chart(ctx3,{type:'bar',data:{labels:procEntries.map(e=>e[0]),datasets:[{
+      label:'문의 건수',
+      data:procEntries.map(e=>e[1]),
+      backgroundColor:procEntries.map((e,i)=>PROC_COLORS[i%PROC_COLORS.length]+'BB'),
+      borderColor:procEntries.map((e,i)=>PROC_COLORS[i%PROC_COLORS.length]),
+      borderWidth:1.5, borderRadius:5
+    }]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}});
+  }
 }
 
 function pairTrendLegendClick(e, legendItem, legend){
@@ -897,7 +1015,7 @@ if(cloudOn){
  function mark(v){['input','history','chart'].forEach(n=>document.getElementById('euRes'+n[0].toUpperCase()+n.slice(1))?.classList.toggle('active',n===v));try{localStorage.setItem(K,v)}catch(e){}}
  const orig=window.showTab;window.showTab=function(v){orig(v);mark(v)};document.getElementById('euResInput').onclick=()=>showTab('input');document.getElementById('euResHistory').onclick=()=>showTab('history');document.getElementById('euResChart').onclick=()=>showTab('chart');
  try{const v=localStorage.getItem(K);if(['input','history','chart'].includes(v))setTimeout(()=>showTab(v),0)}catch(e){}
- function excel(){if(typeof XLSX==='undefined')return alert('엑셀 모듈을 불러오지 못했습니다.');const rows=[];Object.keys(store||{}).sort().forEach(ds=>CH.forEach(ch=>rows.push({날짜:ds,채널:ch,예약문의:store[ds]?.[ch]?.inq||0,예약성공:store[ds]?.[ch]?.bk||0,보류:store[ds]?.[ch]?.hold||0,무응답:store[ds]?.[ch]?.nr||0})));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'전체기록');XLSX.writeFile(wb,'예약통계_전체_'+new Date().toISOString().slice(0,10)+'.xlsx');}
+ function excel(){if(typeof XLSX==='undefined')return alert('엑셀 모듈을 불러오지 못했습니다.');const rows=[];Object.keys(store||{}).sort().forEach(ds=>CH.forEach(ch=>rows.push({날짜:ds,채널:ch,예약문의:store[ds]?.[ch]?.inq||0,예약성공:store[ds]?.[ch]?.bk||0,보류:store[ds]?.[ch]?.hold||0,문의시술:resolveStoredProc(store[ds]?.[ch])})));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'전체기록');XLSX.writeFile(wb,'예약통계_전체_'+new Date().toISOString().slice(0,10)+'.xlsx');}
  document.getElementById('euExcelBtn').onclick=excel;document.getElementById('euJsonBtn').onclick=exportData;const act=document.getElementById('euSettingsActions');act.innerHTML='<button id="euRestoreJson">JSON 복원</button><button id="euRefresh">클라우드 새로고침</button>';document.getElementById('euRestoreJson').onclick=()=>document.getElementById('importFile').click();document.getElementById('euRefresh').onclick=()=>{document.getElementById('euSettingsModal').classList.remove('show');refreshCloud()};
  const op=window.persist;window.persist=function(){const r=op.apply(this,arguments);euBackupSnapshot(APP,store);return r;};
  const ind=document.getElementById('saveIndicator');if(ind)new MutationObserver(()=>{const t=ind.textContent||'';euSetTopStatus(t.includes('실패')||t.includes('미동기화')?'연결 오류':t.includes('저장')?'저장됨':'연결됨',t.includes('실패')||t.includes('미동기화')?'error':'ok')}).observe(ind,{childList:true,subtree:true,characterData:true});
