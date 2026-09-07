@@ -170,6 +170,45 @@ $('euTopToday').textContent='오늘 '+todayIso().slice(2);
 const originalLoad=load;load=async function(target){euSetTopStatus('연결 중…','busy');try{await originalLoad(target);euSetTopStatus('연결됨','ok');}catch(e){euSetTopStatus('연결 오류','error');throw e;}};
 syncControls();
 if(!LIVE)euSetTopStatus('미리보기','offline');
+// 계정별 마지막 직원·주기·화면, 1시간 범위의 인증 토큰 유지
+const CL_AUTH_KEY='everyup_checklist_auth_v2';
+function clGlobal(){try{return JSON.parse(localStorage.getItem('everyup_global_session_v1')||'null');}catch(e){return null;}}
+function clSavedAuth(){try{const a=JSON.parse(sessionStorage.getItem(CL_AUTH_KEY)||'null'),g=clGlobal();if(!a||!a.token||!a.name||a.expiresAt<=Date.now())return null;if(g&&(g.name!==a.name||Number(g.expiresAt)<=Date.now()))return null;return a;}catch(e){return null;}}
+readSession=function(){
+ const g=clGlobal();
+ if(g){if(!g.name||Number(g.expiresAt)<=Date.now())return null;try{if(g.pw64)return{name:g.name,part:g.part||'',pw:decodeURIComponent(escape(atob(g.pw64))),at:g.at,expiresAt:Number(g.expiresAt)};}catch(e){}}
+ try{const s=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');const expiry=Number(s?.expiresAt)||Number(s?.at)+3600000;if(s?.name&&s.pw&&expiry>Date.now()&&(!g||g.name===s.name))return{...s,expiresAt:expiry};}catch(e){}
+ const a=clSavedAuth();return a?{name:a.name,part:a.part,expiresAt:a.expiresAt}:null;
+};
+checklistTabKey=function(){return 'everyup_lasttab_체크리스트_'+(session?.name||'default');};
+function clRememberView(){if(!session?.name||!model.viewUser)return;try{localStorage.setItem(checklistTabKey(),JSON.stringify({viewUser:model.viewUser,view:activeView,period:activePeriod,statsPeriod,statsAnchor}));}catch(e){}}
+function clLastView(){try{return JSON.parse(localStorage.getItem(checklistTabKey())||'null')||{};}catch(e){return{};}}
+function clLoginNotice(text){
+ $('status').style.display='';$('status').replaceChildren(document.createTextNode(text+' '));
+ const a=document.createElement('a');a.href=LOGIN_URL;a.textContent='로그인 메뉴로 이동';$('status').append(a);
+ euSetTopStatus('로그인 확인 필요','error');
+}
+signOut=function(){try{sessionStorage.removeItem(CL_AUTH_KEY);}catch(e){}token='';clLoginNotice('로그인 유지 시간이 끝났거나 인증이 만료되었습니다.');};
+const clRender=render;render=function(){clRender();clRememberView();};
+start=async function(){
+ if(!LIVE){$('status').textContent='미리보기 · 네트워크 차단. 운영 사이트에서 로그인하세요.';return;}
+ session=readSession();if(!session){clLoginNotice('사용 가능한 로그인 정보가 없습니다. 처음 한 번 로그인해 주세요.');return;}
+ const saved=clLastView();
+ if(['daily','weekly','monthly','quarterly','all'].includes(saved.period))activePeriod=saved.period;
+ if(['daily','weekly','monthly','quarterly','all'].includes(saved.statsPeriod))statsPeriod=saved.statsPeriod;
+ if(/^\d{4}-\d{2}-\d{2}$/.test(saved.statsAnchor||''))statsAnchor=saved.statsAnchor;
+ activeView=saved.view==='stats'?'stats':'checklist';
+ try{
+  const a=clSavedAuth();
+  if(session.pw){const r=await jsonp({action:'auth',name:session.name,pw:session.pw});if(!r.ok)throw new Error(r.msg||'인증 실패');token=r.token;}
+  else if(a)token=a.token;
+  else throw new Error('로그인 정보가 만료되었습니다.');
+  sessionStorage.setItem(CL_AUTH_KEY,JSON.stringify({token,name:session.name,part:session.part||'',expiresAt:session.expiresAt}));
+  await load(saved.viewUser||'');if(activeView==='stats'&&model.canStats)await loadStats();
+ }catch(e){clLoginNotice(e.message||'연결에 실패했습니다. 잠시 후 새로고침하세요.');}
+};
+window.addEventListener('pagehide',clRememberView);
+
 start();
 
 </script></body></html>
