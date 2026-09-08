@@ -137,7 +137,6 @@ async function toggle(itemId,checked){
  try{
   const r=await jsonp({action:"toggle",token,itemId,checked});
   if(!r.ok){if(r.code==="AUTH")signOut();throw new Error(r.msg||"저장 실패")}
-  toast(checked?"체크했습니다.":"체크를 해제했습니다.");
  }catch(e){
   toast("저장하지 못했습니다.");
   if(prev)model.records[itemId]=prev;else delete model.records[itemId];
