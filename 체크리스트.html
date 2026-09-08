@@ -125,7 +125,24 @@ function clearDragStyles(){document.querySelectorAll(".item").forEach(el=>el.cla
 function bindDragHandlers(){if(!model.isDirector)return;document.querySelectorAll(".drag-handle").forEach(handle=>{handle.addEventListener("dragstart",e=>{draggedItemId=handle.dataset.id;const card=handle.closest(".item");draggedCycle=card.dataset.cycle;card.classList.add("dragging");e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",draggedItemId)});handle.addEventListener("dragend",()=>{draggedItemId="";draggedCycle="";clearDragStyles()})});document.querySelectorAll(".item").forEach(card=>{card.addEventListener("dragover",e=>{if(!draggedItemId||card.dataset.id===draggedItemId||card.dataset.cycle!==draggedCycle)return;e.preventDefault();clearDragStyles();const source=document.querySelector(`.item[data-id="${CSS.escape(draggedItemId)}"]`);if(source)source.classList.add("dragging");const after=e.clientY>card.getBoundingClientRect().top+card.offsetHeight/2;card.classList.add(after?"drop-after":"drop-before");e.dataTransfer.dropEffect="move"});card.addEventListener("drop",e=>{if(!draggedItemId||card.dataset.id===draggedItemId||card.dataset.cycle!==draggedCycle)return;e.preventDefault();const after=card.classList.contains("drop-after");const sourceId=draggedItemId,targetId=card.dataset.id;draggedItemId="";draggedCycle="";clearDragStyles();reorderByDrop(sourceId,targetId,after)})})}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[m])}
 function formatDate(v){if(!v)return"";const d=new Date(v);return d.toLocaleString("ko-KR",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}
-async function toggle(itemId,checked){if(busy)return;if(activePeriod==="daily"&&model.viewDate&&model.viewDate!==todayIso())return;busy=true;try{await post({action:"toggle",token,itemId,checked});toast(checked?"체크했습니다.":"체크를 해제했습니다.");await new Promise(r=>setTimeout(r,600));busy=false;await load(model.viewUser)}catch(e){toast("저장하지 못했습니다.");busy=false;await load(model.viewUser)}finally{busy=false}}
+async function toggle(itemId,checked){
+ if(busy)return;
+ if(activePeriod==="daily"&&model.viewDate&&model.viewDate!==todayIso())return;
+ busy=true;
+ // 화면은 즉시 반영(낙관적 업데이트)하고, 실제 저장은 백그라운드에서 확인합니다. 실패하면 되돌립니다.
+ const prev=model.records[itemId];
+ if(checked)model.records[itemId]={checked:true,actionAt:new Date().toISOString(),actionBy:session.name,periodKey:prev?.periodKey||""};
+ else delete model.records[itemId];
+ render();
+ try{
+  const r=await jsonp({action:"toggle",token,itemId,checked});
+  if(!r.ok){if(r.code==="AUTH")signOut();throw new Error(r.msg||"저장 실패")}
+  toast(checked?"체크했습니다.":"체크를 해제했습니다.");
+ }catch(e){
+  toast("저장하지 못했습니다.");
+  if(prev)model.records[itemId]=prev;else delete model.records[itemId];
+ }finally{busy=false;render();}
+}
 async function reorderByDrop(sourceId,targetId,after){if(!model.isDirector||busy)return;const source=model.items.find(x=>x.itemId===sourceId),target=model.items.find(x=>x.itemId===targetId);if(!source||!target||source.cycle!==target.cycle)return;const ordered=model.items.filter(x=>x.cycle===source.cycle).sort((a,b)=>a.sortOrder-b.sortOrder);const sourceIndex=ordered.findIndex(x=>x.itemId===sourceId);if(sourceIndex<0)return;const moved=ordered.splice(sourceIndex,1)[0];const targetIndex=ordered.findIndex(x=>x.itemId===targetId);ordered.splice(targetIndex+(after?1:0),0,moved);busy=true;try{await post({action:"reorderItems",token,itemIds:ordered.map(x=>x.itemId)});toast("순서를 변경했습니다.");await new Promise(r=>setTimeout(r,600));busy=false;await load(model.viewUser)}catch(e){toast("순서를 변경하지 못했습니다.");busy=false;await load(model.viewUser)}finally{busy=false}}
 async function removeItem(itemId){if(!confirm("이 항목을 삭제할까요? 기존 완료 기록은 보존됩니다."))return;await post({action:"deleteItem",token,itemId});toast("삭제했습니다.");await new Promise(r=>setTimeout(r,600));await load(model.viewUser)}
 async function addItem(){const role=$("newRole").value,cycle=$("newCycle").value,text=$("newText").value.trim();if(!text){toast("체크 항목을 입력해주세요.");return}await post({action:"addItem",token,role,cycle,text});$("modal").classList.remove("show");$("newText").value="";toast("항목을 추가했습니다.");await new Promise(r=>setTimeout(r,600));await load(model.viewUser)}
