@@ -63,9 +63,14 @@
   .dtab.has-data.active{background:var(--teal); color:#fff; border-color:var(--teal);}
 
   /* ---- input table ---- */
-  table.dt{width:100%; border-collapse:collapse; overflow:hidden; border-radius:10px;}
+  table.dt{width:100%; border-collapse:collapse; overflow:hidden; border-radius:10px; table-layout:fixed;}
   table.dt th{background:var(--navy); color:#fff; font-size:12px; font-weight:700; padding:11px 10px; text-align:center;}
-  table.dt th:first-child{text-align:left; min-width:80px;}
+  table.dt th:first-child{text-align:left;}
+  table.dt th:nth-child(1), table.dt td:nth-child(1){width:15%;}
+  table.dt th:nth-child(2), table.dt td:nth-child(2){width:13%;}
+  table.dt th:nth-child(3), table.dt td:nth-child(3){width:13%;}
+  table.dt th:nth-child(4), table.dt td:nth-child(4){width:13%;}
+  table.dt th:nth-child(5), table.dt td:nth-child(5){width:46%;}
   table.dt td{padding:9px 8px; border-bottom:1px solid #EEF1F5; text-align:center; font-size:13.5px; color:var(--ink);}
   table.dt td:first-child{text-align:left; font-weight:700; color:var(--navy2); background:#F8FAFC;}
   table.dt tfoot td{background:var(--teal-lt); font-weight:800; color:var(--teal); border-top:2px solid #bfe9e6;}
@@ -76,6 +81,11 @@
   table.dt select.proc-sel:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(14,165,160,.15);}
   table.dt input.proc-text{width:98px; margin-top:6px; padding:6px 4px; border:1px solid var(--line); border-radius:7px; font-size:12.5px; text-align:center; background:#fff; color:var(--ink); font-family:inherit;}
   table.dt input.proc-text:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(14,165,160,.15);}
+  table.dt td.proc-cell{vertical-align:top; padding-top:10px;}
+  .proc-list{display:flex; flex-direction:row; flex-wrap:wrap; justify-content:center; gap:10px 12px; max-height:220px; overflow-y:auto; padding:2px;}
+  .proc-item{display:flex; flex-direction:column; align-items:center; gap:2px;}
+  .proc-idx{font-size:10.5px; font-weight:800; color:var(--teal); background:var(--teal-lt); border-radius:999px; padding:1px 7px; margin-bottom:2px;}
+  .proc-empty-hint{font-size:11.5px; color:var(--muted);}
 
   /* ---- metric cards ---- */
   .metrics{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:16px 0;}
@@ -108,6 +118,11 @@
   .trend-toggle.active{background:var(--purple); border-color:var(--purple);}
   .chart-wrap{position:relative; width:100%; height:300px;}
   .chart-wrap2{position:relative; width:100%; height:260px;}
+  .split-row{display:flex; gap:16px; align-items:stretch;}
+  .split-row .split-half{flex:1 1 0; min-width:0; margin-bottom:16px;}
+  @media (max-width:760px){
+    .split-row{flex-direction:column;}
+  }
   .view-toggle{display:flex; gap:6px; margin-bottom:12px;}
   .vt{padding:7px 15px; font-size:12.5px; font-weight:700; border:1px solid var(--line); border-radius:8px; background:#fff; color:#5a6b7d; cursor:pointer;}
   .vt.active{background:var(--teal-lt); color:var(--teal); border-color:#9fd8d4;}
@@ -215,6 +230,22 @@ header.top:not(.eu-unified-top){display:none!important}
 <main>
   <div id="tab-input" class="panel active">
     <div class="card">
+      <div class="card-title">신환·재진 시술문의 기록</div>
+      <div style="font-size:12px; color:var(--muted); margin-bottom:14px;">예약 변경, 취소 등은 입력하지 않습니다. (선택한 요일 기준으로 저장됩니다)</div>
+      <div style="display:flex; gap:14px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:150px;">
+          <label style="display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:6px;">신환 시술문의</label>
+          <input type="number" min="0" value="0" id="newPatientInq" oninput="onInput()"
+            style="width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:9px; font-size:15px; text-align:center; font-family:inherit; color:var(--ink);">
+        </div>
+        <div style="flex:1; min-width:150px;">
+          <label style="display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:6px;">재진 시술문의</label>
+          <input type="number" min="0" value="0" id="returnPatientInq" oninput="onInput()"
+            style="width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:9px; font-size:15px; text-align:center; font-family:inherit; color:var(--ink);">
+        </div>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-title">주차 선택</div>
       <div class="week-row">
         <button class="wk-nav" onclick="shiftWeek(-1)">◀ 이전주</button>
@@ -274,14 +305,16 @@ header.top:not(.eu-unified-top){display:none!important}
       </div>
       <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
     </div>
-    <div class="card">
-      <div class="card-title">채널별 누적 예약문의</div>
-      <div class="chart-wrap2"><canvas id="chChart"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title">주요 문의 시술 통계</div>
-      <div class="chart-wrap2"><canvas id="procChart"></canvas></div>
-      <div class="empty" id="procChartEmpty" style="display:none;">아직 문의 시술 데이터가 없습니다.</div>
+    <div class="split-row">
+      <div class="card split-half">
+        <div class="card-title">채널별 누적 예약문의</div>
+        <div class="chart-wrap2"><canvas id="chChart"></canvas></div>
+      </div>
+      <div class="card split-half">
+        <div class="card-title">주요 문의 시술</div>
+        <div class="chart-wrap2"><canvas id="procChart"></canvas></div>
+        <div class="empty" id="procChartEmpty" style="display:none;">아직 문의 시술 데이터가 없습니다.</div>
+      </div>
     </div>
   </div>
 </main>
@@ -490,45 +523,108 @@ function buildTable(){
   CH.forEach(ch => {
     const tr = document.createElement('tr');
     const numCells = MK.map(m =>
-      `<td><input type="number" min="0" value="0" id="i_${ch}_${m}" oninput="onInput()"></td>`
+      `<td><input type="number" min="0" value="0" id="i_${ch}_${m}" oninput="${m==='inq' ? `onInqInput('${ch}')` : 'onInput()'}"></td>`
     ).join('');
-    const procOpts = ['<option value="">선택</option>']
-      .concat(PROC_OPTIONS.map(p => `<option value="${p}">${p}</option>`))
-      .concat(['<option value="직접입력">직접 입력</option>'])
-      .join('');
-    const procCell = `<td>
-      <select class="proc-sel" id="i_${ch}_proc" onchange="onProcChange('${ch}')">${procOpts}</select>
-      <input type="text" class="proc-text" id="i_${ch}_procText" placeholder="시술명 입력" oninput="onInput()" style="display:none;">
-    </td>`;
+    const procCell = `<td class="proc-cell"><div class="proc-list" id="proclist_${ch}"><span class="proc-empty-hint">예약문의 0건</span></div></td>`;
     tr.innerHTML = `<td>${ch}</td>` + numCells + procCell;
     tb.appendChild(tr);
   });
 }
 
-function onProcChange(ch){
-  const sel = document.getElementById(`i_${ch}_proc`);
-  const txt = document.getElementById(`i_${ch}_procText`);
+// 예약문의 입력칸 값이 바뀔 때: 그 개수만큼 문의 시술 드롭다운을 다시 그림 (기존 입력값은 최대한 유지)
+function onInqInput(ch){
+  const el = document.getElementById(`i_${ch}_inq`);
+  const raw = Math.max(0, Math.floor(+el.value || 0));
+  const count = Math.min(raw, 30);   // 화면이 너무 길어지지 않도록 최대 30개까지만 표시
+  const savedProcs = collectCurrentProcs(ch);
+  renderProcItems(ch, count, savedProcs);
+  onInput();
+}
+
+// 채널의 문의 시술 목록(select+직접입력 텍스트)을 count개만큼 다시 그림. savedProcs가 있으면 같은 순서로 값 복원
+function renderProcItems(ch, count, savedProcs){
+  const wrap = document.getElementById(`proclist_${ch}`);
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  if(count === 0){
+    wrap.innerHTML = '<span class="proc-empty-hint">예약문의 0건</span>';
+    return;
+  }
+  for(let i = 0; i < count; i++){
+    const saved = (savedProcs && savedProcs[i]) || {};
+    const item = document.createElement('div');
+    item.className = 'proc-item';
+
+    if(count > 1){
+      const idx = document.createElement('span');
+      idx.className = 'proc-idx';
+      idx.textContent = (i+1) + '번';
+      item.appendChild(idx);
+    }
+
+    const sel = document.createElement('select');
+    sel.className = 'proc-sel';
+    sel.id = `i_${ch}_proc_${i}`;
+    sel.appendChild(new Option('선택', ''));
+    PROC_OPTIONS.forEach(p => sel.appendChild(new Option(p, p)));
+    sel.appendChild(new Option('직접 입력', '직접입력'));
+    sel.value = saved.sel || '';
+    sel.onchange = () => onProcChange(ch, i);
+    item.appendChild(sel);
+
+    const txt = document.createElement('input');
+    txt.type = 'text';
+    txt.className = 'proc-text';
+    txt.id = `i_${ch}_procText_${i}`;
+    txt.placeholder = '시술명 입력';
+    txt.value = saved.sel === '직접입력' ? (saved.text || '') : '';
+    txt.style.display = saved.sel === '직접입력' ? 'block' : 'none';
+    txt.oninput = onInput;
+    item.appendChild(txt);
+
+    wrap.appendChild(item);
+  }
+}
+
+// 현재 화면에 그려진 채널의 문의 시술 select/텍스트 값들을 순서대로 읽어옴
+function collectCurrentProcs(ch){
+  const wrap = document.getElementById(`proclist_${ch}`);
+  if(!wrap) return [];
+  return Array.from(wrap.querySelectorAll('.proc-item')).map((item, i) => {
+    const sel = document.getElementById(`i_${ch}_proc_${i}`);
+    const txt = document.getElementById(`i_${ch}_procText_${i}`);
+    return { sel: sel ? sel.value : '', text: txt ? txt.value : '' };
+  });
+}
+
+function onProcChange(ch, i){
+  const sel = document.getElementById(`i_${ch}_proc_${i}`);
+  const txt = document.getElementById(`i_${ch}_procText_${i}`);
   txt.style.display = sel.value === '직접입력' ? 'block' : 'none';
   if(sel.value !== '직접입력') txt.value = '';
   onInput();
 }
 
-// 채널의 현재 화면(입력 중) 선택 시술명을 반환 ('직접입력'이면 텍스트칸 값 사용)
-function resolvedProc(ch){
-  const sel = document.getElementById(`i_${ch}_proc`);
-  if(!sel || !sel.value) return '';
-  if(sel.value === '직접입력'){
-    const txt = document.getElementById(`i_${ch}_procText`);
-    return txt ? txt.value.trim() : '';
-  }
-  return sel.value;
+// 채널의 현재 화면(입력 중) 선택된 시술명 배열을 반환 (빈 선택은 제외)
+function resolvedProcsLive(ch){
+  return collectCurrentProcs(ch)
+    .map(p => p.sel === '직접입력' ? (p.text || '').trim() : (p.sel || ''))
+    .filter(Boolean);
 }
 
-// 저장된 day 데이터(store[ds][ch])에서 시술명을 반환
-function resolveStoredProc(dayObj){
-  if(!dayObj) return '';
-  if(dayObj.proc === '직접입력') return (dayObj.procText || '').trim();
-  return dayObj.proc || '';
+// 이전 버전(채널당 시술 1개) 데이터와의 호환: procs 배열이 없으면 옛 proc/procText 필드에서 변환
+function getProcsArray(dayObj){
+  if(!dayObj) return [];
+  if(Array.isArray(dayObj.procs)) return dayObj.procs;
+  if(dayObj.proc) return [{ sel: dayObj.proc, text: dayObj.procText || '' }];
+  return [];
+}
+
+// 저장된 day 데이터(store[ds][ch])에서 시술명 배열을 반환
+function resolveStoredProcs(dayObj){
+  return getProcsArray(dayObj)
+    .map(p => (p && p.sel === '직접입력') ? (p.text || '').trim() : (p?.sel || ''))
+    .filter(Boolean);
 }
 
 function exportData(){
@@ -581,11 +677,15 @@ function autoSave(){
   CH.forEach(ch => {
     wd[ch] = {};
     MK.forEach(m => { wd[ch][m] = +document.getElementById(`i_${ch}_${m}`).value || 0; });
-    const sel = document.getElementById(`i_${ch}_proc`);
-    const txt = document.getElementById(`i_${ch}_procText`);
-    wd[ch].proc = sel ? sel.value : '';
-    wd[ch].procText = (sel && sel.value === '직접입력' && txt) ? txt.value.trim() : '';
+    wd[ch].procs = collectCurrentProcs(ch).map(p => ({
+      sel: p.sel || '',
+      text: p.sel === '직접입력' ? (p.text || '').trim() : ''
+    }));
   });
+  const newEl = document.getElementById('newPatientInq');
+  const retEl = document.getElementById('returnPatientInq');
+  wd.newPatient = newEl ? (+newEl.value || 0) : 0;
+  wd.returnPatient = retEl ? (+retEl.value || 0) : 0;
   store[dateStr] = wd;
   persist();
   buildDayTabs();
@@ -598,7 +698,12 @@ function buildDayTabs(){
   // i=0 → 월요일, i=1 → 화요일 ... i=6 → 일요일
   for(let i = 0; i < 7; i++){
     const dateStr = weekDay(curWeek, i);  // curWeek은 항상 월요일
-    const hasData = store[dateStr] && CH.some(ch => MK.some(m => (store[dateStr][ch]?.[m] || 0) > 0) || resolveStoredProc(store[dateStr][ch]));
+    const dayData = store[dateStr];
+    const hasData = !!dayData && (
+      CH.some(ch => MK.some(m => (dayData[ch]?.[m] || 0) > 0) || resolveStoredProcs(dayData[ch]).length > 0)
+      || (dayData.newPatient || 0) > 0
+      || (dayData.returnPatient || 0) > 0
+    );
     const btn = document.createElement('button');
     btn.className = 'dtab' + (i === curDayIdx ? ' active' : '') + (hasData ? ' has-data' : '');
     // DAY_NAMES[i]: i=0→월, i=4→금, i=6→일
@@ -616,17 +721,14 @@ function loadDay(){
       const el = document.getElementById(`i_${ch}_${m}`);
       if(el) el.value = wd ? (wd[ch]?.[m] || 0) : 0;
     });
-    const sel = document.getElementById(`i_${ch}_proc`);
-    const txt = document.getElementById(`i_${ch}_procText`);
-    if(sel){
-      const savedProc = wd?.[ch]?.proc || '';
-      sel.value = savedProc;
-      if(txt){
-        txt.value = savedProc === '직접입력' ? (wd?.[ch]?.procText || '') : '';
-        txt.style.display = savedProc === '직접입력' ? 'block' : 'none';
-      }
-    }
+    const inqVal = wd ? (wd[ch]?.inq || 0) : 0;
+    const count = Math.min(Math.max(0, Math.floor(inqVal)), 30);
+    renderProcItems(ch, count, getProcsArray(wd?.[ch]));
   });
+  const newEl = document.getElementById('newPatientInq');
+  const retEl = document.getElementById('returnPatientInq');
+  if(newEl) newEl.value = wd?.newPatient || 0;
+  if(retEl) retEl.value = wd?.returnPatient || 0;
   calcTotals();
   showWeekSummary();
 }
@@ -638,8 +740,7 @@ function calcTotals(){
     inq  += +document.getElementById(`i_${ch}_inq`).value  || 0;
     bk   += +document.getElementById(`i_${ch}_bk`).value   || 0;
     hold += +document.getElementById(`i_${ch}_hold`).value  || 0;
-    const p = resolvedProc(ch);
-    if(p) procCount[p] = (procCount[p]||0) + 1;
+    resolvedProcsLive(ch).forEach(p => { procCount[p] = (procCount[p]||0) + 1; });
   });
   document.getElementById('t-inq').textContent  = inq;
   document.getElementById('t-bk').textContent   = bk;
@@ -661,8 +762,7 @@ function showWeekSummary(){
       const ds=weekDay(curWeek,i);
       const day = store[ds]?.[ch];
       inq+=day?.inq||0; bk+=day?.bk||0; hold+=day?.hold||0;
-      const p = resolveStoredProc(day);
-      if(p) procCount[p]=(procCount[p]||0)+1;
+      resolveStoredProcs(day).forEach(p => { procCount[p]=(procCount[p]||0)+1; });
     }
     tI+=inq; tB+=bk; tH+=hold;
     const top = Object.entries(procCount).sort((a,b)=>b[1]-a[1])[0];
@@ -690,8 +790,7 @@ function renderHistory(){
       CH.forEach(ch => {
         const day = store[ds][ch];
         inq+=day?.inq||0; bk+=day?.bk||0; hold+=day?.hold||0;
-        const p = resolveStoredProc(day);
-        if(p) procCount[p]=(procCount[p]||0)+1;
+        resolveStoredProcs(day).forEach(p => { procCount[p]=(procCount[p]||0)+1; });
       });
       const top = Object.entries(procCount).sort((a,b)=>b[1]-a[1])[0];
       const d = parseLocal(ds);
@@ -711,8 +810,7 @@ function renderHistory(){
         CH.forEach(ch => {
           const day = store[ds]?.[ch];
           inq+=day?.inq||0; bk+=day?.bk||0; hold+=day?.hold||0;
-          const p = resolveStoredProc(day);
-          if(p) procCount[p]=(procCount[p]||0)+1;
+          resolveStoredProcs(day).forEach(p => { procCount[p]=(procCount[p]||0)+1; });
         });
       }
       const top = Object.entries(procCount).sort((a,b)=>b[1]-a[1])[0];
@@ -739,6 +837,29 @@ function linreg(ys){
   const a = (sy - b*sx) / n;
   return ys.map((_, i) => Math.max(0, a + b*i));   // 음수 방지
 }
+
+// 막대 위에 값(숫자)을 직접 그려주는 경량 플러그인 (외부 라이브러리 없이 자체 구현)
+const barValuePlugin = {
+  id: 'barValueLabel',
+  afterDatasetsDraw(chart){
+    const { ctx } = chart;
+    chart.data.datasets.forEach((dataset, dsIndex) => {
+      const meta = chart.getDatasetMeta(dsIndex);
+      if(meta.hidden) return;
+      meta.data.forEach((bar, index) => {
+        const value = dataset.data[index];
+        if(value === undefined || value === null || value === 0) return;
+        ctx.save();
+        ctx.fillStyle = '#374151';
+        ctx.font = "700 12px 'Pretendard', 'Malgun Gothic', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(String(value), bar.x, bar.y - 6);
+        ctx.restore();
+      });
+    });
+  }
+};
 
 function renderCharts(){
   let allDates = Object.keys(store).sort();
@@ -830,18 +951,16 @@ function renderCharts(){
       scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}},x:{ticks:{autoSkip:true,maxTicksLimit:14,maxRotation:45}}}}});
   }
   const ctx2 = document.getElementById('chChart').getContext('2d');
-  chartC = new Chart(ctx2,{type:'bar',data:{labels:CH,datasets:[{label:'누적 예약문의',data:CH.map(ch=>allDates.reduce((s,ds)=>s+(store[ds][ch]?.inq||0),0)),backgroundColor:COLORS.map(c=>c+'BB'),borderColor:COLORS,borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}});
+  chartC = new Chart(ctx2,{type:'bar',data:{labels:CH,datasets:[{label:'누적 예약문의',data:CH.map(ch=>allDates.reduce((s,ds)=>s+(store[ds][ch]?.inq||0),0)),backgroundColor:COLORS.map(c=>c+'CC'),borderColor:COLORS,borderWidth:1.5,borderRadius:6,maxBarThickness:70}]},plugins:[barValuePlugin],options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:24}},plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{grid:{display:false}}}}});
 
   // 주요 문의 시술 통계: 선택된 기간(allDates) 동안 채널 전체에서 선택된 시술명 집계
   const procTally = {};
   allDates.forEach(ds => CH.forEach(ch => {
-    const p = resolveStoredProc(store[ds][ch]);
-    if(p) procTally[p] = (procTally[p]||0) + 1;
+    resolveStoredProcs(store[ds][ch]).forEach(p => { procTally[p] = (procTally[p]||0) + 1; });
   }));
   const procEmpty = document.getElementById('procChartEmpty');
   const procCanvas = document.getElementById('procChart');
   let procEntries = Object.entries(procTally).sort((a,b)=> b[1]-a[1]).slice(0,12);
-  procEntries.reverse();   // 오름차순으로 뒤집어 가장 많은 시술이 맨 아래로 가도록
   if(procEntries.length === 0){
     procCanvas.style.display = 'none';
     procEmpty.style.display = 'block';
@@ -852,10 +971,10 @@ function renderCharts(){
     chartP = new Chart(ctx3,{type:'bar',data:{labels:procEntries.map(e=>e[0]),datasets:[{
       label:'문의 건수',
       data:procEntries.map(e=>e[1]),
-      backgroundColor:procEntries.map((e,i)=>PROC_COLORS[i%PROC_COLORS.length]+'BB'),
+      backgroundColor:procEntries.map((e,i)=>PROC_COLORS[i%PROC_COLORS.length]+'CC'),
       borderColor:procEntries.map((e,i)=>PROC_COLORS[i%PROC_COLORS.length]),
-      borderWidth:1.5, borderRadius:5
-    }]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}});
+      borderWidth:1.5, borderRadius:6, maxBarThickness:70
+    }]},plugins:[barValuePlugin],options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:24}},plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{grid:{display:false},ticks:{autoSkip:false,maxRotation:40,minRotation:0}}}}});
   }
 }
 
@@ -1015,7 +1134,7 @@ if(cloudOn){
  function mark(v){['input','history','chart'].forEach(n=>document.getElementById('euRes'+n[0].toUpperCase()+n.slice(1))?.classList.toggle('active',n===v));try{localStorage.setItem(K,v)}catch(e){}}
  const orig=window.showTab;window.showTab=function(v){orig(v);mark(v)};document.getElementById('euResInput').onclick=()=>showTab('input');document.getElementById('euResHistory').onclick=()=>showTab('history');document.getElementById('euResChart').onclick=()=>showTab('chart');
  try{const v=localStorage.getItem(K);if(['input','history','chart'].includes(v))setTimeout(()=>showTab(v),0)}catch(e){}
- function excel(){if(typeof XLSX==='undefined')return alert('엑셀 모듈을 불러오지 못했습니다.');const rows=[];Object.keys(store||{}).sort().forEach(ds=>CH.forEach(ch=>rows.push({날짜:ds,채널:ch,예약문의:store[ds]?.[ch]?.inq||0,예약성공:store[ds]?.[ch]?.bk||0,보류:store[ds]?.[ch]?.hold||0,문의시술:resolveStoredProc(store[ds]?.[ch])})));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'전체기록');XLSX.writeFile(wb,'예약통계_전체_'+new Date().toISOString().slice(0,10)+'.xlsx');}
+ function excel(){if(typeof XLSX==='undefined')return alert('엑셀 모듈을 불러오지 못했습니다.');const rows=[];Object.keys(store||{}).sort().forEach(ds=>{rows.push({날짜:ds,구분:'신환/재진',신환시술문의:store[ds]?.newPatient||0,재진시술문의:store[ds]?.returnPatient||0});CH.forEach(ch=>rows.push({날짜:ds,채널:ch,예약문의:store[ds]?.[ch]?.inq||0,예약성공:store[ds]?.[ch]?.bk||0,보류:store[ds]?.[ch]?.hold||0,문의시술:resolveStoredProcs(store[ds]?.[ch]).join(', ')}));});const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'전체기록');XLSX.writeFile(wb,'예약통계_전체_'+new Date().toISOString().slice(0,10)+'.xlsx');}
  document.getElementById('euExcelBtn').onclick=excel;document.getElementById('euJsonBtn').onclick=exportData;const act=document.getElementById('euSettingsActions');act.innerHTML='<button id="euRestoreJson">JSON 복원</button><button id="euRefresh">클라우드 새로고침</button>';document.getElementById('euRestoreJson').onclick=()=>document.getElementById('importFile').click();document.getElementById('euRefresh').onclick=()=>{document.getElementById('euSettingsModal').classList.remove('show');refreshCloud()};
  const op=window.persist;window.persist=function(){const r=op.apply(this,arguments);euBackupSnapshot(APP,store);return r;};
  const ind=document.getElementById('saveIndicator');if(ind)new MutationObserver(()=>{const t=ind.textContent||'';euSetTopStatus(t.includes('실패')||t.includes('미동기화')?'연결 오류':t.includes('저장')?'저장됨':'연결됨',t.includes('실패')||t.includes('미동기화')?'error':'ok')}).observe(ind,{childList:true,subtree:true,characterData:true});
