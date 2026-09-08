@@ -75,7 +75,8 @@
   table.dt td:first-child{text-align:left; font-weight:700; color:var(--navy2); background:#F8FAFC;}
   table.dt tfoot td{background:var(--teal-lt); font-weight:800; color:var(--teal); border-top:2px solid #bfe9e6;}
   table.dt tfoot td:first-child{color:var(--teal); background:var(--teal-lt);}
-  table.dt input[type=number]{width:62px; padding:7px 4px; border:1px solid var(--line); border-radius:7px; font-size:14px; text-align:center; background:#fff; color:var(--ink); font-family:inherit;}
+  table.dt input[type=number]{width:70%; max-width:64px; margin:0 auto; display:block; padding:7px 4px; border:1px solid var(--line); border-radius:7px; font-size:14px; text-align:center; background:#fff; color:var(--ink); font-family:inherit; -moz-appearance:textfield;}
+  table.dt input[type=number]::-webkit-inner-spin-button, table.dt input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none; margin:0;}
   table.dt input[type=number]:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(14,165,160,.15);}
   table.dt select.proc-sel{width:98px; padding:7px 4px; border:1px solid var(--line); border-radius:7px; font-size:12.5px; text-align:center; text-align-last:center; background:#fff; color:var(--ink); font-family:inherit;}
   table.dt select.proc-sel:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(14,165,160,.15);}
@@ -765,8 +766,9 @@ function showWeekSummary(){
       resolveStoredProcs(day).forEach(p => { procCount[p]=(procCount[p]||0)+1; });
     }
     tI+=inq; tB+=bk; tH+=hold;
-    const top = Object.entries(procCount).sort((a,b)=>b[1]-a[1])[0];
-    html += `<tr><td>${ch}</td><td>${inq}</td><td>${bk}</td><td>${hold}</td><td>${top ? `${top[0]} (${top[1]})` : '—'}</td></tr>`;
+    const top5 = Object.entries(procCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const procText = top5.length ? top5.map(([name,cnt])=>`${name}(${cnt})`).join(' · ') : '—';
+    html += `<tr><td>${ch}</td><td>${inq}</td><td>${bk}</td><td>${hold}</td><td>${procText}</td></tr>`;
   });
   html += `</tbody><tfoot><tr><td>합계</td><td>${tI}</td><td>${tB}</td><td>${tH}</td><td>—</td></tr></tfoot></table>`;
   wrap.innerHTML = html;
