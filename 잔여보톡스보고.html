@@ -270,9 +270,11 @@ const PRODUCT_HINTS = {
 // 분류별 기준일. 보톡스·스킨보톡스·쥬베룩 모두 같은 4단계(정상→사용독려→서비스추천→폐기) 방식이며,
 // 분류마다 그 경계가 되는 날짜만 다릅니다.
 // normalEndDay: 정상이 끝나는 날, refDay: 사용독려가 끝나는 날, discardDay: 폐기가 시작되는 날
-// 분류명에 "쥬베룩"이 들어가거나, 제품명에 "세렉소"가 들어가면 쥬베룩과 같은 기준을 적용합니다.
+// 분류명·제품명 어느 쪽이든 "쥬베룩" 또는 "세렉소"가 들어가면 쥬베룩과 같은 기준을 적용합니다.
+// (예: 분류를 "세렉소 블랙"으로 만들었거나, 제품명에 "세렉소"라고만 적은 경우 모두 포함)
 function usesJuveluukRule(cat, product){
-  return (cat||'').indexOf('쥬베룩')!==-1 || (product||'').indexOf('세렉소')!==-1;
+  const text = ((cat||'') + ' ' + (product||''));
+  return text.indexOf('쥬베룩')!==-1 || text.indexOf('세렉소')!==-1;
 }
 function ruleOf(cat, product){
   return usesJuveluukRule(cat, product)
