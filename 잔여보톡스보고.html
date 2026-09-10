@@ -65,6 +65,7 @@
   .st-discard{background:var(--black); color:#fff; padding:4px 14px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; text-align:center; min-width:44px;}
   .st-unused{color:var(--muted); font-weight:700;}
   .rd-count{font-weight:700; color:var(--navy2);}
+  .rd-count.rd-red{color:var(--red);}
   .del-btn{padding:5px 10px; font-size:11.5px; border:1px solid #f3c9c5; border-radius:7px; background:#fff; color:var(--red); font-weight:700;}
   .del-btn:hover{background:var(--red-lt);}
   .edit-btn{padding:5px 10px; font-size:11.5px; border:1px solid #cfd8e3; border-radius:7px; background:#fff; color:var(--blue); font-weight:700; margin-right:6px;}
@@ -277,7 +278,7 @@ function addDays(str,n){ const d=parseLocal(str); d.setDate(d.getDate()+n); retu
 
 function statusInfo(cat, hydrateDate){
   if(!hydrateDate){
-    return { elapsed:null, label:'미사용', cls:'st-unused', remainText:'–', discardDate:'' };
+    return { elapsed:null, label:'미사용', cls:'st-unused', remainText:'–', remainRed:false, discardDate:'' };
   }
   const elapsed = daysBetween(hydrateDate, todayYMD());
   const {refDay, discardDay} = ruleOf(cat);
@@ -293,11 +294,17 @@ function statusInfo(cat, hydrateDate){
     else if(elapsed<discardDay){ label='서비스추천'; cls='st-refer'; }
     else { label='폐기'; cls='st-discard'; }
   }
-  let remainText;
-  if(elapsed<=refDay) remainText = (refDay-elapsed)+'일';
-  else remainText = '+'+(elapsed-refDay)+'일'; // 서비스추천·폐기 모두 오늘 기준 초과일수를 +N일로 표시
+  let remainText, remainRed=false;
+  if(elapsed<=refDay){
+    const remainDays = refDay-elapsed;
+    remainText = remainDays+'일';
+    // 보톡스·스킨보톡스: 1~4일 남았을 때 숫자를 빨간색으로 / 쥬베룩: 7~21일 남았을 때(=사용독려 구간) 숫자를 빨간색으로
+    remainRed = normalTier ? (remainDays>=1 && remainDays<=4) : (remainDays>=7 && remainDays<=21);
+  }else{
+    remainText = '+'+(elapsed-refDay)+'일'; // 서비스추천·폐기 모두 오늘 기준 초과일수를 +N일로 표시
+  }
   const discardDate = addDays(hydrateDate, discardDay);
-  return {elapsed, label, cls, remainText, discardDate};
+  return {elapsed, label, cls, remainText, remainRed, discardDate};
 }
 
 /* ===================== 데이터 ===================== */
@@ -498,7 +505,7 @@ function render(){
         <td style="text-align:left">${productCell}</td>
         <td><input type="date" value="${r.hydrateDate||''}" onchange="updateField('${r.id}','hydrateDate',this.value)"></td>
         <td><input type="text" class="remain-inp" value="${r.remain||''}" placeholder="예: 20u" onchange="updateField('${r.id}','remain',this.value)"></td>
-        <td class="rd-count">${st.remainText}</td>
+        <td class="rd-count${st.remainRed?' rd-red':''}">${st.remainText}</td>
         <td class="st ${st.cls}">${st.label}</td>
         <td><button class="del-btn" onclick="removeItem('${r.id}')">${sd?'지우기':'삭제'}</button></td>`;
       body.appendChild(row);
