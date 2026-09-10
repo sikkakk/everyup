@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>에브리업의원 로그인</title>
+<!-- 앱스크립트 서버와의 연결을 미리 준비해서, 첫 API 요청이 조금이라도 더 빨리 응답하도록 합니다 -->
+<link rel="preconnect" href="https://script.google.com">
+<link rel="dns-prefetch" href="https://script.google.com">
 
 <style>
   :root{
@@ -441,6 +444,13 @@ function welcome(){
   const canBotox = isDirector || isSiljang || isNurseAsst;
   $("goBotox").style.display = canBotox ? "block" : "none";
   show("welcome");
+  // 직전에 확인했던 앱 사용 상태가 있으면 클라우드 응답을 기다리지 않고 먼저 화면에 반영합니다.
+  // (아래 refreshAppSettings()가 이어서 최신 상태로 다시 확인/보정합니다)
+  const cached = loadCachedAppState(cur.name);
+  if(cached){
+    appState=cached.apps; appRevision=cached.revision; appCanManage=!!cached.canManage;
+    renderAppSettings();
+  }
   refreshAppSettings();
 }
 
@@ -496,13 +506,26 @@ const MENU_APPS = [
 ];
 let appState=null, appRevision=0, appCanManage=false, appSaving=false, appNavigating=false;
 let appRequest=0;
+let appStateFetchedAt=0; // 마지막으로 클라우드에서 확인에 성공한 시각 (성능 개선용)
+const APP_STATE_FRESH_MS=8000; // 이 시간 안에 이미 확인했다면, 버튼 클릭 시 재확인 없이 바로 이동합니다
+const APP_STATE_CACHE_KEY='everyup_appstate_cache_v1';
+function loadCachedAppState(name){
+  try{
+    const c=JSON.parse(localStorage.getItem(APP_STATE_CACHE_KEY)||'null');
+    if(c && c.name===name && c.apps && Number.isInteger(c.revision)) return c;
+  }catch(e){}
+  return null;
+}
+function saveCachedAppState(name,apps,revision,canManage){
+  try{ localStorage.setItem(APP_STATE_CACHE_KEY, JSON.stringify({name,apps,revision,canManage,at:Date.now()})); }catch(e){}
+}
 function setAppStatus(text){ $('appSettingsStatus').textContent=text; }
 function activeMenuSession(){
   const s=readGlobalSession();
   return !!(EVERYUP_LIVE && cur && s && s.name===cur.name);
 }
 function resetAppSettings(){
-  ++appRequest; appState=null; appCanManage=false; appSaving=false; appNavigating=false;
+  ++appRequest; appState=null; appCanManage=false; appSaving=false; appNavigating=false; appStateFetchedAt=0;
   $('appSettingsPanel').hidden=true; $('appSettingsBtn').setAttribute('aria-expanded','false');
   renderAppSettings();
 }
@@ -535,11 +558,12 @@ function renderAppSettings(){
 }
 function acceptAppSettings(r){
   if(!r.apps || !Number.isInteger(r.revision)) throw new Error('invalid settings');
-  // 예전 백엔드가 아직 모르는 새 앱 키(예: botox)는 없으면 기본값 '사용'으로 채워서
-  // 전체 메뉴가 통째로 막히지 않게 합니다.
   const apps = Object.assign({}, r.apps);
+  // 백엔드가 아직 모르는 앱 키(예: 새로 추가된 앱)는 막지 않고 기본으로 '사용' 처리합니다.
   MENU_APPS.forEach(([key])=>{ if(typeof apps[key] !== 'boolean') apps[key] = true; });
   appState=apps; appRevision=r.revision; appCanManage=r.canManage===true;
+  appStateFetchedAt=Date.now();
+  if(cur) saveCachedAppState(cur.name, appState, appRevision, appCanManage);
   $('appSettingsRetry').hidden=true;
   renderAppSettings();
 }
@@ -556,7 +580,7 @@ async function refreshAppSettings(){
     acceptAppSettings(r); setAppStatus('클라우드 설정 적용됨'); return true;
   }catch(e){
     if(request!==appRequest || cur!==person) return false;
-    appState=null; appCanManage=false; renderAppSettings();
+    appState=null; appCanManage=false; appStateFetchedAt=0; renderAppSettings();
     $('appSettingsRetry').hidden=false;
     setAppStatus('앱 사용 상태를 확인하지 못했습니다. 다시 확인해 주세요.');
     return false;
@@ -592,6 +616,7 @@ $('appSettingsBtn').onclick=async()=>{
 };
 $('appSettingsRetry').onclick=()=>refreshAppSettings();
 // 기존 이동 함수를 보존하고, 어떤 인증 신호도 쓰기 전에 최신 클라우드 상태를 확인합니다.
+// (단, 방금 확인한 상태가 있다면 매번 다시 왕복하지 않고 바로 이동해 체감 속도를 높입니다)
 for(const [key,id] of MENU_APPS){
   const button=$(id), original=button.onclick;
   button.onclick=null;
@@ -601,7 +626,10 @@ for(const [key,id] of MENU_APPS){
     if(!activeMenuSession()){expireMenu();return;}
     appNavigating=true;
     try{
-      if(!await refreshAppSettings()) return;
+      const isFresh = appState && (Date.now()-appStateFetchedAt) < APP_STATE_FRESH_MS;
+      if(!isFresh){
+        if(!await refreshAppSettings()) return;
+      }
       if(appState[key]!==true){alert('현재 사용 중지된 앱입니다');return;}
       if(button.style.display==='none') return;
       original.call(button,event);
