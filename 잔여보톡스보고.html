@@ -54,12 +54,13 @@
   /* ---- 표 ---- */
   table.bt{width:100%; border-collapse:collapse; margin-top:6px;}
   table.bt th{background:var(--navy); color:#fff; font-size:12px; font-weight:700; padding:10px 8px; text-align:center;}
-  table.bt td{padding:9px 8px; border-bottom:1px solid #EEF1F5; text-align:center; font-size:13.5px; color:var(--ink); vertical-align:middle;}
-  tr.grp-head td{background:#F8FAFC; font-weight:800; color:var(--navy2); text-align:left; padding:10px 10px; font-size:13.5px; border-bottom:1px solid var(--line);}
+  table.bt td{padding:8px 8px; border-bottom:1px solid #EEF1F5; text-align:center; font-size:13.5px; color:var(--ink); vertical-align:middle;}
+  tr.grp-head td{background:#F8FAFC; font-weight:800; color:var(--navy2); text-align:left; padding:9px 10px; font-size:13.5px; border-bottom:1px solid var(--line);}
   tr.flat-row td{background:#F8FAFC;}
-  tr.no-item td{color:var(--muted); font-size:12.5px; padding:12px; background:#FCFCFD;}
-  table.bt input[type=date]{padding:6px 8px; border:1px solid var(--line); border-radius:7px; font-size:13px; font-family:inherit;}
-  table.bt input.remain-inp{width:90px; padding:6px 8px; border:1px solid var(--line); border-radius:7px; font-size:13px; text-align:center; font-family:inherit;}
+  table.bt td.cat-merge{background:#F8FAFC; font-weight:800; color:var(--navy2); text-align:left; vertical-align:middle;}
+  tr.no-item td{color:var(--muted); font-size:12.5px; padding:11px; background:#FCFCFD;}
+  table.bt input[type=date]{padding:5px 8px; border:1px solid var(--line); border-radius:7px; font-size:13px; font-family:inherit;}
+  table.bt input.remain-inp{width:90px; padding:5px 8px; border:1px solid var(--line); border-radius:7px; font-size:13px; text-align:center; font-family:inherit;}
   .st{font-weight:800;}
   table.bt td.st-normal{color:var(--green);}
   table.bt td.st-encourage{color:var(--red);}
@@ -157,7 +158,7 @@
     </div>
     <table class="bt">
       <thead>
-        <tr><th style="text-align:left;width:20%">제품</th><th style="width:14%">수화일</th><th style="width:16%">잔여량(대략)</th><th style="width:14%">잔여사용일</th><th style="width:16%">할일</th><th style="width:10%"></th></tr>
+        <tr><th style="text-align:left;width:12%">분류</th><th style="text-align:left;width:16%">제품</th><th style="width:14%">수화일</th><th style="width:14%">잔여량(대략)</th><th style="width:12%">잔여사용일</th><th style="width:14%">할일</th><th style="width:10%"></th></tr>
       </thead>
       <tbody id="mainBody"></tbody>
     </table>
@@ -266,11 +267,17 @@ const PRODUCT_HINTS = {
   '쥬베룩 볼륨': ['쥬베룩 볼륨'],
   '쥬베룩 스킨': ['쥬베룩 스킨']
 };
-// 분류에 "쥬베룩"이 들어가면 쥬베룩 기준, 그 외(보톡스·스킨보톡스 및 직접입력 분류)는
-// 보수적으로 보톡스 기준(정상 단계 있음)을 기본 적용합니다.
-function hasNormalTier(cat){ return (cat||'').indexOf('쥬베룩')===-1; }
-function ruleOf(cat){
-  return hasNormalTier(cat) ? {refDay:7, discardDay:11} : {refDay:21, discardDay:31};
+// 분류별 기준일. 보톡스·스킨보톡스·쥬베룩 모두 같은 4단계(정상→사용독려→서비스추천→폐기) 방식이며,
+// 분류마다 그 경계가 되는 날짜만 다릅니다.
+// normalEndDay: 정상이 끝나는 날, refDay: 사용독려가 끝나는 날, discardDay: 폐기가 시작되는 날
+// 분류명에 "쥬베룩"이 들어가거나, 제품명에 "세렉소"가 들어가면 쥬베룩과 같은 기준을 적용합니다.
+function usesJuveluukRule(cat, product){
+  return (cat||'').indexOf('쥬베룩')!==-1 || (product||'').indexOf('세렉소')!==-1;
+}
+function ruleOf(cat, product){
+  return usesJuveluukRule(cat, product)
+    ? {normalEndDay:20, refDay:30, discardDay:31} // 쥬베룩·세렉소 계열: 0~20일 정상, 21~30일 사용독려, 31일부터 폐기
+    : {normalEndDay:4,  refDay:7,  discardDay:11}; // 보톡스·스킨보톡스(및 그 외 직접입력 분류·제품)
 }
 
 function parseLocal(str){ const [y,m,d]=str.split('-').map(Number); return new Date(y,m-1,d); }
@@ -279,30 +286,25 @@ function todayYMD(){ return toYMD(new Date()); }
 function daysBetween(fromStr,toStr){ return Math.round((parseLocal(toStr)-parseLocal(fromStr))/86400000); }
 function addDays(str,n){ const d=parseLocal(str); d.setDate(d.getDate()+n); return toYMD(d); }
 
-function statusInfo(cat, hydrateDate){
+function statusInfo(cat, product, hydrateDate){
   if(!hydrateDate){
     return { elapsed:null, label:'미사용', cls:'st-unused', remainText:'–', remainRed:false, discardDate:'' };
   }
   const elapsed = daysBetween(hydrateDate, todayYMD());
-  const {refDay, discardDay} = ruleOf(cat);
-  const normalTier = hasNormalTier(cat);
+  const {normalEndDay, refDay, discardDay} = ruleOf(cat, product);
   let label, cls;
-  if(normalTier){
-    if(elapsed<=refDay-3){ label='정상'; cls='st-normal'; }
-    else if(elapsed<=refDay){ label='사용독려'; cls='st-encourage'; }
-    else if(elapsed<discardDay){ label='서비스추천'; cls='st-refer'; }
-    else { label='폐기'; cls='st-discard'; }
-  }else{
-    if(elapsed<=refDay){ label='사용독려'; cls='st-encourage'; }
-    else if(elapsed<discardDay){ label='서비스추천'; cls='st-refer'; }
-    else { label='폐기'; cls='st-discard'; }
-  }
+  if(elapsed<=normalEndDay){ label='정상'; cls='st-normal'; }
+  else if(elapsed<=refDay){ label='사용독려'; cls='st-encourage'; }
+  else if(elapsed<discardDay){ label='서비스추천'; cls='st-refer'; }
+  else { label='폐기'; cls='st-discard'; }
+
   let remainText, remainRed=false;
   if(elapsed<=refDay){
     const remainDays = refDay-elapsed;
     remainText = remainDays+'일';
-    // 보톡스·스킨보톡스: 1~4일 남았을 때 숫자를 빨간색으로 / 쥬베룩: 7~21일 남았을 때(=사용독려 구간) 숫자를 빨간색으로
-    remainRed = normalTier ? (remainDays>=1 && remainDays<=4) : (remainDays>=7 && remainDays<=21);
+    // 보톡스와 같은 방식: 정상→사용독려 경계와의 거리만큼을 "곧 사용독려" 경고로 빨간색 표시
+    const redWindow = refDay-normalEndDay+1; // 보톡스=4, 쥬베룩=11
+    remainRed = remainDays>=1 && remainDays<=redWindow;
   }else{
     remainText = '+'+(elapsed-refDay)+'일'; // 서비스추천·폐기 모두 오늘 기준 초과일수를 +N일로 표시
   }
@@ -410,7 +412,7 @@ function updateField(id, field, value){
 function removeItem(id){
   const isFixed = !!slotDef(id);
   const r = records.find(x=>x.id===id);
-  const st = r ? statusInfo(r.category, r.hydrateDate) : null;
+  const st = r ? statusInfo(r.category, r.product, r.hydrateDate) : null;
 
   if(st && st.label==='폐기'){
     if(!confirm('이 항목을 폐기 목록으로 옮길까요?\n(이 줄은 빈 칸으로 돌아가고, 아래 폐기 목록에 기록됩니다)')) return;
@@ -484,6 +486,10 @@ function displayItemsFor(cat){
   return fixed.concat(extras);
 }
 
+// 이 분류들은 "분류" 칸을 엑셀처럼 세로로 병합해서 한 번만 보여줍니다 (보톡스·스킨보톡스만 해당).
+// 쥬베룩(가로 한 줄)이나 새로 추가하는 분류는 기존 방식(분류명 줄이 위에 따로 표시)을 그대로 씁니다.
+const MERGED_CATS = ['보톡스','스킨보톡스'];
+
 function render(){
   const body = document.getElementById('mainBody');
   body.innerHTML = '';
@@ -491,35 +497,42 @@ function render(){
     const items = displayItemsFor(cat);
     if(items.length===0 && !CATS.includes(cat)) return; // 직접입력 분류인데 항목이 모두 없어지면 섹션 자체를 숨김
     const flat = FLAT_CATS.includes(cat);
-    if(!flat){
+    const merged = MERGED_CATS.includes(cat);
+    if(!flat && !merged){
       const tr = document.createElement('tr');
       tr.className='grp-head';
-      tr.innerHTML = `<td colspan="6">${cat}</td>`;
+      tr.innerHTML = `<td colspan="7">${cat}</td>`;
       body.appendChild(tr);
     }
     if(items.length===0){
       const e = document.createElement('tr');
       e.className='no-item';
-      e.innerHTML = `<td colspan="6">등록된 항목이 없습니다 · "+ 새 항목"으로 추가하세요</td>`;
+      e.innerHTML = `<td colspan="7">등록된 항목이 없습니다 · "+ 새 항목"으로 추가하세요</td>`;
       body.appendChild(e);
       return;
     }
-    items.forEach(r=>{
-      const st = statusInfo(r.category, r.hydrateDate);
+    items.forEach((r,idx)=>{
+      const st = statusInfo(r.category, r.product, r.hydrateDate);
       const sd = slotDef(r.id);
       const productEditable = sd ? sd.editableProduct : true;
-      let productCell;
+      const productInner = productEditable
+        ? `<input type="text" class="remain-inp" style="width:100%;text-align:left" value="${r.product||''}" placeholder="제품명" onchange="updateField('${r.id}','product',this.value)">`
+        : (r.product||'');
+
+      let leadCells;
       if(flat){
-        productCell = `<strong>${r.product || cat}</strong>`;
-      } else if(productEditable){
-        productCell = `<input type="text" class="remain-inp" style="width:100%;text-align:left" value="${r.product||''}" placeholder="제품명" onchange="updateField('${r.id}','product',this.value)">`;
-      } else {
-        productCell = r.product||'';
+        leadCells = `<td colspan="2" style="text-align:left"><strong>${r.product || cat}</strong></td>`;
+      }else if(merged){
+        const catCell = idx===0 ? `<td rowspan="${items.length}" class="cat-merge">${cat}</td>` : '';
+        leadCells = `${catCell}<td style="text-align:left">${productInner}</td>`;
+      }else{
+        leadCells = `<td colspan="2" style="text-align:left">${productInner}</td>`;
       }
+
       const row = document.createElement('tr');
       if(flat) row.className='flat-row';
       row.innerHTML = `
-        <td style="text-align:left">${productCell}</td>
+        ${leadCells}
         <td><input type="date" value="${r.hydrateDate||''}" onchange="updateField('${r.id}','hydrateDate',this.value)"></td>
         <td><input type="text" class="remain-inp" value="${r.remain||''}" placeholder="예: 20u" onchange="updateField('${r.id}','remain',this.value)"></td>
         <td class="rd-count${st.remainRed?' rd-red':''}">${st.remainText}</td>
@@ -663,7 +676,7 @@ function importData(file){
 function excelExport(){
   if(typeof XLSX==='undefined'){ alert('엑셀 모듈을 불러오지 못했습니다.'); return; }
   const rows = records.map(r=>{
-    const st = statusInfo(r.category, r.hydrateDate);
+    const st = statusInfo(r.category, r.product, r.hydrateDate);
     return {분류:r.category, 제품:r.product, 수화일:r.hydrateDate, 잔여량:r.remain||'', 잔여사용일:st.remainText, 할일:st.label, 폐기날짜:st.discardDate};
   });
   const wb = XLSX.utils.book_new();
