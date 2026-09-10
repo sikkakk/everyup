@@ -30,7 +30,8 @@
   .today-line{font-size:12.5px; font-weight:700; color:var(--muted);}
 
   /* ---- 새 항목 버튼 ---- */
-  .section-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .section-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; row-gap:8px;}
+  .usage-note{font-size:12.5px; font-weight:700; color:var(--red);}
   .add-btn{padding:11px 20px; font-size:14px; font-weight:800; background:var(--teal); color:#fff; border:0; border-radius:9px; transition:.15s;}
   .add-btn:hover{background:#0c918d;}
   .btn-ghost{padding:11px 20px; font-size:14px; font-weight:700; background:#fff; color:var(--muted); border:1px solid var(--line); border-radius:9px;}
@@ -147,9 +148,10 @@
 
   <div class="card">
     <div class="section-head">
-      <div style="display:flex; align-items:baseline; gap:10px;">
+      <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; row-gap:6px;">
         <div class="card-title" style="margin-bottom:0">보유 현황</div>
         <span class="today-line" id="todayLine"></span>
+        <span class="usage-note">사용기간: 보톡스 수화일로부터 7일 / 쥬베룩 수화일로부터 30일</span>
       </div>
       <button class="add-btn" onclick="openAddModal()">+ 새 항목</button>
     </div>
