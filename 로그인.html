@@ -534,8 +534,12 @@ function renderAppSettings(){
   }
 }
 function acceptAppSettings(r){
-  if(!r.apps || !Number.isInteger(r.revision) || MENU_APPS.some(([key])=>typeof r.apps[key]!=='boolean')) throw new Error('invalid settings');
-  appState=r.apps; appRevision=r.revision; appCanManage=r.canManage===true;
+  if(!r.apps || !Number.isInteger(r.revision)) throw new Error('invalid settings');
+  // 예전 백엔드가 아직 모르는 새 앱 키(예: botox)는 없으면 기본값 '사용'으로 채워서
+  // 전체 메뉴가 통째로 막히지 않게 합니다.
+  const apps = Object.assign({}, r.apps);
+  MENU_APPS.forEach(([key])=>{ if(typeof apps[key] !== 'boolean') apps[key] = true; });
+  appState=apps; appRevision=r.revision; appCanManage=r.canManage===true;
   $('appSettingsRetry').hidden=true;
   renderAppSettings();
 }
