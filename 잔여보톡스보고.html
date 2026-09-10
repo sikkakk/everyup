@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>에브리업의원 · 잔여 보톡스 보고</title>
+<style>
+  :root{
+    --navy:#1C2B4A; --navy2:#2C3E50;
+    --teal:#0EA5A0; --teal-lt:#EAF6F5;
+    --blue:#2E86C1; --blue-lt:#EAF2FB;
+    --green:#1E8E54; --green-lt:#EAFAF1;
+    --amber:#D97706; --amber-lt:#FEF3E2;
+    --red:#D64541; --red-lt:#FDECEA;
+    --black:#111318; --black-lt:#EDEEF0;
+    --ink:#1C2B4A; --muted:#7C8A99; --line:#E4E9EE; --bg:#F1F4F8; --card:#FFFFFF;
+    --r:14px; --shadow:0 1px 3px rgba(28,43,74,.06),0 8px 24px rgba(28,43,74,.06);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif;
+    background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; line-height:1.5;}
+  button,select,input{font-family:inherit}
+  button{cursor:pointer}
+  button:focus-visible, select:focus-visible, input:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
+
+  main{max-width:1080px; margin:0 auto; padding:22px 20px 60px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); padding:18px; margin-bottom:16px;}
+  .card-title{font-size:12px; font-weight:800; color:var(--muted); letter-spacing:.04em; margin-bottom:14px;}
+
+  .today-line{font-size:12.5px; font-weight:700; color:var(--muted);}
+
+  /* ---- 새 항목 버튼 ---- */
+  .section-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .add-btn{padding:11px 20px; font-size:14px; font-weight:800; background:var(--teal); color:#fff; border:0; border-radius:9px; transition:.15s;}
+  .add-btn:hover{background:#0c918d;}
+  .btn-ghost{padding:11px 20px; font-size:14px; font-weight:700; background:#fff; color:var(--muted); border:1px solid var(--line); border-radius:9px;}
+  .btn-ghost:hover{background:#F5F7F9;}
+
+  /* ---- 새 항목 팝업 ---- */
+  .modal-overlay{position:fixed; inset:0; z-index:500; background:rgba(20,25,32,.4); display:flex; align-items:center; justify-content:center; padding:18px;}
+  .modal-overlay[hidden]{display:none!important;}
+  .modal-card{width:min(420px,100%); background:#fff; border-radius:16px; box-shadow:0 18px 50px rgba(20,30,40,.22); padding:20px; max-height:90vh; overflow-y:auto;}
+  .modal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+  .modal-head h3{font-size:17px; font-weight:800; color:var(--navy);}
+  .modal-close{border:0; background:#F1F3F5; width:32px; height:32px; border-radius:9px; font-size:18px; cursor:pointer; color:var(--muted);}
+  .modal-body{display:flex; flex-direction:column; gap:14px;}
+  .add-field{display:flex; flex-direction:column; gap:6px;}
+  .add-field label{font-size:12px; font-weight:700; color:var(--muted);}
+  .add-field select, .add-field input{padding:10px 12px; border:1px solid var(--line); border-radius:9px; font-size:14px; color:var(--ink); width:100%;}
+  .modal-actions{display:flex; gap:10px; margin-top:18px;}
+  .modal-actions .add-btn, .modal-actions .btn-ghost{flex:1;}
+
+  /* ---- 표 ---- */
+  table.bt{width:100%; border-collapse:collapse; margin-top:6px;}
+  table.bt th{background:var(--navy); color:#fff; font-size:12px; font-weight:700; padding:10px 8px; text-align:center;}
+  table.bt td{padding:9px 8px; border-bottom:1px solid #EEF1F5; text-align:center; font-size:13.5px; color:var(--ink); vertical-align:middle;}
+  tr.grp-head td{background:#F8FAFC; font-weight:800; color:var(--navy2); text-align:left; padding:10px 10px; font-size:13.5px; border-bottom:1px solid var(--line);}
+  tr.no-item td{color:var(--muted); font-size:12.5px; padding:12px; background:#FCFCFD;}
+  table.bt input[type=date]{padding:6px 8px; border:1px solid var(--line); border-radius:7px; font-size:13px; font-family:inherit;}
+  table.bt input.remain-inp{width:90px; padding:6px 8px; border:1px solid var(--line); border-radius:7px; font-size:13px; text-align:center; font-family:inherit;}
+  .st{font-weight:800;}
+  .st-normal{color:var(--green);}
+  .st-encourage{color:var(--red);}
+  .st-refer{color:var(--blue);}
+  .st-discard{background:var(--black); color:#fff; padding:4px 10px; border-radius:6px; display:inline-block;}
+  .st-unused{color:var(--muted); font-weight:700;}
+  .rd-count{font-weight:700; color:var(--navy2);}
+  .del-btn{padding:5px 10px; font-size:11.5px; border:1px solid #f3c9c5; border-radius:7px; background:#fff; color:var(--red); font-weight:700;}
+  .del-btn:hover{background:var(--red-lt);}
+  /* ---- 폐기 표 ---- */
+  table.dt2{width:100%; border-collapse:collapse;}
+  table.dt2 th{background:var(--black); color:#fff; font-size:12px; font-weight:700; padding:10px 8px; text-align:center;}
+  table.dt2 td{padding:9px 8px; border-bottom:1px solid #EEF1F5; text-align:center; font-size:13.5px; color:var(--ink);}
+  .empty{text-align:center; color:var(--muted); padding:24px; font-size:13px;}
+
+  .save-indicator{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:10px;}
+
+  @media (max-width:640px){
+    .add-row{flex-direction:column; align-items:stretch;}
+    .add-field select, .add-field input{min-width:0; width:100%;}
+  }
+
+  /* ---- 에브리업 공통 상단 ---- */
+  .eu-unified-top{position:sticky;top:0;z-index:120;background:rgba(247,248,250,.96);backdrop-filter:blur(12px);border-bottom:1px solid #E3E7EC;font-family:"Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+  .eu-unified-top *{box-sizing:border-box}
+  .eu-unified-inner{max-width:1180px;margin:0 auto;padding:11px 18px;display:flex;align-items:center;gap:14px;min-height:60px;overflow-x:auto;scrollbar-width:none}
+  .eu-unified-inner::-webkit-scrollbar{display:none}.eu-u-brand{display:flex;align-items:center;gap:12px;flex:0 0 auto;white-space:nowrap}.eu-u-logo{height:34px;width:auto;display:block}.eu-u-divider{width:1px;height:25px;background:#DCE1E7}.eu-u-title{font-size:20px;font-weight:800;letter-spacing:-.025em;color:#161A20}.eu-u-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex:0 0 auto;white-space:nowrap}.eu-u-today{font-size:12px;font-weight:650;color:#8792A1}.eu-u-status{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;background:#E8F5EE;color:#168154;font-size:12px;font-weight:800;border:1px solid #DCEFE4}.eu-u-status i{width:7px;height:7px;border-radius:50%;background:#16905F;display:block}.eu-u-status[data-s="busy"]{background:#EEF0FA;color:#5A4FC7;border-color:#E0DDF5}.eu-u-status[data-s="busy"] i{background:#5A4FC7}.eu-u-status[data-s="error"]{background:#FCEBE7;color:#B54A34;border-color:#F3D4CD}.eu-u-status[data-s="error"] i{background:#C6533D}.eu-u-status[data-s="offline"]{background:#F7F0DF;color:#946A10;border-color:#EFE2C2}.eu-u-status[data-s="offline"] i{background:#C19026}.eu-u-btn{height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #DDE2E8;background:#fff;color:#1F2937;border-radius:10px;padding:0 13px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 1px 2px rgba(20,30,40,.03);white-space:nowrap}.eu-u-btn:hover{border-color:#C9D0D8}.eu-u-btn.excel{background:#EAF6EF;border-color:#CDE7D6;color:#187545}.eu-u-btn.json{background:#F0EEFC;border-color:#DFDBF8;color:#5144B8}.eu-u-btn.gear{width:38px;padding:0;color:#40566F;background:#F0F3F7}.eu-u-settings{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(20,25,32,.35);padding:18px}.eu-u-settings.show{display:flex}.eu-u-settings-card{width:min(420px,100%);background:#fff;border:1px solid #E2E6EA;border-radius:16px;padding:18px;box-shadow:0 18px 50px rgba(20,30,40,.18)}.eu-u-settings-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}.eu-u-settings-head h3{margin:0;font-size:17px}.eu-u-close{border:0;background:#F1F3F5;width:32px;height:32px;border-radius:9px;font-size:18px;cursor:pointer}.eu-u-settings-actions{display:grid;gap:8px}.eu-u-settings-actions button,.eu-u-settings-actions label{display:flex;align-items:center;justify-content:center;border:1px solid #DDE2E8;background:#fff;border-radius:11px;padding:11px 12px;font-size:13px;font-weight:800;cursor:pointer;color:#26313E}.eu-u-settings-note{margin-top:10px;color:#7A8491;font-size:11.5px;line-height:1.55}
+  @media(max-width:800px){.eu-unified-inner{padding:9px 12px;gap:10px}.eu-u-logo{height:28px}.eu-u-title{font-size:16px}.eu-u-right{gap:6px}.eu-u-today{display:none}.eu-u-btn{height:34px;padding:0 10px;font-size:12px}.eu-u-btn.gear{width:34px}.eu-u-status{padding:5px 9px;font-size:11.5px}}
+
+  /* ---- 접근 게이트 ---- */
+  #accessGate{position:fixed; inset:0; z-index:9999; background:var(--navy);
+    display:flex; align-items:center; justify-content:center; padding:24px;}
+  #accessGate.hidden{display:none;}
+  .gate-card{background:#fff; border-radius:18px; box-shadow:0 20px 60px rgba(0,0,0,.35);
+    width:100%; max-width:380px; padding:34px 30px; text-align:center;}
+  .gate-lock{font-size:40px; line-height:1; margin-bottom:14px;}
+  .gate-title{font-size:19px; font-weight:800; color:var(--navy); letter-spacing:-.3px;}
+  .gate-sub{font-size:13px; color:var(--muted); margin-top:8px; line-height:1.6;}
+  .gate-form{margin-top:22px; display:flex; flex-direction:column; gap:10px;}
+  .gate-form input{padding:13px 14px; border:1px solid var(--line); border-radius:11px;
+    font-size:15px; text-align:center; font-family:inherit; letter-spacing:1px;}
+  .gate-form input:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(14,165,160,.15);}
+  .gate-btn{padding:13px; font-size:15px; font-weight:800; background:var(--teal); color:#fff;
+    border:0; border-radius:11px; cursor:pointer; transition:.15s;}
+  .gate-btn:hover{background:#0c918d;}
+  .gate-err{font-size:12.5px; color:var(--red); font-weight:700; min-height:16px;}
+  .gate-note{font-size:11.5px; color:var(--muted); margin-top:16px; line-height:1.6;}
+  [hidden]{display:none!important}
+</style>
+<script src="everyup-config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<header class="eu-unified-top" id="euUnifiedHeader"><div class="eu-unified-inner">
+  <div class="eu-u-brand"><img class="eu-u-logo" src="https://sikkakk.github.io/everyup/logo.png" alt="에브리업의원"><span class="eu-u-divider"></span><span class="eu-u-title">잔여 보톡스 보고</span></div>
+  <div class="eu-u-right"><span class="eu-u-today" id="euTopToday"></span><span class="eu-u-status" id="euTopStatus" data-s="busy"><i></i><span id="euTopStatusText">연결 중…</span></span><button class="eu-u-btn" id="euMenuBtn">← 메뉴</button><button class="eu-u-btn excel" id="euExcelBtn">엑셀 저장</button><button class="eu-u-btn json" id="euJsonBtn">JSON 저장</button><button class="eu-u-btn gear" id="euGearBtn" aria-label="설정" title="설정">⚙</button></div>
+</div>
+<div class="eu-u-settings" id="euSettingsModal"><div class="eu-u-settings-card"><div class="eu-u-settings-head"><h3>설정 · 복원</h3><button class="eu-u-close" data-eu-close>×</button></div><div class="eu-u-settings-actions" id="euSettingsActions"></div><div class="eu-u-settings-note">복원은 현재 데이터를 바꿀 수 있으므로 실행 전 자동으로 JSON 백업을 내려받도록 구성했습니다.</div></div></div>
+</header>
+
+<!-- ===== 접근 게이트 (원장·상담실장·간호조무사 전용) ===== -->
+<div id="accessGate">
+  <div class="gate-card">
+    <div class="gate-lock">🔒</div>
+    <div class="gate-title">잔여 보톡스 보고 · 접근 확인</div>
+    <div class="gate-sub">원장·상담실장·간호조무사 전용 페이지입니다.<br>로그인 화면의 <b>잔여 보톡스 보고</b> 버튼으로 들어와 주세요.</div>
+    <div class="gate-form">
+      <input type="password" id="gatePw" inputmode="text" autocomplete="off"
+        placeholder="비밀번호" onkeydown="if(event.key==='Enter')gateUnlock()">
+      <div class="gate-err" id="gateErr"></div>
+      <button class="gate-btn" onclick="gateUnlock()">들어가기</button>
+    </div>
+    <div class="gate-note">주소를 직접 아는 사람의 접근을 막기 위한 화면입니다.<br>비밀번호는 원장·상담실장·간호조무사만 공유해 주세요.</div>
+  </div>
+</div>
+
+<main>
+  <div class="save-indicator" id="saveIndicator">● 구글 시트</div>
+
+  <div class="card">
+    <div class="section-head">
+      <div style="display:flex; align-items:baseline; gap:10px;">
+        <div class="card-title" style="margin-bottom:0">보유 현황</div>
+        <span class="today-line" id="todayLine"></span>
+      </div>
+      <button class="add-btn" onclick="openAddModal()">+ 새 항목</button>
+    </div>
+    <table class="bt">
+      <thead>
+        <tr><th style="text-align:left;width:20%">제품</th><th style="width:14%">수화일</th><th style="width:16%">잔여량(대략)</th><th style="width:14%">잔여사용일</th><th style="width:16%">할일</th><th style="width:10%"></th></tr>
+      </thead>
+      <tbody id="mainBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">폐기 목록</div>
+    <table class="dt2">
+      <thead><tr><th style="text-align:left">폐기 품목</th><th>수화일</th><th>폐기 날짜</th></tr></thead>
+      <tbody id="discardBody"></tbody>
+    </table>
+    <div class="empty" id="discardEmpty" style="display:none">현재 폐기 목록이 없습니다.</div>
+  </div>
+
+  <input type="file" id="importFile" accept=".json" hidden onchange="importData(this.files[0])">
+
+  <!-- ===== 새 항목 팝업 ===== -->
+  <div class="modal-overlay" id="addModal" hidden>
+    <div class="modal-card">
+      <div class="modal-head"><h3>새 항목 추가</h3><button class="modal-close" onclick="closeAddModal()">×</button></div>
+      <div class="modal-body">
+        <div class="add-field">
+          <label>분류</label>
+          <select id="newCatSelect">
+            <option value="보톡스">보톡스</option>
+            <option value="스킨보톡스">스킨보톡스</option>
+            <option value="쥬베룩 볼륨">쥬베룩 볼륨</option>
+            <option value="쥬베룩 스킨">쥬베룩 스킨</option>
+            <option value="__custom__">직접 입력...</option>
+          </select>
+          <input type="text" id="newCatCustom" placeholder="분류명을 입력하세요" hidden>
+        </div>
+        <div class="add-field">
+          <label>제품</label>
+          <input type="text" id="newProduct" list="productHints" placeholder="예: 뉴럭스 (직접 입력 가능)">
+          <datalist id="productHints"></datalist>
+        </div>
+        <div class="add-field">
+          <label>수화일</label>
+          <input type="date" id="newHydrateDate">
+        </div>
+        <div class="add-field">
+          <label>잔여량 (대략)</label>
+          <input type="text" id="newRemain" placeholder="예: 20u, 절반 정도">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-ghost" onclick="closeAddModal()">취소</button>
+        <button class="add-btn" onclick="addItem()">추가</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ===================== 접근 게이트 =====================
+   허용: 원장 · 상담실장 · 간호조무사
+   - 로그인 화면의 '잔여 보톡스 보고' 버튼으로 들어오면 신호(everyup_botox_ok)를
+     받아 비밀번호 없이 바로 열림 (같은 탭 세션 동안 유지)
+   - 주소를 직접 아는 사람의 새 창 접근은 막힘 → 비상용 비밀번호 필요
+   - 비상용 비밀번호: botox2026  (다른 앱과 다른 비번, 원장·상담실장·간호조무사만 공유)
+====================================================== */
+const BOTOX_HANDOFF_KEY = 'everyup_botox_ok';
+const BOTOX_SESSION_KEY = 'everyup_botox_session';
+const BOTOX_HANDOFF_MAX_MS = 120000;
+const BOTOX_PW_HASH = '627156d00414ccbd1dfeddbdf2e67384037cb601dfd313e5923217f19361f46b'; // SHA-256('botox2026')
+
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function grantAccess(){
+  try{ sessionStorage.setItem(BOTOX_SESSION_KEY, '1'); }catch(e){}
+  const g = document.getElementById('accessGate');
+  if(g) g.classList.add('hidden');
+}
+function checkAccess(){
+  try{ if(sessionStorage.getItem(BOTOX_SESSION_KEY) === '1'){ grantAccess(); return; } }catch(e){}
+  try{
+    const ts = parseInt(sessionStorage.getItem(BOTOX_HANDOFF_KEY) || '0', 10);
+    if(ts && (Date.now() - ts) < BOTOX_HANDOFF_MAX_MS){
+      sessionStorage.removeItem(BOTOX_HANDOFF_KEY);
+      grantAccess();
+      return;
+    }
+  }catch(e){}
+  setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); }, 100);
+}
+async function gateUnlock(){
+  const el = document.getElementById('gatePw');
+  const err = document.getElementById('gateErr');
+  const v = (el.value || '').trim();
+  if(!v){ err.textContent = '비밀번호를 입력하세요.'; return; }
+  const h = await sha256Hex(v);
+  if(h === BOTOX_PW_HASH){ err.textContent=''; grantAccess(); }
+  else{ err.textContent = '비밀번호가 올바르지 않습니다.'; el.value=''; el.focus(); }
+}
+checkAccess();
+/* =================== 접근 게이트 끝 =================== */
+
+/* ===================== 분류/상태 규칙 ===================== */
+const CATS = ['보톡스','스킨보톡스','쥬베룩 볼륨','쥬베룩 스킨'];
+const PRODUCT_HINTS = {
+  '보톡스': ['뉴럭스','코어톡스','제오민'],
+  '스킨보톡스': ['뉴럭스','코어톡스','제오민'],
+  '쥬베룩 볼륨': ['쥬베룩 볼륨'],
+  '쥬베룩 스킨': ['쥬베룩 스킨']
+};
+// 분류에 "쥬베룩"이 들어가면 쥬베룩 기준, 그 외(보톡스·스킨보톡스 및 직접입력 분류)는
+// 보수적으로 보톡스 기준(정상 단계 있음)을 기본 적용합니다.
+function hasNormalTier(cat){ return (cat||'').indexOf('쥬베룩')===-1; }
+function ruleOf(cat){
+  return hasNormalTier(cat) ? {refDay:7, discardDay:11} : {refDay:21, discardDay:31};
+}
+
+function parseLocal(str){ const [y,m,d]=str.split('-').map(Number); return new Date(y,m-1,d); }
+function toYMD(d){ const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+function todayYMD(){ return toYMD(new Date()); }
+function daysBetween(fromStr,toStr){ return Math.round((parseLocal(toStr)-parseLocal(fromStr))/86400000); }
+function addDays(str,n){ const d=parseLocal(str); d.setDate(d.getDate()+n); return toYMD(d); }
+
+function statusInfo(cat, hydrateDate){
+  if(!hydrateDate){
+    return { elapsed:null, label:'미사용', cls:'st-unused', remainText:'–', discardDate:'' };
+  }
+  const elapsed = daysBetween(hydrateDate, todayYMD());
+  const {refDay, discardDay} = ruleOf(cat);
+  const normalTier = hasNormalTier(cat);
+  let label, cls;
+  if(normalTier){
+    if(elapsed<=refDay-3){ label='정상'; cls='st-normal'; }
+    else if(elapsed<=refDay){ label='사용독려'; cls='st-encourage'; }
+    else if(elapsed<discardDay){ label='서비스추천'; cls='st-refer'; }
+    else { label='폐기'; cls='st-discard'; }
+  }else{
+    if(elapsed<=refDay){ label='사용독려'; cls='st-encourage'; }
+    else if(elapsed<discardDay){ label='서비스추천'; cls='st-refer'; }
+    else { label='폐기'; cls='st-discard'; }
+  }
+  let remainText;
+  if(elapsed<=refDay) remainText = (refDay-elapsed)+'일';
+  else if(elapsed<discardDay) remainText = '+'+(elapsed-refDay)+'일';
+  else remainText = '폐기';
+  const discardDate = addDays(hydrateDate, discardDay);
+  return {elapsed, label, cls, remainText, discardDate};
+}
+
+/* ===================== 데이터 ===================== */
+let records = []; // [{id, category, product, hydrateDate, remain}]
+let saveTimer = null;
+
+function loadLocal(){
+  try{ const s = localStorage.getItem('botox_remain_v1'); if(s) records = JSON.parse(s)||[]; }catch(e){}
+}
+function persist(){
+  const ind = document.getElementById('saveIndicator');
+  clearTimeout(saveTimer);
+  try{
+    localStorage.setItem('botox_remain_v1', JSON.stringify(records));
+    ind.textContent = cloudOn ? '● 구글 시트에 저장됨' : '● 저장됨(이 PC)';
+    ind.style.color = '#1E8E54';
+    saveTimer = setTimeout(()=>{ ind.textContent = cloudOn ? '● 구글 시트' : '● 로컬 저장'; ind.style.color=''; }, 1500);
+    euBackupSnapshot && euBackupSnapshot('잔여보톡스보고', records);
+    if(cloudOn) cloudPush();
+  }catch(e){
+    ind.textContent='⚠ 저장 실패'; ind.style.color='#dc2626';
+  }
+}
+
+function newId(){ return 'b'+Date.now()+Math.random().toString(36).slice(2,7); }
+
+// 고정 항목: 이 목록은 데이터와 무관하게 항상 표에 나타납니다.
+// (수화일·잔여량을 입력하는 순간에만 실제 데이터로 저장되고, 지우면 다시 빈 칸으로 돌아갑니다)
+const FIXED_SLOTS = [
+  { id:'fx_botox_nurlux',     category:'보톡스',     product:'뉴럭스',   editableProduct:false },
+  { id:'fx_botox_coretox',    category:'보톡스',     product:'코어톡스', editableProduct:false },
+  { id:'fx_botox_xeomin',     category:'보톡스',     product:'제오민',   editableProduct:false },
+  { id:'fx_skinbotox_nurlux', category:'스킨보톡스', product:'뉴럭스',   editableProduct:false },
+  { id:'fx_skinbotox_coretox',category:'스킨보톡스', product:'코어톡스', editableProduct:false },
+  { id:'fx_skinbotox_xeomin', category:'스킨보톡스', product:'제오민',   editableProduct:false },
+  { id:'fx_juve_volume',      category:'쥬베룩 볼륨', product:'쥬베룩 볼륨', editableProduct:false },
+  { id:'fx_juve_skin',        category:'쥬베룩 스킨', product:'쥬베룩 스킨', editableProduct:false }
+];
+// 이 분류들은 별도 머리글 줄 없이, 분류명이 곧 그 줄의 이름이 되어 바로 옆에 수화일 등이 나열됩니다.
+const FLAT_CATS = ['쥬베룩 볼륨','쥬베룩 스킨'];
+function slotDef(id){ return FIXED_SLOTS.find(s=>s.id===id); }
+
+function getModalCategory(){
+  const sel = document.getElementById('newCatSelect');
+  if(sel.value==='__custom__') return document.getElementById('newCatCustom').value.trim();
+  return sel.value;
+}
+function openAddModal(){
+  document.getElementById('newCatSelect').value='보톡스';
+  document.getElementById('newCatCustom').hidden=true;
+  document.getElementById('newCatCustom').value='';
+  document.getElementById('newProduct').value='';
+  document.getElementById('newHydrateDate').value='';
+  document.getElementById('newRemain').value='';
+  fillProductHints();
+  document.getElementById('addModal').hidden=false;
+  setTimeout(()=>document.getElementById('newProduct').focus(),50);
+}
+function closeAddModal(){
+  document.getElementById('addModal').hidden=true;
+}
+function addItem(){
+  const cat = getModalCategory();
+  const product = document.getElementById('newProduct').value.trim();
+  const hydrateDate = document.getElementById('newHydrateDate').value || '';
+  const remain = document.getElementById('newRemain').value.trim();
+  if(!cat){ alert('분류를 선택하거나 입력하세요.'); return; }
+  if(!product){ alert('제품명을 입력하세요.'); return; }
+  records.push({ id: newId(), category:cat, product, hydrateDate, remain });
+  persist(); render();
+  closeAddModal();
+}
+function updateField(id, field, value){
+  let r = records.find(x=>x.id===id);
+  if(!r){
+    // 아직 데이터가 없는 고정 슬롯 → 이번 입력으로 실제 항목을 만듭니다.
+    const sd = slotDef(id);
+    if(!sd) return;
+    r = { id: sd.id, category: sd.category, product: sd.product, hydrateDate:'', remain:'' };
+    records.push(r);
+  }
+  r[field]=value;
+  persist(); render();
+}
+function removeItem(id){
+  const isFixed = !!slotDef(id);
+  if(!confirm(isFixed ? '이 항목의 입력값을 지울까요? (칸은 그대로 남습니다)' : '이 항목을 삭제할까요?')) return;
+  records = records.filter(x=>x.id!==id);
+  persist(); render();
+}
+
+/* ===================== 렌더 ===================== */
+function fillProductHints(){
+  const cat = getModalCategory();
+  const dl = document.getElementById('productHints');
+  dl.innerHTML = (PRODUCT_HINTS[cat]||[]).map(p=>`<option value="${p}">`).join('');
+}
+document.getElementById('newCatSelect').addEventListener('change', function(){
+  const custom = this.value==='__custom__';
+  document.getElementById('newCatCustom').hidden = !custom;
+  if(custom) document.getElementById('newCatCustom').focus();
+  fillProductHints();
+});
+document.getElementById('newCatCustom').addEventListener('input', fillProductHints);
+
+function orderedCategories(){
+  const extra = [];
+  records.forEach(r=>{ if(!CATS.includes(r.category) && !extra.includes(r.category)) extra.push(r.category); });
+  return CATS.concat(extra);
+}
+
+// 화면에 보일 목록: 고정 슬롯(데이터 없으면 빈 칸) + 그 외 실제로 추가된 항목
+function displayItemsFor(cat){
+  const fixed = FIXED_SLOTS.filter(s=>s.category===cat).map(sd=>{
+    const found = records.find(r=>r.id===sd.id);
+    return found || { id: sd.id, category: sd.category, product: sd.product, hydrateDate:'', remain:'' };
+  });
+  const fixedIds = FIXED_SLOTS.map(s=>s.id);
+  const extras = records.filter(r=>r.category===cat && !fixedIds.includes(r.id));
+  return fixed.concat(extras);
+}
+
+function render(){
+  const body = document.getElementById('mainBody');
+  body.innerHTML = '';
+  orderedCategories().forEach(cat=>{
+    const items = displayItemsFor(cat);
+    if(items.length===0 && !CATS.includes(cat)) return; // 직접입력 분류인데 항목이 모두 없어지면 섹션 자체를 숨김
+    const flat = FLAT_CATS.includes(cat);
+    if(!flat){
+      const tr = document.createElement('tr');
+      tr.className='grp-head';
+      tr.innerHTML = `<td colspan="6">${cat}</td>`;
+      body.appendChild(tr);
+    }
+    if(items.length===0){
+      const e = document.createElement('tr');
+      e.className='no-item';
+      e.innerHTML = `<td colspan="6">등록된 항목이 없습니다 · "+ 새 항목"으로 추가하세요</td>`;
+      body.appendChild(e);
+      return;
+    }
+    items.forEach(r=>{
+      const st = statusInfo(r.category, r.hydrateDate);
+      const sd = slotDef(r.id);
+      const productEditable = sd ? sd.editableProduct : true;
+      let productCell;
+      if(flat){
+        productCell = `<strong>${r.product || cat}</strong>`;
+      } else if(productEditable){
+        productCell = `<input type="text" class="remain-inp" style="width:100%;text-align:left" value="${r.product||''}" placeholder="제품명" onchange="updateField('${r.id}','product',this.value)">`;
+      } else {
+        productCell = r.product||'';
+      }
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td style="text-align:left">${productCell}</td>
+        <td><input type="date" value="${r.hydrateDate||''}" onchange="updateField('${r.id}','hydrateDate',this.value)"></td>
+        <td><input type="text" class="remain-inp" value="${r.remain||''}" placeholder="예: 20u" onchange="updateField('${r.id}','remain',this.value)"></td>
+        <td class="rd-count">${st.remainText}</td>
+        <td class="st ${st.cls}">${st.label}</td>
+        <td><button class="del-btn" onclick="removeItem('${r.id}')">${sd?'지우기':'삭제'}</button></td>`;
+      body.appendChild(row);
+    });
+  });
+  renderDiscard();
+}
+
+function renderDiscard(){
+  const body = document.getElementById('discardBody');
+  const empty = document.getElementById('discardEmpty');
+  const items = records
+    .map(r=>({r, st:statusInfo(r.category, r.hydrateDate)}))
+    .filter(x=>x.st.label==='폐기');
+  if(items.length===0){
+    body.innerHTML=''; empty.style.display='block'; return;
+  }
+  empty.style.display='none';
+  body.innerHTML = items.map(({r,st})=>`
+    <tr><td style="text-align:left">${r.category} · ${r.product}</td><td>${r.hydrateDate}</td><td>${st.discardDate}</td></tr>
+  `).join('');
+}
+
+/* ===================== 구글 시트 연동 (상담결제전환·예약통계와 같은 URL 사용) ===================== */
+/*  ▼▼▼ 상담결제전환관리/예약통계에서 쓰던 그 Apps Script /exec URL을 그대로 붙여넣으세요 ▼▼▼ */
+const CLOUD_URL = "https://script.google.com/macros/s/AKfycbzP4SKXTS47Xkqx7RlQ08MQNmukNOsNh8IF8Kl9BhKCuQN87zq9Jt7WRn9XMaYBZDUS/exec";
+/*  ▲▲▲ 비워두면 이 브라우저에만 저장됩니다 ▲▲▲ */
+const cloudOn = !!CLOUD_URL;
+let syncedOK = false;
+
+function cloudPush(){
+  if(!cloudOn) return;
+  if(!syncedOK){
+    const ind=document.getElementById('saveIndicator');
+    ind.textContent='⚠ 시트 미동기화 · 로컬만 저장'; ind.style.color='#D97706';
+    return;
+  }
+  fetch(CLOUD_URL, {method:'POST', mode:'no-cors',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({action:'saveBotox', records:records})
+  }).catch(function(){});
+}
+function cloudPull(){
+  return new Promise(function(resolve){
+    if(!cloudOn){ resolve(false); return; }
+    var cb='__bx_cb_'+Date.now()+'_'+Math.floor(Math.random()*1e4);
+    var s=document.createElement('script'); var done=false;
+    function cleanup(){ try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode) s.parentNode.removeChild(s); }
+    window[cb]=function(res){ done=true; try{
+      if(res && res.ok && Array.isArray(res.botox)){
+        records = res.botox;
+        try{ localStorage.setItem('botox_remain_v1', JSON.stringify(records)); }catch(e){}
+        syncedOK=true; resolve(true);
+      } else resolve(false);
+    } finally { cleanup(); } };
+    s.onerror=function(){ if(!done){ resolve(false); cleanup(); } };
+    s.src=CLOUD_URL+(CLOUD_URL.indexOf('?')>=0?'&':'?')+'callback='+cb+'&t='+Date.now();
+    document.head.appendChild(s);
+    setTimeout(function(){ if(!done){ resolve(false); cleanup(); } }, 15000);
+  });
+}
+function refreshCloud(){
+  if(!cloudOn){ alert('구글 시트 연동이 설정되지 않았습니다. (CLOUD_URL 비어 있음)'); return; }
+  const ind=document.getElementById('saveIndicator');
+  ind.textContent='↻ 동기화 중…'; ind.style.color='#2E86C1';
+  cloudPull().then(function(ok){
+    render();
+    euSetTopStatus && euSetTopStatus(ok?'연결됨':'동기화 실패', ok?'ok':'error');
+    ind.textContent = ok ? '● 구글 시트에서 불러옴' : '⚠ 동기화 실패 · 로컬 사용';
+    ind.style.color = ok ? '#1E8E54' : '#dc2626';
+  });
+}
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(records,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '잔여보톡스보고_백업_'+todayYMD()+'.json';
+  a.click();
+}
+function importData(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!Array.isArray(data)) throw new Error('형식 오류');
+      records = data; persist(); render();
+      alert('복원되었습니다.');
+    }catch(err){ alert('복원 실패: 올바른 백업 파일이 아닙니다.'); }
+  };
+  reader.readAsText(file);
+}
+function excelExport(){
+  if(typeof XLSX==='undefined'){ alert('엑셀 모듈을 불러오지 못했습니다.'); return; }
+  const rows = records.map(r=>{
+    const st = statusInfo(r.category, r.hydrateDate);
+    return {분류:r.category, 제품:r.product, 수화일:r.hydrateDate, 잔여량:r.remain||'', 잔여사용일:st.remainText, 할일:st.label, 폐기날짜:st.discardDate};
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), '잔여보톡스보고');
+  XLSX.writeFile(wb, '잔여보톡스보고_'+todayYMD()+'.xlsx');
+}
+
+/* ===================== 시작 ===================== */
+function paintTodayLines(){
+  const dow=['일','월','화','수','목','금','토'][new Date().getDay()];
+  document.getElementById('todayLine').textContent = '오늘: '+todayYMD()+' ('+dow+')';
+}
+loadLocal();
+paintTodayLines();
+render();
+
+if(cloudOn){
+  const ind=document.getElementById('saveIndicator');
+  ind.textContent='↻ 동기화 중…'; ind.style.color='#2E86C1';
+  cloudPull().then(function(ok){
+    render();
+    euSetTopStatus && euSetTopStatus(ok?'연결됨':'동기화 실패', ok?'ok':'error');
+    ind.textContent = ok ? '● 구글 시트에서 불러옴' : '⚠ 동기화 실패 · 로컬 사용';
+    ind.style.color = ok ? '#1E8E54' : '#dc2626';
+  });
+}
+
+document.getElementById('euExcelBtn').onclick = excelExport;
+document.getElementById('euJsonBtn').onclick = exportData;
+const settingsActions = document.getElementById('euSettingsActions');
+settingsActions.innerHTML = '<button id="euRestoreJson">JSON 복원</button><button id="euRefresh">클라우드 새로고침</button>';
+document.getElementById('euRestoreJson').onclick = ()=>document.getElementById('importFile').click();
+document.getElementById('euRefresh').onclick = ()=>{ document.getElementById('euSettingsModal').classList.remove('show'); refreshCloud(); };
+</script>
+
+<script>
+(function(){
+  const CFG = window.EVERYUP_CONFIG || {};
+  const SESSION_KEY='everyup_global_session_v1';
+  window.euReadSession=function(){
+    try{const s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); if(!s||!s.name||!s.expiresAt||Date.now()>s.expiresAt){localStorage.removeItem(SESSION_KEY);return null;} return s;}catch(e){return null;}
+  };
+  window.euSessionUser=function(){const s=window.euReadSession();return s?s.name:'';};
+  window.euGoMenu=function(){location.href=(CFG.loginUrl||'로그인.html')+'?menu=1';};
+  window.euSetTopStatus=function(text,state){const el=document.getElementById('euTopStatus'),tx=document.getElementById('euTopStatusText');if(!el||!tx)return;tx.textContent=text||'연결됨';el.dataset.s=state||'ok';};
+  window.euBackupSnapshot=function(app,payload){
+    const url=CFG.backupApi||''; if(!url||url.includes('__EVERYUP')) return;
+    let data=payload; try{if(typeof data!=='string')data=JSON.stringify(data);}catch(e){return;}
+    try{fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'snapshot',token:CFG.backupToken||'',app:app,payload:data})});}catch(e){}
+  };
+  const d=new Date(), today=document.getElementById('euTopToday'); if(today) today.textContent='오늘 '+String(d.getFullYear()).slice(2)+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const menu=document.getElementById('euMenuBtn'); if(menu)menu.onclick=window.euGoMenu;
+  const gear=document.getElementById('euGearBtn'), modal=document.getElementById('euSettingsModal'); if(gear&&modal)gear.onclick=()=>modal.classList.add('show');
+  document.querySelectorAll('[data-eu-close]').forEach(x=>x.onclick=()=>modal&&modal.classList.remove('show'));
+  if(modal) modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('show')});
+})();
+</script>
+</body>
+</html>
