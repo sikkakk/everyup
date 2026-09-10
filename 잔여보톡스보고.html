@@ -55,15 +55,16 @@
   table.bt th{background:var(--navy); color:#fff; font-size:12px; font-weight:700; padding:10px 8px; text-align:center;}
   table.bt td{padding:9px 8px; border-bottom:1px solid #EEF1F5; text-align:center; font-size:13.5px; color:var(--ink); vertical-align:middle;}
   tr.grp-head td{background:#F8FAFC; font-weight:800; color:var(--navy2); text-align:left; padding:10px 10px; font-size:13.5px; border-bottom:1px solid var(--line);}
+  tr.flat-row td{background:#F8FAFC;}
   tr.no-item td{color:var(--muted); font-size:12.5px; padding:12px; background:#FCFCFD;}
   table.bt input[type=date]{padding:6px 8px; border:1px solid var(--line); border-radius:7px; font-size:13px; font-family:inherit;}
   table.bt input.remain-inp{width:90px; padding:6px 8px; border:1px solid var(--line); border-radius:7px; font-size:13px; text-align:center; font-family:inherit;}
   .st{font-weight:800;}
-  .st-normal{color:var(--green);}
-  .st-encourage{color:var(--red);}
-  .st-refer{color:var(--blue);}
-  .st-discard{background:var(--black); color:#fff; padding:4px 14px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; text-align:center; min-width:44px;}
-  .st-unused{color:var(--muted); font-weight:700;}
+  table.bt td.st-normal{color:var(--green);}
+  table.bt td.st-encourage{color:var(--red);}
+  table.bt td.st-refer{color:var(--blue);}
+  table.bt td.st-unused{color:var(--muted); font-weight:700;}
+  .discard-pill{background:var(--black); color:#fff!important; padding:4px 14px; border-radius:6px; display:inline-block; font-weight:800; text-align:center;}
   .rd-count{font-weight:700; color:var(--navy2);}
   .rd-count.rd-red{color:var(--red);}
   .del-btn{padding:5px 10px; font-size:11.5px; border:1px solid #f3c9c5; border-radius:7px; background:#fff; color:var(--red); font-weight:700;}
@@ -335,6 +336,17 @@ function persist(){
 
 function newId(){ return 'b'+Date.now()+Math.random().toString(36).slice(2,7); }
 
+// 로그인 화면에서 공유하는 전체 세션 정보를 읽어, 현재 사용자가 원장(송우철)인지 확인합니다.
+// (폐기 목록의 수정·삭제 버튼은 원장에게만 보이도록 하기 위한 용도)
+function isDirectorUser(){
+  try{
+    const s = JSON.parse(localStorage.getItem('everyup_global_session_v1')||'null');
+    if(!s || !s.name || !s.expiresAt || Date.now()>s.expiresAt) return false;
+    const part = s.part||'';
+    return s.name==='송우철' || part.includes('원장');
+  }catch(e){ return false; }
+}
+
 // 고정 항목: 이 목록은 데이터와 무관하게 항상 표에 나타납니다.
 // (수화일·잔여량을 입력하는 순간에만 실제 데이터로 저장되고, 지우면 다시 빈 칸으로 돌아갑니다)
 const FIXED_SLOTS = [
@@ -417,10 +429,11 @@ function removeItem(id){
   persist(); render();
 }
 
-/* ===================== 폐기 목록: 수정 / 삭제 ===================== */
-function startEditDiscard(id){ editingDiscardId = id; renderDiscard(); }
+/* ===================== 폐기 목록: 수정 / 삭제 (원장 전용) ===================== */
+function startEditDiscard(id){ if(!isDirectorUser()) return; editingDiscardId = id; renderDiscard(); }
 function cancelEditDiscard(){ editingDiscardId = null; renderDiscard(); }
 function saveEditDiscard(id){
+  if(!isDirectorUser()) return;
   const d = discards.find(x=>x.id===id);
   if(!d) return;
   const product = document.getElementById('dEditProduct_'+id).value.trim();
@@ -432,6 +445,7 @@ function saveEditDiscard(id){
   persist(); render();
 }
 function deleteDiscard(id){
+  if(!isDirectorUser()) return;
   if(!confirm('폐기 목록에서 이 항목을 완전히 삭제할까요?')) return;
   discards = discards.filter(x=>x.id!==id);
   persist(); render();
@@ -501,13 +515,14 @@ function render(){
         productCell = r.product||'';
       }
       const row = document.createElement('tr');
+      if(flat) row.className='flat-row';
       row.innerHTML = `
         <td style="text-align:left">${productCell}</td>
         <td><input type="date" value="${r.hydrateDate||''}" onchange="updateField('${r.id}','hydrateDate',this.value)"></td>
         <td><input type="text" class="remain-inp" value="${r.remain||''}" placeholder="예: 20u" onchange="updateField('${r.id}','remain',this.value)"></td>
         <td class="rd-count${st.remainRed?' rd-red':''}">${st.remainText}</td>
-        <td class="st ${st.cls}">${st.label}</td>
-        <td><button class="del-btn" onclick="removeItem('${r.id}')">${sd?'지우기':'삭제'}</button></td>`;
+        <td class="st ${st.cls}">${st.cls==='st-discard' ? `<span class="discard-pill">${st.label}</span>` : st.label}</td>
+        <td><button class="del-btn" onclick="removeItem('${r.id}')">${st.label==='폐기' ? '폐기하기' : (sd?'지우기':'삭제')}</button></td>`;
       body.appendChild(row);
     });
   });
@@ -521,10 +536,11 @@ function renderDiscard(){
     body.innerHTML=''; empty.style.display='block'; return;
   }
   empty.style.display='none';
+  const canManageDiscard = isDirectorUser();
   // 최근에 폐기한 것이 위로 오도록
   const ordered = discards.slice().reverse();
   body.innerHTML = ordered.map(d=>{
-    if(d.id===editingDiscardId){
+    if(canManageDiscard && d.id===editingDiscardId){
       return `
       <tr>
         <td style="text-align:left">
@@ -537,6 +553,15 @@ function renderDiscard(){
           <button class="edit-btn" onclick="saveEditDiscard('${d.id}')">저장</button>
           <button class="del-btn" onclick="cancelEditDiscard()">취소</button>
         </td>
+      </tr>`;
+    }
+    if(!canManageDiscard){
+      return `
+      <tr>
+        <td style="text-align:left">${d.category} · ${d.product}</td>
+        <td>${d.hydrateDate||''}</td>
+        <td>${d.discardDate||''}</td>
+        <td></td>
       </tr>`;
     }
     return `
