@@ -217,7 +217,7 @@ start=async function(){
  const saved=clLastView();
  if(['daily','weekly','monthly','quarterly','all'].includes(saved.period))activePeriod=saved.period;
  if(['daily','weekly','monthly','quarterly','all'].includes(saved.statsPeriod))statsPeriod=saved.statsPeriod;
- if(/^\d{4}-\d{2}-\d{2}$/.test(saved.statsAnchor||''))statsAnchor=saved.statsAnchor;
+ if(saved.statsAnchor===todayIso())statsAnchor=saved.statsAnchor;
  activeView=saved.view==='stats'?'stats':'checklist';
  try{
   const a=clSavedAuth();
@@ -257,7 +257,8 @@ start=async function(){
  const user=readSession(),cached=user?clReadScreen(user):null;
  if(cached){
   session=user;model=cached.model;activeView=cached.activeView==='stats'?'stats':'checklist';
-  activePeriod=cached.activePeriod;statsPeriod=cached.statsPeriod;statsAnchor=cached.statsAnchor;statsData=cached.statsData;
+  activePeriod=cached.activePeriod;statsPeriod=cached.statsPeriod;
+  if(cached.statsAnchor===todayIso()){statsAnchor=cached.statsAnchor;statsData=cached.statsData;}
   settingsMode=!!cached.settingsMode&&!!model.isDirector;
   clRestoring=true;
   try{render();if(activeView==='stats'&&statsData)renderStatsContent();}finally{clRestoring=false;}
