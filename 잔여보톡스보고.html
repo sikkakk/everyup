@@ -62,11 +62,16 @@
   .st-normal{color:var(--green);}
   .st-encourage{color:var(--red);}
   .st-refer{color:var(--blue);}
-  .st-discard{background:var(--black); color:#fff; padding:4px 10px; border-radius:6px; display:inline-block;}
+  .st-discard{background:var(--black); color:#fff; padding:4px 14px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; text-align:center; min-width:44px;}
   .st-unused{color:var(--muted); font-weight:700;}
   .rd-count{font-weight:700; color:var(--navy2);}
   .del-btn{padding:5px 10px; font-size:11.5px; border:1px solid #f3c9c5; border-radius:7px; background:#fff; color:var(--red); font-weight:700;}
   .del-btn:hover{background:var(--red-lt);}
+  .edit-btn{padding:5px 10px; font-size:11.5px; border:1px solid #cfd8e3; border-radius:7px; background:#fff; color:var(--blue); font-weight:700; margin-right:6px;}
+  .edit-btn:hover{background:var(--blue-lt);}
+  .dt2-actions{white-space:nowrap;}
+  table.dt2 input[type=date], table.dt2 input.dt2-inp{padding:6px 8px; border:1px solid var(--line); border-radius:7px; font-size:13px; font-family:inherit;}
+  table.dt2 input.dt2-inp{width:100%; text-align:left;}
   /* ---- 폐기 표 ---- */
   table.dt2{width:100%; border-collapse:collapse;}
   table.dt2 th{background:var(--black); color:#fff; font-size:12px; font-weight:700; padding:10px 8px; text-align:center;}
@@ -157,7 +162,7 @@
   <div class="card">
     <div class="card-title">폐기 목록</div>
     <table class="dt2">
-      <thead><tr><th style="text-align:left">폐기 품목</th><th>수화일</th><th>폐기 날짜</th></tr></thead>
+      <thead><tr><th style="text-align:left">폐기 품목</th><th>수화일</th><th>폐기 날짜</th><th style="width:130px"></th></tr></thead>
       <tbody id="discardBody"></tbody>
     </table>
     <div class="empty" id="discardEmpty" style="display:none">현재 폐기 목록이 없습니다.</div>
@@ -290,24 +295,27 @@ function statusInfo(cat, hydrateDate){
   }
   let remainText;
   if(elapsed<=refDay) remainText = (refDay-elapsed)+'일';
-  else if(elapsed<discardDay) remainText = '+'+(elapsed-refDay)+'일';
-  else remainText = '폐기';
+  else remainText = '+'+(elapsed-refDay)+'일'; // 서비스추천·폐기 모두 오늘 기준 초과일수를 +N일로 표시
   const discardDate = addDays(hydrateDate, discardDay);
   return {elapsed, label, cls, remainText, discardDate};
 }
 
 /* ===================== 데이터 ===================== */
 let records = []; // [{id, category, product, hydrateDate, remain}]
+let discards = []; // [{id, category, product, hydrateDate, discardDate}] — 폐기 목록(계속 누적, 지우기 전까진 안 사라짐)
 let saveTimer = null;
+let editingDiscardId = null;
 
 function loadLocal(){
   try{ const s = localStorage.getItem('botox_remain_v1'); if(s) records = JSON.parse(s)||[]; }catch(e){}
+  try{ const s = localStorage.getItem('botox_discard_v1'); if(s) discards = JSON.parse(s)||[]; }catch(e){}
 }
 function persist(){
   const ind = document.getElementById('saveIndicator');
   clearTimeout(saveTimer);
   try{
     localStorage.setItem('botox_remain_v1', JSON.stringify(records));
+    localStorage.setItem('botox_discard_v1', JSON.stringify(discards));
     ind.textContent = cloudOn ? '● 구글 시트에 저장됨' : '● 저장됨(이 PC)';
     ind.style.color = '#1E8E54';
     saveTimer = setTimeout(()=>{ ind.textContent = cloudOn ? '● 구글 시트' : '● 로컬 저장'; ind.style.color=''; }, 1500);
@@ -380,8 +388,45 @@ function updateField(id, field, value){
 }
 function removeItem(id){
   const isFixed = !!slotDef(id);
+  const r = records.find(x=>x.id===id);
+  const st = r ? statusInfo(r.category, r.hydrateDate) : null;
+
+  if(st && st.label==='폐기'){
+    if(!confirm('이 항목을 폐기 목록으로 옮길까요?\n(이 줄은 빈 칸으로 돌아가고, 아래 폐기 목록에 기록됩니다)')) return;
+    discards.push({
+      id: newId(),
+      category: r.category,
+      product: r.product,
+      hydrateDate: r.hydrateDate,
+      discardDate: todayYMD() // 지우기 누른 날짜를 폐기 날짜로 기록
+    });
+    records = records.filter(x=>x.id!==id);
+    persist(); render();
+    return;
+  }
+
   if(!confirm(isFixed ? '이 항목의 입력값을 지울까요? (칸은 그대로 남습니다)' : '이 항목을 삭제할까요?')) return;
   records = records.filter(x=>x.id!==id);
+  persist(); render();
+}
+
+/* ===================== 폐기 목록: 수정 / 삭제 ===================== */
+function startEditDiscard(id){ editingDiscardId = id; renderDiscard(); }
+function cancelEditDiscard(){ editingDiscardId = null; renderDiscard(); }
+function saveEditDiscard(id){
+  const d = discards.find(x=>x.id===id);
+  if(!d) return;
+  const product = document.getElementById('dEditProduct_'+id).value.trim();
+  const hydrateDate = document.getElementById('dEditHydrate_'+id).value || '';
+  const discardDate = document.getElementById('dEditDiscardDate_'+id).value || '';
+  if(!product){ alert('제품명을 입력하세요.'); return; }
+  d.product = product; d.hydrateDate = hydrateDate; d.discardDate = discardDate;
+  editingDiscardId = null;
+  persist(); render();
+}
+function deleteDiscard(id){
+  if(!confirm('폐기 목록에서 이 항목을 완전히 삭제할까요?')) return;
+  discards = discards.filter(x=>x.id!==id);
   persist(); render();
 }
 
@@ -465,16 +510,39 @@ function render(){
 function renderDiscard(){
   const body = document.getElementById('discardBody');
   const empty = document.getElementById('discardEmpty');
-  const items = records
-    .map(r=>({r, st:statusInfo(r.category, r.hydrateDate)}))
-    .filter(x=>x.st.label==='폐기');
-  if(items.length===0){
+  if(discards.length===0){
     body.innerHTML=''; empty.style.display='block'; return;
   }
   empty.style.display='none';
-  body.innerHTML = items.map(({r,st})=>`
-    <tr><td style="text-align:left">${r.category} · ${r.product}</td><td>${r.hydrateDate}</td><td>${st.discardDate}</td></tr>
-  `).join('');
+  // 최근에 폐기한 것이 위로 오도록
+  const ordered = discards.slice().reverse();
+  body.innerHTML = ordered.map(d=>{
+    if(d.id===editingDiscardId){
+      return `
+      <tr>
+        <td style="text-align:left">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${d.category}</div>
+          <input type="text" class="dt2-inp" id="dEditProduct_${d.id}" value="${d.product||''}">
+        </td>
+        <td><input type="date" id="dEditHydrate_${d.id}" value="${d.hydrateDate||''}"></td>
+        <td><input type="date" id="dEditDiscardDate_${d.id}" value="${d.discardDate||''}"></td>
+        <td class="dt2-actions">
+          <button class="edit-btn" onclick="saveEditDiscard('${d.id}')">저장</button>
+          <button class="del-btn" onclick="cancelEditDiscard()">취소</button>
+        </td>
+      </tr>`;
+    }
+    return `
+      <tr>
+        <td style="text-align:left">${d.category} · ${d.product}</td>
+        <td>${d.hydrateDate||''}</td>
+        <td>${d.discardDate||''}</td>
+        <td class="dt2-actions">
+          <button class="edit-btn" onclick="startEditDiscard('${d.id}')">수정</button>
+          <button class="del-btn" onclick="deleteDiscard('${d.id}')">삭제</button>
+        </td>
+      </tr>`;
+  }).join('');
 }
 
 /* ===================== 구글 시트 연동 (이 앱 전용 독립 Apps Script) ===================== */
@@ -493,7 +561,7 @@ function cloudPush(){
   }
   fetch(CLOUD_URL, {method:'POST', mode:'no-cors',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({action:'saveBotox', records:records})
+    body: JSON.stringify({action:'saveBotox', records:records, discards:discards})
   }).catch(function(){});
 }
 function cloudPull(){
@@ -505,7 +573,11 @@ function cloudPull(){
     window[cb]=function(res){ done=true; try{
       if(res && res.ok && Array.isArray(res.botox)){
         records = res.botox;
-        try{ localStorage.setItem('botox_remain_v1', JSON.stringify(records)); }catch(e){}
+        discards = Array.isArray(res.discard) ? res.discard : discards;
+        try{
+          localStorage.setItem('botox_remain_v1', JSON.stringify(records));
+          localStorage.setItem('botox_discard_v1', JSON.stringify(discards));
+        }catch(e){}
         syncedOK=true; resolve(true);
       } else resolve(false);
     } finally { cleanup(); } };
@@ -528,7 +600,7 @@ function refreshCloud(){
 }
 
 function exportData(){
-  const blob = new Blob([JSON.stringify(records,null,2)],{type:'application/json'});
+  const blob = new Blob([JSON.stringify({records:records, discards:discards},null,2)],{type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = '잔여보톡스보고_백업_'+todayYMD()+'.json';
@@ -540,8 +612,15 @@ function importData(file){
   reader.onload = e=>{
     try{
       const data = JSON.parse(e.target.result);
-      if(!Array.isArray(data)) throw new Error('형식 오류');
-      records = data; persist(); render();
+      if(Array.isArray(data)){
+        records = data; // 예전 형식(배열만) 백업 호환
+      }else if(data && Array.isArray(data.records)){
+        records = data.records;
+        discards = Array.isArray(data.discards) ? data.discards : discards;
+      }else{
+        throw new Error('형식 오류');
+      }
+      persist(); render();
       alert('복원되었습니다.');
     }catch(err){ alert('복원 실패: 올바른 백업 파일이 아닙니다.'); }
   };
