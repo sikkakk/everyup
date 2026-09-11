@@ -541,7 +541,7 @@ function render(){
         <td><input type="text" class="remain-inp" value="${r.remain||''}" placeholder="예: 20u" onchange="updateField('${r.id}','remain',this.value)"></td>
         <td class="rd-count${st.remainRed?' rd-red':''}">${st.remainText}</td>
         <td class="st ${st.cls}">${st.cls==='st-discard' ? `<span class="discard-pill">${st.label}</span>` : st.label}</td>
-        <td><input type="text" class="memo-inp" value="${r.memo||''}" placeholder="메모" onchange="updateField('${r.id}','memo',this.value)"></td>
+        <td><input type="text" class="memo-inp" value="${r.memo||''}" onchange="updateField('${r.id}','memo',this.value)"></td>
         <td><button class="del-btn" onclick="removeItem('${r.id}')">${st.label==='폐기' ? '폐기하기' : (sd?'지우기':'삭제')}</button></td>`;
       body.appendChild(row);
     });
