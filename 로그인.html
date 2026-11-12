@@ -453,9 +453,9 @@ function welcome(){
   // 직원관리는 송우철 원장님으로 로그인했을 때만 표시
   const isDirector = cur.name==="송우철" || (cur.part||"").includes("원장");
   $("goAttendance").style.display = isDirector ? "block" : "none";
-  // 예약통계는 원장·실장·부실장만 표시 (part에 '실장' 포함 시 상담실장·부실장 모두 해당)
+  // 예약통계는 원장·실장·부실장·코디네이터만 표시 (part에 '실장' 또는 '코디' 포함 시 해당)
   const RESV_NAMES = ["송우철","박수진","한희수"];
-  const canResv = isDirector || RESV_NAMES.includes(cur.name) || (cur.part||"").includes("실장");
+  const canResv = isDirector || RESV_NAMES.includes(cur.name) || (cur.part||"").includes("실장") || (cur.part||"").includes("코디");
   $("goReservation").style.display = canResv ? "block" : "none";
   // 상담전환관리는 원장·실장만 (부실장 제외)
   const CONSULT_NAMES = ["송우철","박수진"];
